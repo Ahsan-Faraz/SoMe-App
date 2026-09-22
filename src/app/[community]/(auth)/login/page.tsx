@@ -1,10 +1,20 @@
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { LoginForm } from '@/features/auth/components/LoginForm'
 import { getCommunity } from '@/features/communities/queries'
 import { t } from '@/lib/i18n'
+import { RouteSkeleton } from '../../loading'
 
-export default async function LoginPage({ params }: PageProps<'/[community]/login'>) {
+export default function LoginPage(props: PageProps<'/[community]/login'>) {
+  return (
+    <Suspense fallback={<RouteSkeleton />}>
+      <LoginContent {...props} />
+    </Suspense>
+  )
+}
+
+async function LoginContent({ params }: PageProps<'/[community]/login'>) {
   const { community: slug } = await params
   const community = await getCommunity(slug)
   if (!community) notFound()

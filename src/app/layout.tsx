@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en">
-      <body className="bg-white font-sans text-neutral-900 antialiased">
+      <body suppressHydrationWarning className="bg-white font-sans text-neutral-900 antialiased">
         {children}
         <ServiceWorker />
       </body>

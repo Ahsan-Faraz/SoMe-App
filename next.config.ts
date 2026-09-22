@@ -11,6 +11,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
   poweredByHeader: false,
+  async redirects() {
+    return [{ source: '/', destination: '/biking-stockholm', permanent: false }]
+  },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

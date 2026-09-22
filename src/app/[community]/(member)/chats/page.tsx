@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { BottomNav } from '@/components/BottomNav'
 import { Avatar } from '@/components/ui/Avatar'
@@ -7,11 +8,20 @@ import { getViewer } from '@/features/auth/queries'
 import { ChatList } from '@/features/chats/components/ChatList'
 import { listChats } from '@/features/chats/queries'
 import { t } from '@/lib/i18n'
+import { RouteSkeleton } from '../../loading'
 
 const iconButton =
   'inline-flex size-10 items-center justify-center rounded-full text-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-accent'
 
-export default async function ChatsPage({ params }: PageProps<'/[community]/chats'>) {
+export default function ChatsPage(props: PageProps<'/[community]/chats'>) {
+  return (
+    <Suspense fallback={<RouteSkeleton />}>
+      <ChatsContent {...props} />
+    </Suspense>
+  )
+}
+
+async function ChatsContent({ params }: PageProps<'/[community]/chats'>) {
   const { community } = await params
   const viewer = await getViewer()
   if (!viewer) redirect(`/${community}/login`)

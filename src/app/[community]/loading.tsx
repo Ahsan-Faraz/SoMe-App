@@ -1,4 +1,4 @@
-export default function Loading() {
+export function RouteSkeleton() {
   return (
     <div className="mx-auto max-w-md animate-pulse" aria-busy="true">
       <div className="h-14 border-b border-neutral-200" />
@@ -11,3 +11,5 @@ export default function Loading() {
     </div>
   )
 }
+
+export default RouteSkeleton
