@@ -1,0 +1,53 @@
+---
+description: Performance budget and practices for the SoMe PWA — code, Postgres, Storage, Realtime, service worker. Use on every feature, query, upload, or screen. Speed is the top product requirement. Single source of truth for perf; other rules defer to it.
+alwaysApply: true
+---
+
+# Performance — fast by default, nothing extra
+
+Budgets (engineering targets, not spec text), mid-range phone on 4G: LCP < 2.5 s cold / < 1 s repeat, INP < 200 ms, A1 first-load JS ≤ 150 KB gz, hot query p95 < 100 ms.
+
+## Code
+
+- Server Components for first paint. Client JS only for composer, long-press sheet, camera, sliders.
+- A1 ships no calendar, camera, album, or ads code — `import()` those screens.
+- Hot writes (send, react, mark-read) go browser → Supabase under RLS. No extra Next API hop. Privileged work (admit, verify, album password) goes through the server.
+- One round trip per screen: one query/RPC or `Promise.all`. Never await in a loop.
+- Optimistic send and react. Debounce search 150–300 ms. Long lists: CSS `content-visibility: auto` first; virtualize only if measured.
+- `proxy.ts` (Next 16's middleware) only refreshes the session — no DB queries in it.
+- Membership check once per request: DAL functions in `lib/auth/dal.ts` wrapped in React `cache()`, shared by layout and page. Verify with `getClaims()` (local JWT check), not `getUser()` (network call) or `getSession()` (unverified).
+- `cacheComponents` is on: read cookies/params/DB inside a `<Suspense>` with a skeleton so the static shell paints first.
+- System font stack (zero download). `next/image` for static assets only. No new dependency — see the allowlist in `project-structure.mdc`.
+
+## Database
+
+- Same region for DB and server: Supabase `eu-north-1` (Stockholm) + Vercel functions `arn1` (Stockholm). A cross-region hop adds latency to every query and keeps data in the EU.
+- Every list query: `community_id` (or chat membership) + explicit columns + `limit`. No `select('*')`; no `count: 'exact'` on hot paths.
+- Messages: per-chat `seq bigint`. Page with keyset `where chat_id = $1 and seq < $cursor order by seq desc limit 30`. Index `(chat_id, seq)`. Never OFFSET.
+- Unread: `chats.last_seq` (one write per message) and `memberships.last_read_seq`. Unread = `last_seq - last_read_seq` in the A1 select. Never `COUNT(*)`; never update every member's row per message (a 460-member group would mean 460 writes).
+- Mark-read: write when the chat is opened and when the user leaves it, not once per incoming message.
+- Other indexes: `(community_id)`, `(user_id, community_id)` on memberships, `(community_id, last_message_at desc)` for A1.
+- RLS: filter on indexed columns; write `(select auth.uid())`, not bare `auth.uid()`.
+- Dynamic fields: one row per value with typed columns (`value_text`, `value_num`, `value_bool`). Multi-select = one row per chosen option. Index `(field_def_id, value_num)` and `(field_def_id, value_text)`. Search runs in one RPC with `limit`.
+
+## Realtime
+
+- At most two channels per client: one per-user channel (A1 bumps) and one for the open chat.
+- Push new messages with **Broadcast** (sent on insert). Don't use `postgres_changes` for chat — it re-checks RLS for every subscriber and slows down big groups.
+
+## Storage
+
+- Resize on the client before upload: max ~1600 px plus a ~256 px thumbnail. Encode WebP; if `blob.type` isn't `image/webp` (older Safari falls back to PNG), use JPEG q≈0.8. Re-encoding also strips EXIF.
+- Lists load thumbnails; the full image only on tap.
+- Immutable paths `{community}/{user}/{uuid}.webp` + long `cache-control`. Replace = new path.
+- Private bucket for chat images, albums, and verification photos. Sign in batch (`createSignedUrls`) and reuse each URL until it expires. Album URLs only after the server password check.
+- Server enforces type + max size. The limit is TBD — keep it in one constant.
+
+## PWA
+
+- `app/manifest.ts` + `public/sw.js` with **no fetch handler**. Hashed `/_next/static/*` is already immutable in the HTTP cache; a fetch handler would make every navigation wait for the worker to boot.
+- Do not cache HTML, RSC payloads, API, or messages — they're authenticated and live, and offline mode is not decided.
+
+## Don't overdo
+
+No Redis, microservices, GraphQL, global state store, offline sync engine, or custom CDN until a measured bottleneck calls for it. Measure first (Lighthouse, `EXPLAIN ANALYZE`). For what to add when something breaks, and what may be stale, see `scaling.mdc`.

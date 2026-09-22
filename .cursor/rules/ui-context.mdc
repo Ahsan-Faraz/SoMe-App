@@ -1,0 +1,18 @@
+---
+description: Wire-like mobile UI for SoMe. Use when editing screens, layouts, navigation, chat rows, profiles, or CSS in app/ or components/. Perf practices live in performance.mdc.
+globs: "src/{app,features,components}/**/*.{tsx,ts,css}"
+alwaysApply: false
+---
+
+# UI — Apple, not Microsoft
+
+Few icons. Post + react are enough. Extra actions = long-press, full-width sheet (not a tiny menu). Layouts = mockup 260922; density = Wire screenshots.
+
+- A1: avatar → own profile; `+` → A2 full sheet; search = **existing chats only**.
+- Bottom nav is TBD (2 tabs vs Chats/Profiles/Ads). Do not add a fourth tab.
+- Unread rows first, then by last activity. Badge on the row.
+- One Post row: avatar, name, date+time, body, reactions. Comments = dim snippet.
+- Fields and G1 filters come from schema types. Verified label = camera + date only.
+- Admin actions render only if the role is true — no disabled clutter.
+- Mount composer and long-press sheet on demand. Persist G1 filters locally.
+- No second design system; CSS transitions only, no animation library.

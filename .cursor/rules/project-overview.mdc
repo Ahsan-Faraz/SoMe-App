@@ -1,0 +1,20 @@
+---
+description: SoMe product map — roles, hierarchy, V1 user loop. Use when planning a feature, writing stories, explaining the app, or deciding who can do what.
+alwaysApply: false
+---
+
+# Product map
+
+`Platform → Community (URL + field schema) → Group (chat room) → User`
+
+| Role | V1 can | Cannot |
+|------|--------|--------|
+| Platform admin | Onboard communities; seed early schemas | Invent a billing console |
+| Community admin | Admit/verify; create groups; this community’s fields | Other communities |
+| Group admin | Members, sticky, calendar, settings, delete any post, F1 | Other groups |
+| User | Chat, profile, search this community, albums, notes/stars, leave | Create groups; see notes about them |
+| Unapproved | AD: profile + DM admin | A1 |
+
+**V1 loop:** community URL AA → Join/Login → AD until admitted → A1 → DM/group or profile search → profile → DM.
+
+Success = Wire-fast on a phone. 100 concurrent now; thousands later. Isolation bugs are privacy bugs.

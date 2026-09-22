@@ -1,0 +1,25 @@
+---
+description: How the agent ships SoMe work. Use on every implementation, review, or refactor. Small slices, spec-only scope, performance in the same change, done checklist.
+alwaysApply: true
+---
+
+# Agent workflow
+
+1. Read the task and the files it touches. Map the screen ID (A1, A4, G1…) if UI.
+2. If the feature is Later or TBD → stop and say so.
+3. One slice only (A1 **or** auth **or** composer — not search + calendar + ads).
+4. Reuse Post / FieldRenderer / existing `lib/` helpers. No new package without a perf reason.
+5. Ship indexes, pagination, and column lists **in the same change**.
+
+## Protected
+
+`.env` and secrets. Unscoped `select`. RLS bypass “just for now.” Unrelated refactors.
+
+## Done checklist
+
+- [ ] Happy path works at mobile width
+- [ ] Query has `community_id` (or chat membership); authz matches role+scope
+- [ ] List is paginated / limited; no `select('*')`; no N+1 unread `COUNT`
+- [ ] Hot path follows `performance.mdc` (bundle, queries, Realtime, images)
+- [ ] No Later feature added “while here”
+- [ ] Typecheck on touched TS

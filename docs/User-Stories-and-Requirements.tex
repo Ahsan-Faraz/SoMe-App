@@ -1,0 +1,2011 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Packages
+% ---------------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.2cm,headheight=14pt]{geometry}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{needspace}
+\usepackage{graphicx}
+\usepackage{etoolbox}
+
+% ---------------------------------------------------------------------------
+% Colours
+% ---------------------------------------------------------------------------
+\definecolor{navy}{HTML}{1B365D}
+\definecolor{steel}{HTML}{2E5984}
+\definecolor{p0}{HTML}{1B7A4E}
+\definecolor{p1}{HTML}{B45309}
+\definecolor{p2}{HTML}{6B7280}
+\definecolor{tbd}{HTML}{B91C1C}
+\definecolor{v1bg}{HTML}{ECFDF3}
+\definecolor{futbg}{HTML}{F3F4F6}
+\definecolor{tbdbg}{HTML}{FEF2F2}
+\definecolor{rulegray}{HTML}{D1D5DB}
+\definecolor{rowalt}{HTML}{F8FAFC}
+\definecolor{hdrbg}{HTML}{1B365D}
+
+% ---------------------------------------------------------------------------
+% Hyperref / headers
+% ---------------------------------------------------------------------------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=steel,
+  urlcolor=steel,
+  citecolor=steel,
+  pdftitle={SoMe App --- User Stories and Requirements Specification},
+  pdfauthor={Product Engineering},
+  pdfsubject={V1 user stories derived from spec v0.33, meeting transcript, and handwritten mockups}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{steel}SoMe App --- User Stories \& Requirements}
+\fancyhead[R]{\small\color{steel}v1.0}
+\fancyfoot[C]{\small\color{steel}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+\titleformat{\section}{\Large\bfseries\color{navy}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries\color{steel}}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{navy}}{\thesubsubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.6em}{0.7em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.5em}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.2em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=0.25em,topsep=0.3em}
+\setstretch{1.08}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+\captionsetup{font=small,labelfont=bf}
+
+% ---------------------------------------------------------------------------
+% Story helpers
+% ---------------------------------------------------------------------------
+\newcommand{\priPzero}{\colorbox{p0}{\makebox[4.6em]{\textcolor{white}{\scriptsize\bfseries P0 V1}}}}
+\newcommand{\priPone}{\colorbox{p1}{\makebox[4.6em]{\textcolor{white}{\scriptsize\bfseries P1}}}}
+\newcommand{\priPtwo}{\colorbox{p2}{\makebox[4.6em]{\textcolor{white}{\scriptsize\bfseries P2 Later}}}}
+\newcommand{\priTBD}{\colorbox{tbd}{\makebox[4.6em]{\textcolor{white}{\scriptsize\bfseries TBD}}}}
+
+\newcommand{\srcSpec}{\textit{Spec v0.33}}
+\newcommand{\srcTx}{\textit{Transcript}}
+\newcommand{\srcMock}{\textit{Mockup 260922}}
+\newcommand{\srcAll}{\textit{Spec v0.33; Transcript; Mockup 260922}}
+
+\newenvironment{story}[1]{%
+  \Needspace{10\baselineskip}%
+  \vspace{0.7em}%
+  \noindent
+  \colorbox{navy}{\makebox[\dimexpr\textwidth-2\fboxsep\relax][l]{\textcolor{white}{\bfseries\ #1}}}%
+  \par\vspace{0.35em}%
+}{\par\vspace{0.55em}}
+
+\newcommand{\storymeta}[5]{%
+  \noindent
+  \begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+    As a: & #1 \\
+    I want to: & #2 \\
+    So that: & #3 \\
+    Priority: & #4 \\
+    Source: & #5 \\
+  \end{tabularx}
+  \par\vspace{0.3em}
+}
+
+\newcommand{\achead}{\noindent\textbf{Acceptance Criteria}\par}
+\newcommand{\authz}[1]{\noindent\textbf{Authorization:} #1\par}
+\newcommand{\deps}[1]{\noindent\textbf{Dependencies:} #1\par}
+\newcommand{\precond}[1]{\noindent\textbf{Preconditions:} #1\par}
+\newcommand{\notes}[1]{\noindent\textbf{Notes:} #1\par}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% ---------------------------------------------------------------------------
+\begin{document}
+
+% ===========================================================================
+% TITLE PAGE
+% ===========================================================================
+\begin{titlepage}
+\centering
+\vspace*{1.6cm}
+{\color{navy}\rule{\textwidth}{2.2pt}}\\[0.55em]
+{\color{steel}\rule{\textwidth}{0.6pt}}\\[1.3em]
+{\LARGE\bfseries\color{navy} SoMe App}\\[0.45em]
+{\huge\bfseries\color{navy} User Stories and Requirements}\\[0.25em]
+{\huge\bfseries\color{navy} Specification}\\[1.0em]
+{\color{steel}\rule{0.42\textwidth}{0.8pt}}\\[1.0em]
+{\Large Community communication platform}\\[0.35em]
+{\large Wire-like chat, community-scoped profiles, verification,}\\[0.15em]
+{\large and group tools --- implementation-ready V1 scope}\\[1.6em]
+\begin{tabular}{>{\bfseries\color{navy}}l l}
+Document type & User Stories / Product Requirements \\
+Document ID & SOME-USR-001 \\
+Version & 1.0 \\
+Status & Draft for team-lead review \\
+Date & 22 September 2026 \\
+Classification & Internal --- project team \\
+\end{tabular}\\[1.4em]
+{\color{steel}\rule{\textwidth}{0.6pt}}\\[0.55em]
+{\color{navy}\rule{\textwidth}{2.2pt}}\\[1.6em]
+\begin{minipage}{0.92\textwidth}
+\small
+\textbf{Derived from (primary sources of truth)}
+\begin{itemize}[leftmargin=1.2em,itemsep=0.15em]
+  \item Word specification \textit{Version 0.33 --- 260915}
+  \item Team meeting transcript (walkthrough of the specification)
+  \item Handwritten UI mockup PDF \textit{SoMe App 260922} (28 screens, IDs AA--D3)
+  \item Wire UI screenshots attached to the specification (visual language only)
+\end{itemize}
+\textbf{This document does not invent product behaviour.} Where sources conflict or are silent, the item is marked \textbf{TBD --- Product Decision Required} or \textbf{Future / Later}.
+\end{minipage}
+\vfill
+{\small\color{p2}Prepared for the development team, product owner, design, and QA.}
+\end{titlepage}
+
+% ===========================================================================
+% DOCUMENT CONTROL
+% ===========================================================================
+\section*{Document Control}
+\addcontentsline{toc}{section}{Document Control}
+
+\subsection*{Revision history}
+\begin{tabularx}{\textwidth}{@{}l l l Y@{}}
+\toprule
+\textbf{Version} & \textbf{Date} & \textbf{Author} & \textbf{Change} \\
+\midrule
+1.0 & 2026-09-22 & Product Engineering & Initial user-stories document extracted from spec v0.33, meeting transcript, and handwritten mockup 260922. \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Source materials}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{ID} & \textbf{Material} & \textbf{How it is used} \\
+\midrule
+S1 & Spec v0.33 (260915) & Named features, group settings, profile base fields, later flags \\
+S2 & Meeting transcript & Intent, V1 vs later, rejected ideas, UX philosophy \\
+S3 & Mockup 260922 & Screen inventory, flows, field-level UI, navigation \\
+S4 & Wire screenshots & Visual density and interaction patterns only --- not product scope \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Implementation context (not product requirements)}
+The implementation team currently expects a modern web stack (for example Next.js, TypeScript, Supabase/PostgreSQL, Supabase Auth, Realtime, and Storage). \textbf{Those technologies are not product requirements} unless a source names them. User stories describe behaviour, not vendors.
+
+\subsection*{Reading convention}
+\begin{itemize}
+  \item \priPzero\ Required for the initial release because the sources place it in the current specification or mockup as current behaviour, and do not mark it later.
+  \item \priPone\ Present in sources as current or drawn, but another source delays it, contradicts it, or leaves the exact rule incomplete. Do not implement as if settled.
+  \item \priPtwo\ Explicitly later / future / ``not now'' in the sources.
+  \item \priTBD\ A product decision is required before the story can be implemented as specified.
+\end{itemize}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{Product Overview}
+% ===========================================================================
+
+\subsection{One-line product definition}
+The product is a mobile-first web application that combines a minimal chat experience (comparable to Wire) with real user profiles, invite-style community isolation, human verification, and form-based discovery, so people in a shared-interest community can talk and meet in real life.
+
+\subsection{Why it exists}
+The founding community already uses Wire. Wire provides fast, clean chat but \textbf{has no user profiles}. Members cannot browse who else is in the community, inspect interests, or judge trust from a profile. The intended differentiator, stated in the transcript, is:
+
+\begin{quote}
+\textit{Take the Wire app and add user profiles. The rest is quality of life.}
+\end{quote}
+
+Quality-of-life additions named in the sources: sticky information, group calendars, easier admin (add/remove members, custom member status), in-app camera tagging of images, private notes/ratings, and community-specific search.
+
+\subsection{Product hierarchy}
+\begin{verbatim}
+Platform          (the company / whole application --- Platform Admin)
+  └── Community   (one interest circle; own URL; own profile-field schema)
+        └── Group (a chat room inside that community; own admin and settings)
+              └── User (member of the community and of 0+ groups)
+                    └── DMs / Posts / Profile / Albums / Notes
+\end{verbatim}
+
+A \textbf{community} is not a group. A community has members, groups, and its own profile questions. A \textbf{group} is a chat room inside one community.
+
+\subsection{Design philosophy (source: transcript)}
+\begin{itemize}
+  \item ``Apple, not Microsoft'': few visible menus; one obvious action per screen.
+  \item Most members only post and react.
+  \item Power actions live on long-press / full-screen sheets, not dense icon bars.
+  \item Dialogues may use most of the screen; do not use tiny hard-to-tap controls.
+  \item Visual language follows the attached Wire screenshots (density, avatars, unread badges, tappable chat title) unless a handwritten screen replaces that layout.
+\end{itemize}
+
+\subsection{What this product is not (explicitly rejected or later)}
+\begin{itemize}
+  \item Not a cross-community social network. Search and membership stay inside one community.
+  \item Not a free-text global search.
+  \item Not Tinder-style kilometre distance search (rejected as too complicated).
+  \item Not an automated verification provider or AI identity check in V1.
+  \item Not a payments product in V1.
+  \item Not a native push-notification product in V1 (browser notifications are later).
+\end{itemize}
+
+% ===========================================================================
+\section{Actors and Roles}
+% ===========================================================================
+
+\begin{tabularx}{\textwidth}{@{}l Y Y@{}}
+\toprule
+\textbf{Role} & \textbf{Can do (from sources)} & \textbf{Cannot do / limits} \\
+\midrule
+Platform Admin
+  & Everything platform-level. Approve/create communities. For the first community this is the same person as community admin. Can set profile fields for early communities.
+  & Sources do not specify a platform console beyond this. \\
+Community Admin
+  & Verify new users; decide who enters the community; create groups in V1; control community profile fields (personally, for the first communities); community-wide settings as named.
+  & Must not access another community's data. Self-serve field UI for other community admins is later. \\
+Group Admin
+  & Create/rename/delete their group; add/remove members; sticky posts; calendar; group settings; delete any post in that group; custom member status; add a DM counterpart to groups they admin.
+  & Cannot change platform/community settings or other groups. Co-admins are later. \\
+User
+  & Chat in DMs and groups they belong to; edit own profile; post; react; comment; delete own posts; edit own posts if the group allows it; search profiles in their community; leave chats; block in DMs; private notes/ratings; albums.
+  & Cannot create groups in V1. Cannot delete others' posts. Cannot see others' private notes/ratings about them. \\
+Unapproved user
+  & After Join: fill profile and DM the community admin (screen AD). Cannot use the main chat list as an approved member until approved.
+  & Exact lock-down of other screens while pending is TBD. \\
+\bottomrule
+\end{tabularx}
+
+\subsection{User levels 1--3}
+The specification states ``user 1--3 levels (community admin or payment level controls the level/rights)''. The only concrete differentiator given in the transcript is \textbf{simple search versus advanced search} (simple = age and gender; advanced = more detail).
+
+\textbf{TBD --- Product Decision Required:} the permission matrix for levels 1--3 beyond that example is not specified. Do not invent entitlements.
+
+\subsection{Authentication versus authorisation}
+\begin{itemize}
+  \item \textbf{Authentication:} proving who the account is (login / email link).
+  \item \textbf{Authorisation:} after login, checking role + scope (this community, this group, this post, this album password).
+\end{itemize}
+Every write action in V1 requires an authorisation check. Community isolation is the primary privacy boundary.
+
+% ===========================================================================
+\section{Scope}
+% ===========================================================================
+
+\subsection{In V1 (initial release)}
+Login and join; community-scoped routing; pending-approval path; main chat list; DMs and group chats; text and image posts; in-app camera tag; reactions; comments; own delete; own edit if allowed; admin delete-any-post; personal chat notes; group sticky posts; group calendar; V1 group settings; admin-only group creation; add/remove members; custom member status; profiles with base fields plus dynamic field \emph{capability}; form-based community search; albums including lock password; private profile notes and 1--5 star ratings; manual verification.
+
+\subsection{Out of V1 (explicitly later)}
+Video/audio/collage posts; disappearing/limited-view posts; browser/OS notifications; co-admins; username-visibility toggle; user-created groups; monetized ads; payments (card, Swish, multi-level fees, profit share); reputation score; profile completeness score; AI-assisted verification; self-serve multi-community onboarding for other admins; Google/social login.
+
+\subsection{Conflicts that block a silent V1 decision}
+These items appear in more than one source with incompatible wording. They are \textbf{not} resolved in this document.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Bottom navigation:} transcript says two items (Chats + Search); mockup 260922 draws three (Chats / Profiles / Ads). Own profile is the top-left avatar in both.
+  \item \textbf{Who may create groups in V1:} opening spec bullet says users can create a group and be admin; later spec text and the transcript say only the community admin can create a group now.
+  \item \textbf{URL model:} spec says ``sub domain'' but the written example is a path (\texttt{https://maindomain/community}; spoken example \texttt{meetirl.com/bikingstockholm}).
+  \item \textbf{Account model:} sources never state whether an account is platform-wide (then join communities) or created per community URL.
+  \item \textbf{Ads in V1:} transcript says no special ad system --- a normal post, with feed filtering later; mockup draws dedicated screens A6, C4, C9, D1, D2, D3.
+  \item \textbf{Direct join:} transcript says not needed at the beginning (always message admin); mockup A9 includes an ``Allow direct join'' checkbox.
+  \item \textbf{Screen-ID collisions inside the mockup:} B1 is both Group Calendar and own profile; A3 is both ``your profile'' on A1 and ``other profile'' on the profile page; B5 is both private notes and ``own post menu''.
+\end{enumerate}
+
+% ===========================================================================
+\section{User Story Methodology}
+% ===========================================================================
+Stories use: \textit{As a [role], I want [goal], so that [benefit].}
+
+Acceptance criteria are written so QA can turn them into cases. Prefer Given / When / Then. Criteria that cannot be tested as written are marked TBD.
+
+Priority is taken from the sources, not from engineering preference:
+\begin{itemize}
+  \item Named in spec/mockup as current, not marked later $\rightarrow$ P0.
+  \item Drawn or mentioned but contradicted or incomplete $\rightarrow$ P1 or TBD.
+  \item Marked later / future / ``not now'' $\rightarrow$ P2.
+\end{itemize}
+
+Story IDs are stable. Do not renumber; add new IDs at the end of a prefix.
+
+\subsection{Epic catalogue}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Epic} & \textbf{Prefix} & \textbf{Covers} \\
+\midrule
+E1 Authentication \& Account Access & AUTH- & Join, login, email link, forgot password, pending state \\
+E2 Community Access \& Membership & COMM- & URL, isolation, membership, approval \\
+E3 User Profile & PROF- & Own/other profile, albums, images \\
+E4 Dynamic Profile Fields & DYN- & Schema, field types, who configures \\
+E5 Profile Search & SEARCH- & Form search, filters, results \\
+E6 Direct Messaging & DM- & List, start, leave, block, admin shortcut \\
+E7 Group Chats & GROUP- & Create, members, settings, leave, join request \\
+E8 Posts, Reactions \& Comments & POST- & Feed items in DM and group \\
+E9 Verification & VERIFY- & Manual review, in-app camera tag \\
+E10 Sticky Posts \& Calendar & STICKY- / CAL- & Group-only extras \\
+E11 Personal Notes \& Ratings & NOTE- & Chat notes, profile notes, stars \\
+E12 Navigation \& Main UI & NAV- & Shell, +, sorting, philosophy \\
+E13 Settings & SET- & Only settings the sources name \\
+E14 Notifications & NOTIF- & Later browser notifications \\
+E15 Advertising & AD- & V1 concept vs dedicated screens vs later monetisation \\
+E16 Payments \& Monetisation & PAY- & Entirely later \\
+E17 Administration & ADMIN- & Platform / community / group admin actions \\
+E18 Security, Privacy \& Data Access & SEC- & Isolation, GDPR, album gate, private data \\
+\bottomrule
+\end{tabularx}
+
+\newpage
+% ===========================================================================
+\section{Epic 1 --- Authentication \& Account Access}
+% ===========================================================================
+Community landing (AA) offers Login (AB) and Join (AC). Join collects username, password, password confirmation, and email, then sends an email with a login link. Google/social login is explicitly not required now. After login, approved users reach A1; users ``not yet approved'' reach AD.
+
+\begin{story}{AUTH-001 --- Join (create account) from a community URL}
+\storymeta{Unregistered visitor}{create an account with username, password, password confirmation, and email}{I can request access to this community}{\priPzero}{\srcMock; \srcSpec}
+\precond{The visitor opened a community start page (AA).}
+\achead
+\begin{enumerate}
+  \item Given I am on AA, when I tap Join, then I see AC with username, password, password again, email, and Send.
+  \item Given I submit valid values, when Send succeeds, then the system stores a pending account and sends an email containing a login link that opens AB.
+  \item Given the passwords do not match or a required field is empty, when I tap Send, then the account is not created and I am shown a validation message.
+  \item Given the username or email is already used \emph{in the applicable account scope}, when I tap Send, then the system rejects the join. \textbf{Account scope (per community vs platform-wide) is TBD --- see COMM-006.}
+\end{enumerate}
+\authz{Unauthenticated. Creates an unapproved account only.}
+\deps{COMM-001 (community URL).}
+\end{story}
+
+\begin{story}{AUTH-002 --- Email login link after join}
+\storymeta{Newly joined user}{receive an email with a login link}{I can open the login screen and continue}{\priPzero}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given I completed AC, when the email is sent, then it contains a link that opens AB.
+  \item The sources do not specify expiry, one-time use, or deep-link token format. \textbf{TBD --- Product Decision Required} for token lifetime and reuse.
+\end{enumerate}
+\end{story}
+
+\begin{story}{AUTH-003 --- Log in}
+\storymeta{Registered user}{log in with username and password}{I can reach the main application or the pending-approval screen}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am on AB, when I enter a valid username and password and tap Enter, and I am approved, then I land on A1 for that community.
+  \item Given I enter valid credentials but I am not yet approved, when I tap Enter, then I land on AD (not A1).
+  \item Given I enter invalid credentials, when I tap Enter, then I remain on AB and see an error; no session is created.
+\end{enumerate}
+\authz{Issues an authenticated session on success. Session mechanism is not specified (implementation choice).}
+\end{story}
+
+\begin{story}{AUTH-004 --- Forgot password}
+\storymeta{Registered user}{use Forgot password on AB}{I can recover access}{\priPone}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am on AB, when I use Forgot password, then a recovery path exists.
+  \item The mockup labels the control but does not specify the recovery steps. \textbf{TBD --- Product Decision Required} for exact flow (email reset vs other).
+\end{enumerate}
+\end{story}
+
+\begin{story}{AUTH-005 --- No Google or social login in V1}
+\storymeta{Visitor}{not be required to use Google or other social login}{I can join with username, password, and email only}{\priPzero}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am on AC, when the screen is shown, then it does not offer Google or other third-party login.
+  \item The mockup note is: ``we don't need google login etc now.''
+\end{enumerate}
+\end{story}
+
+\begin{story}{AUTH-006 --- Log out / session end}
+\storymeta{Authenticated user}{end my session}{another person using the device cannot continue as me}{\priTBD}{Not specified in S1--S3}
+\notes{Login is specified; logout is not drawn or described. Treat presence, placement, and session lifetime as \textbf{TBD --- Product Decision Required}. Do not invent a settings screen for this.}
+\end{story}
+
+% ===========================================================================
+\section{Epic 2 --- Community Access \& Membership}
+% ===========================================================================
+
+\begin{story}{COMM-001 --- Open a community by URL}
+\storymeta{Visitor}{open a community at the community's public address}{I land on that community's start page, not another community}{\priPzero}{\srcSpec; \srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given a community exists with a public address, when I open that address, then I see AA for \emph{that} community (name, picture, Login, Join, scrollable text/images).
+  \item Given I open community A's address, when AA renders, then I do not see community B's name, members, or content.
+  \item The concrete address shape (path \texttt{domain/community} vs host \texttt{community.domain}) is \textbf{TBD --- COMM-005}.
+\end{enumerate}
+\end{story}
+
+\begin{story}{COMM-002 --- Community start page content}
+\storymeta{Visitor}{see short community information before I log in or join}{I understand which community this is}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am on AA, then I see community name, a picture, Login, Join, and further scrollable text and image blocks.
+  \item The sources do not specify a CMS for this content. Who edits AA copy is \textbf{TBD} (likely community/platform admin; not drawn).
+\end{enumerate}
+\end{story}
+
+\begin{story}{COMM-003 --- Community isolation (hard boundary)}
+\storymeta{Member of community A}{only see people, groups, chats, and search results that belong to community A}{I am not exposed to communities I never joined}{\priPzero}{\srcTx}
+\achead
+\begin{enumerate}
+  \item Given I am authenticated in community A, when I open chat list, profile search, profile view, or group search, then every result is scoped to community A.
+  \item Given I request community B's member list, chats, or profile schema by identifier, when I am not a member of B, then the system denies the request.
+  \item The transcript rejects cross-community search: each community is ``totally separate from everything else.''
+\end{enumerate}
+\authz{Membership in the requested community is required for all member APIs.}
+\end{story}
+
+\begin{story}{COMM-004 --- Membership only after manual admin approval}
+\storymeta{Community Admin}{decide who enters the community after reviewing the person}{trolls and fake identities are not admitted automatically}{\priPzero}{\srcSpec; \srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given a user completed Join and is on AD, when they have not been approved, then they are not an approved community member and do not get A1.
+  \item Given I am community admin, when I approve the user (via the verification path), then they may use A1 as a member.
+  \item Mockup F1 shows a Community checkbox labelled ``Admit to community'' on the ``add this user to groups'' screen. That control, if implemented, must create or confirm community membership.
+\end{enumerate}
+\deps{VERIFY-001, ADMIN-003, F1/ADMIN-006.}
+\end{story}
+
+\begin{story}{COMM-005 --- Path versus subdomain (conflict)}
+\storymeta{Platform Admin}{publish a stable public address per community}{members can bookmark and share the community}{\priTBD}{\srcSpec; \srcTx}
+\notes{Spec heading says ``sub domain''; written and spoken examples are path-style (\texttt{https://maindomain/community}, \texttt{meetirl.com/bikingstockholm}). \textbf{TBD --- Product Decision Required.} Either choice still requires a first-class ``current community'' on every screen and API.}
+\end{story}
+
+\begin{story}{COMM-006 --- Account scope: per community vs platform-wide}
+\storymeta{User}{use an account model the product has actually decided}{I am not blocked by an unstated join model}{\priTBD}{Not stated in S1--S3}
+\notes{The mockup starts Join from a community URL, which is compatible with either model. The spec never says whether one person joins a second community with the same credentials. \textbf{TBD --- Product Decision Required.} This decision affects unique username scope, AUTH-001 uniqueness, and later multi-community.}
+\end{story}
+
+\begin{story}{COMM-007 --- Additional communities later}
+\storymeta{Platform Admin}{onboard further communities later, each with its own admin and profile fields}{the platform can host more than one interest circle}{\priPtwo}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Multiple communities on one platform are specified as later for self-serve onboarding.
+  \item The founder stated he will personally set up the first approximately five communities; that is an operations plan, not a V1 self-serve console.
+  \item V1 must still keep data shaped \emph{per community} so a second community does not require a redesign.
+\end{enumerate}
+\end{story}
+
+% ===========================================================================
+\section{Epic 3 --- User Profile}
+% ===========================================================================
+Base fields named in the spec: username (editable); couple/man/woman/other; description (about 4--32k characters); location (country + region list, plus free-text city/village); small chat-icon picture; main profile picture; albums. The mockup adds: three main images; latest login date+time; Score + Notes; Albums; Ads; DM (other profile only); fields that may depend on status.
+
+Do not add age, height, interests, or other fields as hardcoded product fields; those were given as examples of ``many more fields --- later'' or as dynamic schema.
+
+\begin{story}{PROF-001 --- View and edit own profile}
+\storymeta{User}{open and edit my own profile}{other members can see who I am}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am approved and on A1, when I tap my avatar, then I open my own profile in edit-capable mode.
+  \item Given I am on my profile, when I change an editable field and save (save control is implied by ``editable''; exact save UX is not drawn), then the stored values update and later views show the new values.
+  \item Mockup labels own profile \textbf{B1} and also labels A1 avatar as \textbf{A3}. Implement one own-profile screen; treat the ID clash as a documentation issue, not two products.
+\end{enumerate}
+\authz{Only the owner (or a role the sources do not name) may edit. Do not invent admin profile-edit.}
+\end{story}
+
+\begin{story}{PROF-002 --- View another member's profile}
+\storymeta{User}{open another member's profile from a username, search result, or member list}{I can decide whether to contact them}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I tap a username in chat, search, member list, or ad (where linked), when the target is in my community, then I see their profile in non-editable mode.
+  \item Given I am viewing another profile, then I do not see edit controls, replace-icon, or add-image-to-their-album.
+  \item Given the target is not in my community, when I request the profile, then access is denied.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-003 --- Username}
+\storymeta{User}{have an editable username}{others can find and recognise me}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I am on my profile, when I change username to a value allowed by uniqueness rules, then the new username appears in chats, lists, and search.
+  \item Uniqueness scope follows COMM-006 (TBD). Allowed character set is not specified (\textbf{TBD}).
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-004 --- Status: man / woman / couple / other}
+\storymeta{User}{set couple, man, woman, or other}{search and profile show my status}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I edit my profile, when I set status, then I can choose among couple, man, woman, other (checkbox or pulldown --- sources allow either).
+  \item Given the mockup note that fields can depend on status, when status changes, then the visible field set may change \emph{if} the community schema defines status-dependent fields. Exact dependency rules are \textbf{TBD} until the first schema is defined.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-005 --- Long description}
+\storymeta{User}{write a long description}{others can read about me}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I edit my profile, when I enter description text, then the field accepts a long value. The spec states approximately 4--32k characters.
+  \item Given I exceed the maximum, when I save, then the system rejects or truncates according to a rule that is not further specified --- implement the stated 32k upper bound unless product revises it.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-006 --- Location without kilometre distance}
+\storymeta{User}{set country, region, and optional city/village}{others can find people in a region}{\priPzero}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given I edit location, when I choose country and region, then I pick from lists (Sweden example: on the order of 30 regions). I may also enter free-text city/village.
+  \item Given I use profile search, when I filter by region, then results are members of this community in that region. Optional substring match on city/village is described in the transcript.
+  \item Kilometre / GPS distance search must not be implemented as V1. The transcript rejected it as too complicated.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-007 --- Small chat-icon picture}
+\storymeta{User}{set a small picture used as my chat avatar}{my posts and chat rows show a recognisable icon}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am on my profile, when I replace my icon, then subsequent chat rows and posts use the new icon.
+  \item File type, max size, and crop rules are not specified (\textbf{TBD}).
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-008 --- Main profile image(s)}
+\storymeta{User}{show main profile image(s)}{others see a primary photo}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Spec names a changeable main profile image. Mockup draws \textbf{three} main images, each tappable to a larger view, with verified + date where applicable.
+  \item \textbf{TBD --- Product Decision Required:} one main image (spec) vs three (mockup). Do not invent a fourth layout.
+  \item Given I tap a main image on another profile, when I am allowed to view it, then I see a larger image.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-009 --- Latest login shown on profile}
+\storymeta{User}{see another member's latest login date and time on their profile}{I have a freshness signal}{\priPone}{\srcMock}
+\achead
+\begin{enumerate}
+  \item The mockup shows ``latest login'' with date+time on the profile screen.
+  \item Whether this appears on own profile, other profiles, or both, and whether unapproved users have a login timestamp, is not written in the spec. Treat visibility rules as \textbf{TBD} if the team questions privacy; the mockup does draw it.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-010 --- Start a DM from another profile}
+\storymeta{User}{start a DM from another member's profile}{I can contact them after viewing their information}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I view another profile (A3), when I use DM / start chat, then I open or create a DM with that user (A4) if I am allowed to contact them.
+  \item DM is not shown as a primary action on own profile.
+  \item ``Choose what profiles can contact me'' is named in the spec under DM and is not designed. If that rule exists, this action must respect it (SET-002).
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-011 --- Photo albums --- create, rename, list}
+\storymeta{User}{add, delete, and rename albums of images}{I can organise pictures on my profile}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am on my profile, when I open Albums (C5), then I see my albums as a scrollable list/grid with names.
+  \item Given I tap +, when I create an album with a name, then it appears in the list.
+  \item Given I long-press an album I own, when I confirm delete, then the album and its images are removed. The mockup requires an ask/confirm.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-012 --- Album images --- add and delete}
+\storymeta{User}{add and delete images inside an album I own}{I control what others may see after unlock}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I open my album (E1), when I add an image (camera, upload, or other path offered by B4 where applicable), then the image appears with an upload/capture date.
+  \item Given I long-press my image, when I confirm delete, then it is removed.
+  \item Images taken with the in-app camera show a verified indicator and date (VERIFY-004).
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-013 --- Lock an album with a password}
+\storymeta{User}{set a password on an album I own}{only people I choose to tell the password can open it}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am in E1, when I set a password, then subsequent views by others require that password (E2).
+  \item The owner can open their own album without the other-user password prompt.
+  \item How the password is shared (chat, verbally, etc.) is not an in-app grant flow. \textbf{TBD} if a grant/revoke feature is wanted; sources describe typing a password only.
+\end{enumerate}
+\end{story}
+
+\begin{story}{PROF-014 --- View another user's locked album}
+\storymeta{User}{open another user's locked album by entering the password}{I can see pictures they reserved for trusted people}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I open a locked album (E2), when I have not entered the correct password this viewing session, then I am prompted for the password and images are not shown.
+  \item Given I enter the correct password, when the check succeeds, then I see the album images for this viewing session.
+  \item Given I enter an incorrect password, when I submit, then images remain hidden.
+  \item Failed-attempt lockout is not specified --- do not invent one as a product rule.
+\end{enumerate}
+\authz{Requester must already be allowed to view that profile (same community). Password is a second gate.}
+\end{story}
+
+\begin{story}{PROF-015 --- Dynamic fields render on the profile}
+\storymeta{User}{see and fill the fields configured for this community}{my profile matches this community's questions}{\priPzero}{\srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given community A has a schema of field definitions, when I open a profile in A, then I see those field types (examples drawn: text, checkbox, pulldown, numeric, multi-choice, area) and not community B's unique fields.
+  \item Given I own the profile, when I edit a field, then the value is stored against that field definition and this community.
+\end{enumerate}
+\deps{DYN-001, DYN-002.}
+\end{story}
+
+\begin{story}{PROF-016 --- Ads and groups shortcuts on profile}
+\storymeta{User}{reach ads and (if admin) add-to-groups from a profile}{I can continue the contact or admin flow}{\priPone}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Mockup profile shows Albums, Ads, Score+Notes, and admin-only ``add to groups'' (F1).
+  \item Ads targets: other user's ads C4 vs own ads C9. Whether Ads is V1 is AD-001 (conflict).
+  \item F1 is P0 as an admin capability (ADMIN-006) if the control is shown only to admins.
+\end{enumerate}
+\end{story}
+
+% ===========================================================================
+\section{Epic 4 --- Dynamic Profile Fields}
+% ===========================================================================
+This is an architectural product requirement, not an optional extra. The transcript agrees: do not hardcode the first community's fields; provide a backend so the founder can add a checkbox without a code change. Self-serve UI for other community admins is later.
+
+\begin{story}{DYN-001 --- Field types supported by the backend}
+\storymeta{Community / Platform Admin}{define fields by type rather than by a fixed profile table}{I can change the first community without a deploy for each checkbox}{\priPzero}{\srcTx}
+\achead
+\begin{enumerate}
+  \item Given an authorised configurator, when they add a field, then the type is one of the types the sources name: checkbox, text (including long text), image, numeric, pulldown/dropdown, multi-choice, area/location-style, and the search mappings in G1 (multi-select, numeric interval, substring).
+  \item Do not treat the first community's eventual labels (e.g.\ ``bike type'') as hardcoded columns in the application.
+\end{enumerate}
+\end{story}
+
+\begin{story}{DYN-002 --- Schema is per community}
+\storymeta{System}{store field definitions per community}{community A and community B can have different questions}{\priPzero}{\srcTx; \srcSpec}
+\achead
+\begin{enumerate}
+  \item Given community A defines field F and community B does not, when a B member opens their profile or search, then F is not shown and is not queryable.
+  \item Values are stored per user per field definition (and therefore per community).
+\end{enumerate}
+\end{story}
+
+\begin{story}{DYN-003 --- Search form is generated from the same schema}
+\storymeta{User}{search using controls that match this community's field types}{I know what I can search for}{\priPzero}{\srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given community A's schema contains a numeric field, when I open G1, then I get a numeric interval (min/max) control for that field --- not a free-text box for the whole profile.
+  \item Given a checkbox/multi-select field, when I open G1, then I get a multi-select/checkbox filter.
+  \item Given a text field, when I open G1, then I get a substring-in-field control as drawn.
+  \item Free-text global search across unknown keywords is rejected in the transcript.
+\end{enumerate}
+\deps{SEARCH-002.}
+\end{story}
+
+\begin{story}{DYN-004 --- Who configures fields in V1}
+\storymeta{Platform Admin (founder)}{set up profile fields for the first communities myself}{I can change fields after two weeks without waiting for a deploy}{\priPzero}{\srcTx}
+\achead
+\begin{enumerate}
+  \item V1 requires the \emph{capability} to add/change field definitions without shipping a new hardcoded profile.
+  \item The founder stated he will not hand this to other community admins for the first approximately five communities.
+  \item A polished self-serve ``community admin field designer'' UI is \textbf{not} required as a V1 user-facing product if an internal/admin path exists for the founder. Exact UI for that path is \textbf{TBD} (no screen is drawn for field configuration).
+\end{enumerate}
+\end{story}
+
+\begin{story}{DYN-005 --- Self-serve field configuration for other community admins}
+\storymeta{Community Admin of a future community}{configure my own profile fields without the founder}{new communities do not need engineering}{\priPtwo}{\srcTx}
+\achead
+\begin{enumerate}
+  \item The transcript places this in the future: ``here's your backend, do it yourself'' will not happen very early.
+\end{enumerate}
+\end{story}
+
+\begin{story}{DYN-006 --- First community's concrete field list}
+\storymeta{Community Admin}{have an agreed field list for community one}{engineering can seed real definitions}{\priTBD}{\srcTx}
+\notes{The founder is not 100\% sure what the first profile should contain. Do not invent a biking schema. Seed only fields the product owner supplies.}
+\end{story}
+
+% ===========================================================================
+\section{Epic 5 --- Profile Search}
+% ===========================================================================
+
+\begin{story}{SEARCH-001 --- Open profile search (A5)}
+\storymeta{Approved member}{open Find Profiles}{I can discover people I do not already chat with}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am approved in this community, when I open Profiles from the shell (mockup bottom tab; transcript: Search icon), then I see A5.
+  \item Navigation chrome is NAV-003 (TBD: two vs three tabs). The search \emph{capability} is P0 either way.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEARCH-002 --- Filter form G1}
+\storymeta{Approved member}{filter profiles with a form built from this community's schema}{I can specify man/woman, age span, region, and other configured fields}{\priPzero}{\srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I tap the filter control on A5, when G1 opens, then I see example-type controls: multi-select, numeric interval, substring --- populated from this community's schema, not from another community.
+  \item Given I belong only to community A, when G1 renders, then I do not see fields that exist only on community B.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEARCH-003 --- Results are community-scoped}
+\storymeta{Approved member}{receive only matching members of this community}{I cannot find people outside this circle}{\priPzero}{\srcTx}
+\achead
+\begin{enumerate}
+  \item Given I submit filters, when results return, then every row is an approved member of the current community who matches the filters.
+  \item Given no members match, when results return, then the list is empty (empty-state copy is not specified; show an empty list, do not invent members).
+  \item Cross-community and free-text global search must not run.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEARCH-004 --- Result row content}
+\storymeta{Approved member}{see enough on each result to decide whom to open}{I do not have to open every profile}{\priPzero}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given A5 has results, when a row renders, then it shows username, status, Age1/Age2, district, location, and headline as drawn --- \emph{if} those attributes exist on the schema / profile. If the first community schema omits age, do not hardcode age columns; the mockup is an example layout.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEARCH-005 --- Open a profile from a result}
+\storymeta{Approved member}{tap a result and open that profile}{I can continue to DM or notes}{\priPzero}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given I tap a result row, when navigation completes, then I see that user's profile (other-user mode).
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEARCH-006 --- Persist filters between sessions}
+\storymeta{Approved member}{have my profile filters remembered between sessions}{I do not rebuild the form every time}{\priPzero}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given I set filters on G1, when I leave and later return to profile search in this community on this account, then the last filters are restored. The mockup subtitle is ``save between sessions.''
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEARCH-007 --- Simple versus advanced search by user level}
+\storymeta{User at a given level}{see either a simple or an advanced search}{payment or admin level can gate search depth}{\priTBD}{\srcTx}
+\notes{Only example given: simple = age and gender; advanced = more detail. Which level gets which, and whether V1 implements the gate, is \textbf{TBD}. If unimplemented, all approved members see the full community schema form.}
+\end{story}
+
+% ===========================================================================
+\section{Epic 6 --- Direct Messaging}
+% ===========================================================================
+
+\begin{story}{DM-001 --- Chat list with unread counts and sort}
+\storymeta{Approved member}{see my DM and group chats with unread counts}{I know where I have new messages}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I have chats, when A1 loads, then each row shows the chat/group name and unread count when unread $>$ 0.
+  \item Given some chats have unread messages, when the list is sorted, then unread chats are above chats with zero unread; zero-unread chats are ordered by most recent activity.
+  \item Given I am viewing a chat, when a new message arrives in that chat, then that message does not increase my unread count for that chat.
+\end{enumerate}
+\end{story}
+
+\begin{story}{DM-002 --- Search among my existing chats}
+\storymeta{Approved member}{filter my open chats by substring}{I can find a person among many connections}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I type in ``search your chats'', when the query is non-empty, then the list shows only my existing chats whose name matches as a substring.
+  \item This search must not become community-wide people search (that is A2 / A5).
+\end{enumerate}
+\end{story}
+
+\begin{story}{DM-003 --- Start or find a DM via plus (A2)}
+\storymeta{Approved member}{search a username substring and open a DM}{I can contact someone I met as a name, e.g.\ biker439}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I tap + (and I am not using the admin-only create-group path), when A2 opens, then I can filter users and groups by substring.
+  \item Given I tap a user row, when I continue, then I open a DM (A4) or their profile then DM. Spec: ``click user = choose to start chat or view profile.'' Exact one-step vs two-step is slightly underspecified; both actions must exist. \textbf{P1} on the exact interstitial.
+\end{enumerate}
+\end{story}
+
+\begin{story}{DM-004 --- Leave, delete history, and block}
+\storymeta{User in a DM}{leave the DM and choose whether to delete the chat and/or block the other person}{I can stop an unwanted conversation}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am in a DM, when I choose Leave (G2), then I see the options drawn: delete chat + leave + block; leave + block; leave chat.
+  \item Given I block the user, when they later try to start a new DM with me, then they cannot.
+  \item Given I choose delete chat, when the action completes, then that chat history is removed as described (``the other user cannot go back and look at the messages''). Confirm whether delete is for both sides as the transcript states --- implement as bilateral delete when ``delete chat'' is chosen.
+\end{enumerate}
+\end{story}
+
+\begin{story}{DM-005 --- Admin: add/remove this DM user on groups I admin}
+\storymeta{Group Admin}{from a DM, tick groups I admin to add or remove the other user}{I can admit someone who just messaged ``can I join?'' without opening their profile}{\priPzero}{\srcSpec; \srcTx; \srcMock F1}
+\achead
+\begin{enumerate}
+  \item Given I am a group admin and I am in a DM, when I open add-to-groups (F1), then I see groups I admin with on/off checkboxes, plus a Community ``admit'' checkbox as drawn.
+  \item Given I turn a group checkbox on, when saved, then that user becomes a member and the group appears in their A1.
+  \item Given I turn a group checkbox off, when saved, then membership is removed and the group disappears from their list.
+  \item A non-admin must not see this control.
+\end{enumerate}
+\end{story}
+
+\begin{story}{DM-006 --- Who may start a DM (``profiles that can contact me'')}
+\storymeta{User}{choose what profiles can contact me}{I am not opened to every member by default if the product intends a gate}{\priTBD}{\srcSpec}
+\notes{The spec lists this under DM as a bullet and does not define the rule (everyone in community, verified only, level-based, block-list only, etc.). Blocking is specified (DM-004). Additional inbound gates are \textbf{TBD}.}
+\end{story}
+
+\newpage
+% ===========================================================================
+\section{Epic 7 --- Group Chats}
+% ===========================================================================
+
+\begin{story}{GROUP-001 --- Community admin creates a group (V1)}
+\storymeta{Community Admin (or a user already allowed to create groups)}{create a group with name, info posts, calendar flag, and settings}{members have a room with rules and events}{\priPzero}{\srcSpec later text; \srcTx; \srcMock A9}
+\achead
+\begin{enumerate}
+  \item Given I have create-group rights (A7), when I use the admin control on A1 that opens A9, then I can set name; calendar on/off; Info 1--3 headline+text; new members see history; members see user list; allow post editing; and (drawn) allow direct join.
+  \item Given I tap Create, when validation passes, then the group exists in this community, I am group admin, and I may add members via A11/F2 or start empty.
+  \item Regular members must not see the create-group entry in V1 if the restrictive rule is confirmed (GROUP-002).
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-002 --- Regular users cannot create groups in V1}
+\storymeta{User}{not create a group unless later allowed}{group creation stays with the community admin}{\priPzero}{\srcSpec ``only community admin\ldots now''; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given I am a normal user, when I open +, then I get A2 (search user/group) and not A9.
+  \item \textbf{Conflict:} the spec's opening bullet says users can make a group and be admin. The walkthrough and later spec sentence override that for V1. If product later chooses the opening bullet, this story is revoked.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-003 --- Users may create groups later}
+\storymeta{User}{create a group when community admin or payment plan allows it}{more rooms can form without the community admin}{\priPtwo}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Later, community admin can allow others/anyone to create groups, possibly by payment plan / user level. Not V1.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-004 --- Add members by username search}
+\storymeta{Group Admin}{search a username and add that person to this group}{I can grow the room}{\priPzero}{\srcSpec; \srcMock F2}
+\achead
+\begin{enumerate}
+  \item Given I am group admin, when I open F2, then I can filter users and add them with the add control.
+  \item Given I add a user, when the write succeeds, then they see the group on A1.
+  \item Avatar/name opens their profile.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-005 --- Remove a member}
+\storymeta{Group Admin}{remove a user from the group after a confirm}{I can eject someone}{\priPzero}{\srcSpec; \srcMock A11}
+\achead
+\begin{enumerate}
+  \item Given I am on A11, when I use delete on a member and confirm, then membership ends and the group disappears from their A1.
+  \item A normal member cannot remove others.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-006 --- Member list visibility}
+\storymeta{Group member}{see the member list only if the group setting allows it}{the admin can protect the roster}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given ``allow people to see group members list'' is on, when a member opens group info (G3) or the members path, then they see the list.
+  \item Given the setting is off, when a non-admin member requests the list, then the API denies it --- hiding the button is not enough.
+  \item Group admin can always manage members (A11).
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-007 --- Custom member status (admin CRM fields)}
+\storymeta{Group Admin}{set a short text and three checkboxes on a member (example: paid)}{I can track group-operational status}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I open a member from the admin list, when I edit status, then I have four fields: one short text and three checkboxes.
+  \item These fields are group-membership scoped, not community profile fields.
+  \item Who can see these status fields besides the group admin is not specified (\textbf{TBD}; default: admin-only).
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-008 --- Group info shown to non-members}
+\storymeta{User who found a group}{read the group info text before joining}{I know what the room is}{\priPzero}{\srcSpec; \srcMock A2}
+\achead
+\begin{enumerate}
+  \item Given I select a group in A2, when I view group info, then I see the admin-maintained info text (image later).
+  \item I do not see the private message history unless I am a member and history rules allow it.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-009 --- Rename and delete group}
+\storymeta{Group Admin}{rename or delete my group}{I can correct the name or close the room}{\priPzero}{\srcSpec; \srcMock A10}
+\achead
+\begin{enumerate}
+  \item Given I am group admin on A10, when I rename, then the new name appears on A1 and in the chat header.
+  \item Given I delete the group, when I confirm, then the group is removed for all members. Confirm copy is not drawn beyond the button --- require a confirm.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-010 --- V1 group settings}
+\storymeta{Group Admin}{toggle the V1 settings}{each room can behave differently}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I open group settings, when I save, then these flags persist and take effect immediately for members:
+  \begin{itemize}
+    \item Allow new members to see history before / when joining.
+    \item Allow members to see the member list.
+    \item Allow users to edit their own posts.
+    \item Show group calendar.
+    \item Show sticky posts.
+  \end{itemize}
+  \item Each flag is enforced server-side, not only in the UI.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-011 --- Later group settings}
+\storymeta{Group Admin}{use settings that the spec marks later}{future rooms can hide usernames or allow direct join}{\priPtwo}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Later: allow users to see others' usernames or not.
+  \item Later: allow direct join vs message-admin-only. Transcript: V1 they always message the admin. Mockup A9 still draws the checkbox --- \textbf{P1/TBD} whether the control is visible but off, or omitted until later.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-012 --- Leave a group}
+\storymeta{Group member}{leave the group}{I always have one action as a normal member}{\priPzero}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given I am a non-admin member, when I open the chat-name menu, then Leave is available.
+  \item Given I leave, when the action completes, then I am not a member and the chat is gone from my A1.
+  \item Leave-and-block is specified for DMs, not for groups.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-013 --- Join by messaging the group admin (V1 default)}
+\storymeta{User}{request access by DMing the group admin}{I can ask to join without a self-serve join}{\priPzero}{\srcSpec; \srcTx; \srcMock A2}
+\achead
+\begin{enumerate}
+  \item Given direct join is not allowed (V1 default), when I select a group in A2, then I may view info and start a DM with the group admin; I do not become a member until an admin adds me.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-014 --- History visible to new members when allowed}
+\storymeta{New group member}{see prior posts if the admin allowed history}{I can read context (the annoying Wire default is no history)}{\priPzero}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given the history setting is on, when I am added, then I can read posts written before I joined.
+  \item Given the setting is off, when I am added, then I do not receive pre-join history.
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-015 --- Co-admins}
+\storymeta{Group Admin}{assign co-admins}{others can help run the group}{\priPtwo}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Assign co-admins is marked later. V1 has a single group admin (the creator / community-appointed admin).
+\end{enumerate}
+\end{story}
+
+\begin{story}{GROUP-016 --- Maximum group size}
+\storymeta{Group Admin}{know whether a size cap exists}{I do not hit an unstated limit}{\priTBD}{\srcSpec}
+\notes{The spec writes ``max group size?'' as an open question. Unlimited group \emph{chats} is a platform NFR; per-group headcount is unspecified.}
+\end{story}
+
+% ===========================================================================
+\section{Epic 8 --- Chat Posts, Reactions \& Comments}
+% ===========================================================================
+``Post'' is the spec's umbrella word for text, pictures, and comments. DM and group share this behaviour except where a story says group-only.
+
+\begin{story}{POST-001 --- Text post}
+\storymeta{Chat member}{send a text post}{others in the chat see it}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am a member of the chat, when I send text from the composer, then a post is stored with my user id, date+time, and my small profile picture/icon.
+  \item Given I am not a member, when I attempt to post, then the system rejects the write.
+  \item Feed order on A4: newest toward the bottom (mockup).
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-002 --- Picture post}
+\storymeta{Chat member}{post a picture}{others see the image in the feed}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I add a picture via B4 and send, when the post is created, then members see the image with date+time and my identity.
+  \item Video, audio, and collage are later (POST-012).
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-003 --- Choose camera, upload, or album image (B4)}
+\storymeta{Chat member}{add a picture from camera, new upload, or profile/album}{I can attach a real or existing image}{\priPzero}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given I tap add-picture, when B4 opens, then I see: Camera (picture will be ``Verified''); Upload new; From profile/album.
+  \item Given I choose Camera, when capture succeeds, then the image is stored with in-app-camera = true and a capture timestamp.
+  \item Given I upload or pick an album image, when posted, then it is not tagged as in-app-camera (unless that file was originally captured that way --- sources do not specify inheritance; treat a fresh upload as not camera-tagged).
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-004 --- React with emoticons}
+\storymeta{Chat member}{react to a post with emoticons (not only a single like)}{I can acknowledge a post the way Wire does}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I tap/long-press a post, when I pick an emoticon, then my reaction is stored and counts update for all members.
+  \item Multiple emoticon types are required (Wire-like row).
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-005 --- See who reacted}
+\storymeta{Chat member}{see who reacted with which emoticon}{reactions are not anonymous counts only}{\priPzero}{\srcSpec; \srcMock B3}
+\achead
+\begin{enumerate}
+  \item Given a post has reactions, when I open the who-reacted / details path from the post menu, then I see users and their emoticons.
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-006 --- Comment with original-post snippet}
+\storymeta{Chat member}{comment on a post}{my reply is attached to that post}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I choose Reply/Comment, when I send text, then a comment is stored on that post.
+  \item When the comment is shown in the feed, it displays a small, visually dimmed snippet of the original post above or with the comment.
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-007 --- Delete own post}
+\storymeta{Chat member}{delete my own post and its comments}{I can remove something I should not have sent}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I own the post, when I delete it, then the post and its comments (and reactions) are removed for everyone.
+  \item Own-delete is always allowed; it is not gated by the edit setting.
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-008 --- Edit own post if the group allows it}
+\storymeta{Group member}{edit my own post only when the group setting allows editing}{I can fix typos when the admin permits it}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I am in a group, the allow-edit setting is on, and I own the post, when I use Edit, then I can change the post content.
+  \item Given the setting is off, when I am a non-admin owner, then Edit is not offered and the API rejects edit.
+  \item DM edit: the edit setting is listed under group settings. Whether DMs are always editable is \textbf{TBD}. Do not silently copy the group flag onto DMs.
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-009 --- Group admin deletes any post}
+\storymeta{Group Admin}{delete another member's post}{I can moderate the room}{\priPzero}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given I am group admin of this group, when I long-press any post, then Delete is available for others' posts as well as mine.
+  \item This is not gated by a setting. Admins can always delete posts.
+  \item There is no admin-delete concept in a DM.
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-010 --- Long-press / post menu (B3)}
+\storymeta{Chat member}{open a large post menu}{power actions stay hidden until needed}{\priPzero}{\srcSpec; \srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I long-press (or use the spec's click-hold) a post, when the menu opens, then it is a large/full-width sheet, not a tiny popover.
+  \item Menu items from the mockup: emoticons; who reacted; Details; Edit (own or admin); Delete (own or admin-others); Reply; Copy; Cancel.
+  \item Copy and Details are Wire leftovers also drawn on the mockup --- include them as drawn. Details content beyond who-reacted is not specified (\textbf{TBD} if Details $\neq$ who-reacted).
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-011 --- Open poster profile from username}
+\storymeta{Chat member}{tap a username on a post and open that profile}{I can move from chat to profile}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I tap the poster's name or icon, when they are in my community, then I open their profile.
+\end{enumerate}
+\end{story}
+
+\begin{story}{POST-012 --- Video, audio, collage later}
+\storymeta{Chat member}{post video, audio, or collage}{richer media}{\priPtwo}{\srcSpec; \srcTx}
+\end{story}
+
+\begin{story}{POST-013 --- Temporary / limited-view posts later}
+\storymeta{Chat member}{send a post limited by time or number of views}{Snapchat-like ephemerality}{\priPtwo}{\srcSpec; \srcTx}
+\end{story}
+
+\begin{story}{POST-014 --- Filter group posts by profile parameters later}
+\storymeta{Group member}{see only posts from people matching profile filters}{I can skim an Ads-like room}{\priPtwo}{\srcSpec; \srcTx}
+\notes{This is the transcript's V1-ads concept (``just a post + later filter''). Dedicated ad screens are a separate conflict (Epic 15).}
+\end{story}
+
+% ===========================================================================
+\section{Epic 9 --- Verification}
+% ===========================================================================
+
+\begin{story}{VERIFY-001 --- Manual admin verification of new users}
+\storymeta{Community Admin}{manually decide whether a new user is who they say they are}{admission is not algorithmic}{\priPzero}{\srcSpec; \srcTx; \srcMock AD}
+\achead
+\begin{enumerate}
+  \item Given a user is on AD, when they have filled required profile information and contacted the admin, then I can review and approve or not approve.
+  \item Given I have not approved them, when they log in, then they remain on AD / unapproved (AUTH-003).
+  \item There is no automated identity vendor in V1.
+\end{enumerate}
+\end{story}
+
+\begin{story}{VERIFY-002 --- Unapproved user fills profile and DMs the admin}
+\storymeta{Unapproved user}{fill my profile and message the community admin}{the admin can review me}{\priPzero}{\srcMock AD}
+\achead
+\begin{enumerate}
+  \item Given I am on AD, then I see copy that I must fill the profile, message the admin for verification, and that I need to fill all info to be approved.
+  \item Given I tap Create/Edit profile, when it opens, then I reach own-profile edit.
+  \item Given I tap Chat with admin, when it opens, then I have a DM with the community admin (A4).
+\end{enumerate}
+\end{story}
+
+\begin{story}{VERIFY-003 --- In-app camera capture for verification evidence}
+\storymeta{User}{take a live picture in the app (ID, card, or handwritten note with date and name)}{the admin can see a capture that is harder to AI-upload}{\priPzero}{\srcTx; \srcSpec}
+\achead
+\begin{enumerate}
+  \item Given I use Camera for this evidence, when the capture UI opens, then I cannot satisfy this step by picking an arbitrary gallery file in that same action (frontend forces capture).
+  \item Transcript examples: handwritten note with today's date and name; holding ID/card in a live snapshot. Spec image rule also says date. Require date; name-on-note is from the transcript --- include both in helper copy unless product shortens it.
+  \item The captured file is stored with in-app-camera = true and timestamp.
+\end{enumerate}
+\end{story}
+
+\begin{story}{VERIFY-004 --- Verified indicator on every image}
+\storymeta{Any viewer}{see whether an image was taken with the internal app camera, plus date}{I can treat camera-tagged images as a stronger trust signal}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given an image was captured via the in-app camera, when it is shown anywhere (chat, profile, album, ad), then the UI shows that it was taken by the internal camera and shows the date.
+  \item Given an image was a normal upload, when it is shown, then it does not claim to be camera-verified.
+\end{enumerate}
+\end{story}
+
+\begin{story}{VERIFY-005 --- Honest meaning of ``verified picture''}
+\storymeta{System / UX copy}{not claim cryptographic proof of identity}{we do not over-promise}{\priPzero}{\srcTx (implicit); product integrity}
+\achead
+\begin{enumerate}
+  \item UI copy may say the picture was taken with the in-app camera and show the date.
+  \item UI copy must not claim the image is impossible to fake. Sources present this as an added layer / deterrent for admin review.
+\end{enumerate}
+\end{story}
+
+\begin{story}{VERIFY-006 --- AI-assisted verification later}
+\storymeta{Community Admin}{use AI later (e.g.\ face-picture check)}{some review can be assisted}{\priPtwo}{\srcTx}
+\end{story}
+
+% ===========================================================================
+\section{Epic 10 --- Sticky Posts \& Calendar}
+% ===========================================================================
+
+\begin{story}{STICKY-001 --- View sticky information in a group}
+\storymeta{Group member}{open named info items (rules, FAQ, etc.) from the group chat header}{I can read room rules without hunting the history}{\priPzero}{\srcSpec; \srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I am in a group (A4B) and ``show sticky posts'' is on, when the header shows Info items (examples: Rules, FAQ; admin-chosen headlines), then I can open one and read the long text on B2.
+  \item Given the setting is off, when I am a normal member, then sticky controls are not shown and the info API is not available to me.
+  \item DMs do not have official sticky posts.
+\end{enumerate}
+\end{story}
+
+\begin{story}{STICKY-002 --- Admin create, edit, delete sticky posts}
+\storymeta{Group Admin}{add, edit, and delete sticky posts with a headline and long body}{new members can be pointed at rules}{\priPzero}{\srcSpec; \srcMock A9}
+\achead
+\begin{enumerate}
+  \item Given I am group admin, when I edit Info 1--3 (headline + text), then members see the updated headlines and bodies.
+  \item Spec says ``info 1+2'' / multiple allowed; mockup draws three. Support at least two; three matches the later mockup. Do not invent an unbounded CMS beyond what is drawn unless product expands it.
+\end{enumerate}
+\end{story}
+
+\begin{story}{CAL-001 --- View group calendar}
+\storymeta{Group member}{open the group calendar and see events on a month view}{I can see that there is a ride on Tuesday}{\priPzero}{\srcSpec; \srcMock B1}
+\achead
+\begin{enumerate}
+  \item Given I am a member and ``show group calendar'' is on, when I open the calendar, then I see a month (choose month/year), dates with events marked, and tapping a date lists that day's events (header + text).
+  \item There is no community-wide or platform-wide calendar in the sources.
+  \item DMs have no calendar.
+\end{enumerate}
+\end{story}
+
+\begin{story}{CAL-002 --- Admin create, edit, delete calendar events}
+\storymeta{Group Admin}{add, edit, and delete calendar items}{I can publish group events}{\priPzero}{\srcSpec; \srcMock G4}
+\achead
+\begin{enumerate}
+  \item Given I am group admin, when I use + or tap an event, then G4 lets me set date, headline, and text, and Save or Delete.
+  \item Non-admins cannot create/edit/delete events. The sources do not allow members to propose events --- do not invent that.
+  \item Recurring events, reminders, and notifications tied to events are not specified.
+\end{enumerate}
+\end{story}
+
+% ===========================================================================
+\section{Epic 11 --- Personal Notes \& Ratings}
+% ===========================================================================
+Two note kinds exist. Do not conflate them. Reputation and profile score are later and are not these private stars.
+
+\begin{story}{NOTE-001 --- Personal sticky note on a chat}
+\storymeta{User}{write a long private note on a chat that only I can see}{I can remember ``Sven is annoying'' while I chat}{\priPzero}{\srcSpec; \srcTx; \srcMock B5}
+\achead
+\begin{enumerate}
+  \item Given I am in a chat, when I open the fixed private-notes control, then I can add/edit/delete a long text note scoped to that chat and to me.
+  \item Given any other member opens the same chat, when they look, then they cannot see my note or that it exists.
+\end{enumerate}
+\end{story}
+
+\begin{story}{NOTE-002 --- Private note on another profile}
+\storymeta{User}{write a note on another profile that only I can see}{I can keep a mini-CRM}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I view another profile, when I save a note, then it is stored as author $\rightarrow$ subject and shown only to me.
+  \item The profile owner must never see the note text or an indicator that a note exists.
+\end{enumerate}
+\end{story}
+
+\begin{story}{NOTE-003 --- Private 1--5 star rating}
+\storymeta{User}{set a 1--5 star rating on another profile that only I can see}{I can rank people for myself}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I view another profile, when I set stars 1--5, then only I can see that rating.
+  \item The rating is not aggregated, averaged, or shown to the owner in V1.
+  \item Mockup B5 draws notes and stars on one screen titled with group name or profile name --- one UI may serve chat-note and profile-note+rating; privacy rules still differ by target.
+\end{enumerate}
+\end{story}
+
+\begin{story}{NOTE-004 --- Profile completeness score later}
+\storymeta{User}{receive an automatic score for filling fields and verified pictures}{complete profiles are rewarded later}{\priPtwo}{\srcTx}
+\notes{Examples given only as thinking: 200 characters = points; main picture = points; verified main picture = more points. Not in the current specification to build.}
+\end{story}
+
+\begin{story}{NOTE-005 --- Reputation later}
+\storymeta{User}{be scored by others' opinions of my behaviour}{mass DMs and bad actors can be limited later}{\priPtwo}{\srcTx}
+\notes{Could later stop someone from contacting people. Not specified for V1.}
+\end{story}
+
+\newpage
+% ===========================================================================
+\section{Epic 12 --- Navigation \& Main Application UI}
+% ===========================================================================
+
+\begin{story}{NAV-001 --- Main screen A1 as home after approval}
+\storymeta{Approved member}{land on the chat list as the main application view}{chat is the home base}{\priPzero}{\srcSpec; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given I log in as approved, when the app opens, then A1 shows: avatar, title Chats, + (and admin create control if A7), search-your-chats, chat rows, bottom navigation as decided in NAV-003.
+\end{enumerate}
+\end{story}
+
+\begin{story}{NAV-002 --- Plus opens join-chat search (full-screen)}
+\storymeta{User}{open a large + sheet to find a user or group}{starting a conversation is easy to tap}{\priPzero}{\srcTx; \srcMock A2}
+\achead
+\begin{enumerate}
+  \item Given I tap +, when A2 opens, then it uses a large portion of the screen (transcript: do not use a tiny dropdown).
+  \item Entries depend on create-group rights (GROUP-001/002).
+\end{enumerate}
+\end{story}
+
+\begin{story}{NAV-003 --- Bottom navigation structure (conflict)}
+\storymeta{User}{use the bottom navigation the product actually chose}{I am not trained on a layout that will be reversed}{\priTBD}{\srcTx vs \srcMock}
+\achead
+\begin{enumerate}
+  \item \textbf{Alternative A (transcript):} two items --- Chats (this list) and Search (profile search form). Own profile = top-left avatar. Founder said the third icon is not needed.
+  \item \textbf{Alternative B (mockup 260922):} three items --- Chats, Profiles (A5), Ads (A6). Own profile still = avatar.
+  \item Engineering must not pick A or B silently. \textbf{TBD --- Product Decision Required.}
+\end{enumerate}
+\end{story}
+
+\begin{story}{NAV-004 --- Wire-like, low-chrome interaction}
+\storymeta{User}{see few icons and discover extra actions via long-press}{the app feels limited but easy}{\priPzero}{\srcTx}
+\achead
+\begin{enumerate}
+  \item Given a normal member uses a chat, when they do not long-press, then they can still post and react without opening admin menus.
+  \item QA should flag screens that add icon bars not present in Wire or the handwritten map without a source.
+\end{enumerate}
+\end{story}
+
+\begin{story}{NAV-005 --- Screen inventory (mockup IDs)}
+\storymeta{Designer / frontend}{implement the drawn screens rather than inventing new primary pages}{the flow matches Peter's map}{\priPzero}{\srcMock}
+\notes{See Appendix~A. Blank or unfinished: G3 is almost empty (name, headline, member list). Do not invent G3's remaining content. Ads screens exist on paper but conflict with the transcript (Epic 15).}
+\end{story}
+
+% ===========================================================================
+\section{Epic 13 --- Settings}
+% ===========================================================================
+Only settings named by the sources. Do not add notification, theme, or language settings as V1 product requirements.
+
+\begin{story}{SET-001 --- Group settings screen}
+\storymeta{Group Admin}{open group settings as a list of on/off options}{I can configure the room}{\priPzero}{\srcSpec; \srcTx; S4 as pattern only}
+\achead
+\begin{enumerate}
+  \item Given I am group admin, when I open settings, then I see the V1 flags in GROUP-010 as explicit toggles (transcript: radio/toggle style like Wire options).
+  \item Do not copy Wire's iOS notification, calls, or protocol settings as product settings.
+  \item Later flags (GROUP-011) are omitted or disabled unless product explicitly includes the A9 ``direct join'' checkbox as visible-but-later.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SET-002 --- Inbound DM contact rules}
+\storymeta{User}{choose what profiles can contact me}{unwanted DMs can be reduced}{\priTBD}{\srcSpec}
+\notes{Named under Chat / DM in the spec. No UI, no rule set. Blocking (DM-004) is the only specified inbound control. Do not invent a preference panel.}
+\end{story}
+
+\begin{story}{SET-003 --- No additional user settings invented}
+\storymeta{User}{only see settings the sources name}{the app stays minimal}{\priPzero}{Methodology}
+\achead
+\begin{enumerate}
+  \item V1 must not add theme, language, notification, privacy-policy, or ``who can see my profile'' screens unless product later specifies them. Profile visibility inside a community is implied: members can view other members' profiles.
+\end{enumerate}
+\end{story}
+
+% ===========================================================================
+\section{Epic 14 --- Notifications}
+% ===========================================================================
+
+\begin{story}{NOTIF-001 --- Browser notifications later}
+\storymeta{User}{receive a notification when a new message arrives}{I do not miss DMs}{\priPtwo}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Spec: turn on/off iPhone + Android notifications when a new message arrives --- marked later.
+  \item Transcript: possible on the web, but the notification is from the browser (e.g.\ Safari), showing the website name, not a native app notification.
+  \item V1 has no notification requirement.
+\end{enumerate}
+\end{story}
+
+% ===========================================================================
+\section{Epic 15 --- Advertising}
+% ===========================================================================
+
+\begin{story}{AD-001 --- V1 ads concept (conflict)}
+\storymeta{Product Owner}{decide what Ads means in V1}{engineering does not build two products}{\priTBD}{\srcTx vs \srcMock}
+\achead
+\begin{enumerate}
+  \item \textbf{Alternative A (transcript):} no specific ad functionality. An ad is a normal post in a group (likely named Ads). Filtering that feed by profile parameters is later (POST-014). Monetisation is later.
+  \item \textbf{Alternative B (mockup 260922):} dedicated screens --- A6 all ads; C4 one user's ads; C9 my ads; D1 sort/filter (remembered between sessions); D2 publish/edit own ad; D3 view others' ad (not editable) with Profile and DM.
+  \item Do not implement B as if A did not exist. \textbf{TBD --- Product Decision Required.}
+\end{enumerate}
+\end{story}
+
+\begin{story}{AD-002 --- Dedicated ad list and publish (only if Alternative B is chosen)}
+\storymeta{User}{browse ads and publish my own}{I can post ``looking for Saturday woods riders in Stockholm''}{\priPone}{\srcMock}
+\achead
+\begin{enumerate}
+  \item Given Alternative B is approved, when I open A6, then I see ad rows: headline, username, status, ages, district, location, published date.
+  \item Given I publish via D2, when I save, then I set Looking for (profile-type pulldown), headline, text, district (Sweden-area pulldown), location (free text), image (via B4). Age1, Age2, Date, Status are shown and \textbf{not editable} on the ad (from profile).
+  \item Given I view another's ad (D3), when I use Profile or DM, then I reach that profile or a DM.
+  \item Given I own the ad (D2), when I publish changes or delete, then the list updates.
+  \item Filter D1 remembers values between sessions. Field types drawn: multi-select, numeric interval, substring, status, looking for, district, location.
+\end{enumerate}
+\notes{Priority is P1 because the screens are drawn but contradicted by the transcript.}
+\end{story}
+
+\begin{story}{AD-003 --- Monetised advertising later}
+\storymeta{Platform / Community Admin}{charge for ads later}{ads become a revenue feature}{\priPtwo}{\srcTx}
+\achead
+\begin{enumerate}
+  \item Transcript: keep ads as a monetised feature for the future. Do not build billing into V1 ads even if Alternative B ships as a content type.
+\end{enumerate}
+\end{story}
+
+% ===========================================================================
+\section{Epic 16 --- Payments \& Monetisation}
+% ===========================================================================
+
+\begin{story}{PAY-001 --- Payment methods later}
+\storymeta{Payer (any role)}{pay by credit card and Swedish Swish}{local and card payment exist later}{\priPtwo}{\srcSpec; \srcTx}
+\end{story}
+
+\begin{story}{PAY-002 --- Multi-level fees later}
+\storymeta{Platform / Community / Group Admin / User}{pay along the hierarchy}{community admin pays platform (base + per user or \%); group admins may pay community; users may pay to use a community and/or a group}{\priPtwo}{\srcSpec; \srcTx}
+\end{story}
+
+\begin{story}{PAY-003 --- Community admin as payment receiver later}
+\storymeta{Community Admin}{receive a profit share later}{running a community can be compensated}{\priPtwo}{\srcTx}
+\notes{Founder has not figured out how. Do not design a split engine.}
+\end{story}
+
+\begin{story}{PAY-004 --- User levels gated by payment later}
+\storymeta{User}{gain rights (e.g.\ advanced search, create groups) via payment level}{monetisation can unlock features}{\priPtwo}{\srcSpec; \srcTx}
+\notes{Depends on the TBD level matrix. Not V1.}
+\end{story}
+
+% ===========================================================================
+\section{Epic 17 --- Administration}
+% ===========================================================================
+
+\begin{story}{ADMIN-001 --- Platform Admin responsibilities}
+\storymeta{Platform Admin}{own the platform and onboard communities}{there is a single top operator (today: Petter)}{\priPzero}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given I am platform admin, then I can have a community created and can act as community admin for the first community.
+  \item A full platform console (billing, all-community dashboard) is not specified. Do not invent one.
+\end{enumerate}
+\end{story}
+
+\begin{story}{ADMIN-002 --- Community Admin configures this community's profile schema}
+\storymeta{Platform Admin / Community Admin}{define this community's profile fields}{members see the right questions}{\priPzero}{\srcTx}
+\achead
+\begin{enumerate}
+  \item Follow DYN-004: V1 needs a way for the founder to add/change field definitions for a community. No dedicated screen is drawn.
+  \item Self-serve for other community admins is DYN-005 (P2).
+\end{enumerate}
+\end{story}
+
+\begin{story}{ADMIN-003 --- Community Admin verifies and admits users}
+\storymeta{Community Admin}{review AD users and admit them to the community}{membership stays manual}{\priPzero}{\srcTx; \srcMock}
+\achead
+\begin{enumerate}
+  \item Given an unapproved user DMs me and has a profile (and camera evidence if requested), when I admit them (F1 community checkbox or equivalent), then they become an approved member and reach A1 on next login.
+  \item Rejection / request-more-info UX is not drawn (\textbf{TBD} for exact decline path; not admitting them is enough for V1).
+\end{enumerate}
+\end{story}
+
+\begin{story}{ADMIN-004 --- Community Admin creates groups in V1}
+\storymeta{Community Admin}{create groups}{rooms exist only when I allow them}{\priPzero}{\srcSpec; \srcTx}
+\deps{GROUP-001, GROUP-002.}
+\end{story}
+
+\begin{story}{ADMIN-005 --- Group Admin surface (chat-name menu)}
+\storymeta{Group Admin}{reach admin actions from the chat name}{admin stays inside the chat, like Wire}{\priPzero}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given I tap the group name, when I am admin, then I can: edit sticky posts; rename; edit group info text; delete group; add users; list members (click to profile, DM, or edit custom status); remove people; add/edit/delete calendar items; open group settings.
+  \item Co-admins later (GROUP-015).
+\end{enumerate}
+\end{story}
+
+\begin{story}{ADMIN-006 --- Admit to community and assign groups (F1)}
+\storymeta{Community or Group Admin}{from a person, tick community admission and groups}{chat remains the admin interface}{\priPzero}{\srcMock; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given I open F1 for a user, when I toggle Community, then I admit or (if off) do not admit them to the community. Whether unchecking removes an already-approved member is not specified (\textbf{TBD}).
+  \item Group checkboxes follow DM-005.
+\end{enumerate}
+\end{story}
+
+\begin{story}{ADMIN-007 --- Group Admin always deletes posts}
+\storymeta{Group Admin}{delete any post in my group}{I can moderate}{\priPzero}{\srcSpec}
+\deps{POST-009.}
+\end{story}
+
+% ===========================================================================
+\section{Epic 18 --- Security, Privacy \& Data Access}
+% ===========================================================================
+Sources say ``High security'' and ``GDPR compliant'' and ``European servers'' without naming mechanisms. Stories below translate those statements and the isolation/privacy rules. They do not mandate JWT vs session, specific password policy, rate limits, or audit logs.
+
+\begin{story}{SEC-001 --- Authorise every write by role and scope}
+\storymeta{System}{reject actions the caller is not allowed to perform}{login alone is not enough}{\priPzero}{\srcSpec roles; \srcTx}
+\achead
+\begin{enumerate}
+  \item Given a valid session, when the caller deletes a post they do not own and they are not group admin of that group, then the write is rejected.
+  \item Given a valid session, when the caller lists members of a group whose member-list setting is off and they are not admin of that group, then the read is rejected.
+  \item Given a valid session for community A, when the caller queries community B data, then the request is rejected.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEC-002 --- Community isolation on all member data}
+\storymeta{Member}{never receive another community's profiles, messages, or schema}{isolation bugs are treated as privacy defects}{\priPzero}{\srcTx}
+\deps{COMM-003.}
+\end{story}
+
+\begin{story}{SEC-003 --- Private notes and ratings never leak to the subject}
+\storymeta{User}{have my notes and stars about someone stay mine}{the mini-CRM is one-directional}{\priPzero}{\srcSpec}
+\achead
+\begin{enumerate}
+  \item Given User A stored a note or rating about User B, when User B loads their own profile or any API about themselves, then that note/rating is absent.
+  \item Given User C is not the author, when C requests A's note about B, then access is denied.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEC-004 --- Locked album password is a second gate}
+\storymeta{User}{keep album images hidden until the correct album password is entered}{trust is shared manually}{\priPzero}{\srcSpec}
+\deps{PROF-013, PROF-014.}
+\end{story}
+
+\begin{story}{SEC-005 --- Blocked users cannot start a new DM}
+\storymeta{User}{remain unreachable by someone I blocked}{leave+block works}{\priPzero}{\srcSpec}
+\deps{DM-004.}
+\end{story}
+
+\begin{story}{SEC-006 --- European servers and GDPR}
+\storymeta{User / operator}{have the service hosted on European servers and treated as GDPR-compliant}{the spec's legal constraints are met}{\priPzero}{\srcSpec; \srcTx}
+\achead
+\begin{enumerate}
+  \item Hosting must be in Europe as stated.
+  \item GDPR-compliant is stated; export, deletion, lawful basis, DPA, and retention are \textbf{not} enumerated. Those mechanics are \textbf{TBD} as compliance design, not as invented user stories.
+\end{enumerate}
+\end{story}
+
+\begin{story}{SEC-007 --- High security without a mandated mechanism}
+\storymeta{Operator}{treat security as a stated requirement}{auth and storage are not casual}{\priPzero}{\srcSpec}
+\notes{No password policy, 2FA, rate limit, or audit log is specified. Implementation may apply standard practice; those extras are not V1 product stories unless product adds them.}
+\end{story}
+
+\begin{story}{SEC-008 --- Image file constraints}
+\storymeta{User}{upload images the system will accept}{albums and posts have a defined limit}{\priTBD}{Not specified}
+\notes{Image storage approach and max file sizes are not addressed in the sources.}
+\end{story}
+
+\newpage
+% ===========================================================================
+\section{End-to-End User Flows}
+% ===========================================================================
+Flows use the mockup IDs. A diamond marks a TBD branch.
+
+\subsection{Flow 1 --- New user $\rightarrow$ community $\rightarrow$ profile}
+\begin{verbatim}
+Visitor
+  -> Opens community URL
+     -> System shows AA (name, picture, Login, Join)
+Visitor
+  -> Taps Join
+     -> AC: username, password, password, email
+  -> Taps Send
+     -> Account created (unapproved)
+     -> Email with login link -> AB
+User
+  -> Logs in (not approved)
+     -> AD
+  -> Create/Edit profile -> own profile fields (schema of this community)
+  -> Chat with admin -> A4 DM
+Community Admin
+  -> Reviews profile / camera evidence
+  -> Admits via F1 Community checkbox (or equivalent)
+     -> Membership = approved
+User
+  -> Next login -> A1
+\end{verbatim}
+Business writes: Account; ProfileFieldValues; CommunityMembership (unapproved$\rightarrow$approved); optional Verification image (camera-tagged).
+
+\subsection{Flow 2 --- User $\rightarrow$ profile search $\rightarrow$ profile $\rightarrow$ DM}
+\begin{verbatim}
+Approved member on A1
+  -> Opens Profiles / Search  [NAV-003: tab vs icon]
+     -> A5 result list (previous G1 filters restored)
+  -> Opens G1, sets community-schema filters, returns
+     -> Query scoped to this community only
+  -> Taps a row
+     -> Other profile (non-editable)
+  -> Optional: private note / stars (only author can read)
+  -> Taps DM
+     -> A4 DM created or opened
+     -> If inbound-contact rule exists (SET-002 TBD), gate applies
+\end{verbatim}
+
+\subsection{Flow 3 --- Existing chats $\rightarrow$ open $\rightarrow$ send message}
+\begin{verbatim}
+Approved member on A1
+  -> Optionally substring-filters own chats
+  -> Taps a row (unread badge if any)
+     -> A4 / A4B
+  -> Types text or adds picture (B4)
+  -> Sends
+     -> AuthN + AuthZ (member?)
+     -> Post stored with timestamp + avatar
+     -> Other members' unread counts increment
+     -> Transport (websocket / poll / SSE) = implementation choice
+\end{verbatim}
+
+\subsection{Flow 4 --- Search group $\rightarrow$ info $\rightarrow$ join request}
+\begin{verbatim}
+Approved member
+  -> Taps + -> A2
+  -> Substring filter
+  -> Taps a group
+     -> Group info text (public)
+  -> If direct join allowed [V1 default: NO; mockup checkbox TBD]
+        -> Member immediately
+     Else
+        -> DM group admin (A4)
+Group Admin
+  -> Uses F1 / F2 / DM shortcut
+     -> GroupMembership created
+     -> Group appears on requester's A1
+     -> History visible only if GROUP-014 setting is on
+\end{verbatim}
+
+\subsection{Flow 5 --- Group admin manages members}
+\begin{verbatim}
+Group Admin in group A4B
+  -> Taps chat name -> admin menu / A10
+  -> User list A11
+  -> Tap avatar -> profile
+  -> Tap delete -> confirm -> membership removed
+  -> Tap + -> F2 search -> add
+  -> Tap member -> custom status (1 text + 3 checkboxes)
+Alternative (faster):
+  Admin in a DM -> F1 tick/untick groups (+ community admit)
+\end{verbatim}
+
+\subsection{Flow 6 --- Group admin sticky post}
+\begin{verbatim}
+Group Admin
+  -> A9/A10 or chat-name menu
+  -> Edit Info N headline + long text
+     -> StickyPost upsert
+Member in A4B (setting show sticky = on)
+  -> Taps headline (e.g. Rules)
+     -> B2 full text
+\end{verbatim}
+
+\subsection{Flow 7 --- Group admin calendar event}
+\begin{verbatim}
+Group Admin
+  -> Calendar from A4B (or A9 calendar flag)
+     -> Month view B1
+  -> Taps + or an event -> G4
+  -> Date, headline, text -> Save or Delete
+Member (show calendar = on)
+  -> Opens calendar
+  -> Month with marked dates
+  -> Taps a date -> list of events
+\end{verbatim}
+
+\subsection{Flow 8 --- User verification}
+\begin{verbatim}
+Unapproved user on AD
+  -> Completes required profile fields
+  -> Opens in-app camera (cannot satisfy with a random gallery pick)
+  -> Holds note (date + name) and/or ID as requested
+  -> Image stored: camera-tagged + timestamp
+  -> DMs community admin
+Community Admin
+  -> Reviews profile + tagged image
+  -> Approves (manual)
+     -> User may use A1
+Copy must not claim the photo is unfakeable.
+\end{verbatim}
+
+\subsection{Flow 9 --- Locked album}
+\begin{verbatim}
+Owner on own profile
+  -> Albums C5 -> E1
+  -> Sets password; adds images (verified flag if camera)
+Viewer on other profile
+  -> Albums C8 -> E2
+  -> Password prompt
+  -> Correct -> images this session
+  -> Incorrect -> still locked
+No in-app ``grant access'' flow is specified.
+\end{verbatim}
+
+\subsection{Flow 10 --- Admin configures community profile fields}
+\begin{verbatim}
+Platform Admin (founder), first communities
+  -> Uses the field-definition capability (UI not drawn --- TBD)
+  -> Adds types: checkbox, text, numeric, image, pulldown, multi-choice, ...
+     -> ProfileFieldDef rows for this community only
+Member
+  -> Own profile shows those fields (PROF-015)
+  -> G1 search form shows matching filter widgets (DYN-003)
+Other community admins
+  -> Self-serve designer = later (DYN-005)
+\end{verbatim}
+
+% ===========================================================================
+\section{Non-Functional Requirements}
+% ===========================================================================
+
+\subsection{Explicit in the sources}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Source / notes} \\
+\midrule
+NFR-001 & Web-based, mobile-first & Spec, transcript \\
+NFR-002 & Extremely easy / fast (Wire-like; a slow WordPress-like platform was rejected) & Spec, transcript \\
+NFR-003 & European servers & Spec \\
+NFR-004 & GDPR compliant & Spec (mechanics TBD) \\
+NFR-005 & High security & Spec (mechanism not specified) \\
+NFR-006 & Handle 100 concurrent users now & Spec \\
+NFR-007 & Handle thousands of users within 2--3 years & Spec \\
+NFR-008 & Unlimited group chats and DM chats & Spec \\
+NFR-009 & Community isolation as a correctness/privacy property & Transcript \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Assignment / inferred --- not source product requirements}
+\begin{itemize}
+  \item \textbf{PWA / service worker / offline:} ``PWA'' appears as a project label, not as an offline or installability requirement in S1--S3. Treat installability and offline as \textbf{TBD} unless the assignment separately mandates them.
+  \item \textbf{Realtime transport:} not specified. WebSockets, polling, or SSE are implementation choices.
+  \item \textbf{Next.js / Supabase / TypeScript:} implementation context, not NFRs from the client.
+  \item \textbf{HTTPS / hashed passwords:} reasonable engineering practice under ``high security,'' not a named product story.
+\end{itemize}
+
+% ===========================================================================
+\section{V1 Scope}
+% ===========================================================================
+
+\begin{longtable}{@{}p{2.1cm}p{4.6cm}p{3.6cm}p{1.6cm}p{2.2cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Stories} & \textbf{Pri} & \textbf{Status} \\
+\midrule
+\endhead
+V1-01 & Join, email link, login, pending AD & AUTH-001--005, VERIFY-002 & P0 & In scope \\
+V1-02 & Community URL + isolation + manual admit & COMM-001--004, ADMIN-003 & P0 & In scope \\
+V1-03 & Own/other profile, base fields, albums, lock & PROF-001--007, 010--015 & P0 & In scope \\
+V1-04 & Dynamic field backend + search mapping & DYN-001--004 & P0 & In scope \\
+V1-05 & Form-based community profile search & SEARCH-001--006 & P0 & In scope \\
+V1-06 & Chat list, unread sort, in-list search, + & DM-001--003, NAV-001--002 & P0 & In scope \\
+V1-07 & DM leave / delete / block & DM-004 & P0 & In scope \\
+V1-08 & Admin add-to-groups from person/DM & DM-005, ADMIN-006 & P0 & In scope \\
+V1-09 & Admin-only group create, members, settings & GROUP-001--002, 004--010, 012--014 & P0 & In scope \\
+V1-10 & Posts, images, camera tag, react, comment, edit/delete & POST-001--011 & P0 & In scope \\
+V1-11 & Manual verification + camera tag everywhere & VERIFY-001--005 & P0 & In scope \\
+V1-12 & Sticky posts + group calendar & STICKY-001--002, CAL-001--002 & P0 & In scope \\
+V1-13 & Private chat notes; profile notes; 1--5 stars & NOTE-001--003 & P0 & In scope \\
+V1-14 & Minimal Wire-like chrome & NAV-004--005 & P0 & In scope \\
+V1-15 & EU hosting, GDPR statement, high-level security & SEC-001--007, NFR-001--009 & P0 & In scope \\
+V1-16 & Main-image count (1 vs 3) & PROF-008 & TBD & Blocked on decision \\
+V1-17 & Latest login on profile & PROF-009 & P1 & Mockup only \\
+V1-18 & Bottom nav 2 vs 3 & NAV-003 & TBD & Blocked \\
+V1-19 & Ads dedicated UI & AD-002 & P1 & Blocked on AD-001 \\
+\bottomrule
+\end{longtable}
+
+% ===========================================================================
+\section{Future / Later}
+% ===========================================================================
+\begin{longtable}{@{}p{2.3cm}p{5.4cm}p{6.4cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Stories} \\
+\midrule
+\endhead
+F-01 & Video / audio / collage posts & POST-012 \\
+F-02 & Temporary / limited-view posts & POST-013 \\
+F-03 & Filter group posts by profile parameters & POST-014 \\
+F-04 & Browser / OS notifications & NOTIF-001 \\
+F-05 & Users create groups; payment-gated creation & GROUP-003, PAY-004 \\
+F-06 & Direct join (if not taken from mockup) & GROUP-011 \\
+F-07 & Hide other usernames & GROUP-011 \\
+F-08 & Co-admins & GROUP-015 \\
+F-09 & Self-serve field UI for other community admins & DYN-005 \\
+F-10 & Self-serve multi-community onboarding & COMM-007 \\
+F-11 & Reputation score & NOTE-005 \\
+F-12 & Profile completeness score & NOTE-004 \\
+F-13 & Monetised ads & AD-003 \\
+F-14 & Payments: card, Swish, multi-level, profit share & PAY-001--003 \\
+F-15 & AI-assisted verification & VERIFY-006 \\
+F-16 & Google / social login & AUTH-005 (explicitly not now) \\
+\bottomrule
+\end{longtable}
+
+% ===========================================================================
+\section{TBD / Product Decisions Required}
+% ===========================================================================
+Only questions the sources actually open or contradict.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{NAV-003} Bottom nav: 2 tabs (transcript) vs 3 tabs (mockup).
+  \item \textbf{COMM-006} Account created per community vs one platform account that joins communities.
+  \item \textbf{COMM-005} Path URL vs true subdomain.
+  \item \textbf{GROUP-002} Confirm admin-only group creation (recommended reading of later spec + transcript).
+  \item \textbf{DYN-006} Concrete field list for community one.
+  \item \textbf{SEARCH-007 / user levels} Permission matrix for levels 1--3 besides simple vs advanced search.
+  \item \textbf{AD-001} Ads as normal group posts vs dedicated A6/C4/C9/D1--D3.
+  \item \textbf{GROUP-011 / A9} Show ``allow direct join'' in V1 or omit until later.
+  \item \textbf{PROF-008} One main image vs three.
+  \item \textbf{SET-002} Meaning of ``choose what profiles can contact me.''
+  \item \textbf{GROUP-016} Max group size (spec asks).
+  \item \textbf{SEC-008} Image storage and max sizes.
+  \item \textbf{PROF-013} Whether album password sharing stays fully out-of-band.
+  \item \textbf{AUTH-004 / AUTH-006} Forgot-password steps; logout/session lifetime.
+  \item \textbf{POST-008} Are DMs editable, given the edit flag is a group setting?
+  \item \textbf{GROUP-007} Who besides the group admin sees custom member status.
+  \item \textbf{ADMIN-006} Does unchecking Community on F1 revoke membership?
+  \item \textbf{SEC-006} GDPR export/delete/retention mechanics.
+  \item \textbf{AUTH-002} Login-link token lifetime.
+  \item \textbf{Facebook-style ``I agree'' / join questions} Liked in the meeting, \textbf{not} written into the spec --- out of V1 unless product adds them.
+  \item \textbf{PWA offline/install} Assignment label vs unspecified in S1--S3.
+  \item \textbf{Mockup ID collisions} B1, A3, B5 --- documentation only; one screen each.
+\end{enumerate}
+
+% ===========================================================================
+\section{Requirements Traceability}
+% ===========================================================================
+Every meaningful source statement should appear here. ``Unconverted'' means a story cannot be precise until a decision.
+
+\begin{longtable}{@{}p{5.8cm}p{2.0cm}p{3.4cm}p{2.4cm}@{}}
+\toprule
+\textbf{Source requirement} & \textbf{Epic} & \textbf{Story} & \textbf{When} \\
+\midrule
+\endhead
+Login / create user & E1 & AUTH-001, AUTH-003 & V1 \\
+Join fields + email login link; no Google now & E1 & AUTH-001, 002, 005 & V1 \\
+Forgot password label & E1 & AUTH-004 & TBD flow \\
+Unapproved users go to AD not A1 & E1, E9 & AUTH-003, VERIFY-002 & V1 \\
+Community at maindomain/community (wording clash) & E2 & COMM-001, COMM-005 & V1 + TBD \\
+Community start page info + login/join & E2 & COMM-002 & V1 \\
+Each community totally separate; no cross search & E2, E5 & COMM-003, SEARCH-003 & V1 \\
+Manual selection who enters & E2, E9, E17 & COMM-004, VERIFY-001, ADMIN-003 & V1 \\
+Multiple communities later; founder sets first $\sim$5 & E2, E4 & COMM-007, DYN-004, DYN-005 & V1 capability / later UI \\
+Account per community vs platform & E2 & COMM-006 & TBD \\
+Username editable & E3 & PROF-003 & V1 \\
+Couple/man/woman/other & E3 & PROF-004 & V1 \\
+Description 4--32k & E3 & PROF-005 & V1 \\
+Location country/region + city; no km & E3 & PROF-006 & V1 \\
+Small chat icon; main image & E3 & PROF-007, PROF-008 & V1 / TBD count \\
+Albums add/delete/rename; lock password & E3 & PROF-011--014 & V1 \\
+Every image: in-app camera + date & E8, E9 & POST-003, VERIFY-004 & V1 \\
+Dynamic field types (cb, text, image, numeric, \ldots) & E4 & DYN-001--003 & V1 \\
+Admin customizes fields for the community & E4 & DYN-004, ADMIN-002 & V1 (founder path) \\
+Search = fill a profile form; not free text & E5 & SEARCH-002, DYN-003 & V1 \\
+Search only inside community & E5 & SEARCH-003 & V1 \\
+A5 rows + G1 persist filters & E5 & SEARCH-004--006 & V1 \\
+Simple vs advanced search by level & E5 & SEARCH-007 & TBD \\
+User levels 1--3 & E2 & SEARCH-007, PAY-004 & TBD / later \\
+Chat list, unread top, substring search & E6, E12 & DM-001, DM-002, NAV-001 & V1 \\
++ search username/group substring & E6, E7 & DM-003, GROUP-013 & V1 \\
+Click user: start chat or view profile & E6 & DM-003, PROF-002 & V1 \\
+Leave DM: delete and/or block & E6 & DM-004, SEC-005 & V1 \\
+Admin add user to groups from DM & E6, E17 & DM-005, ADMIN-006 & V1 \\
+Choose what profiles can contact me & E13 & SET-002, DM-006 & TBD \\
+Only community admin creates groups now & E7 & GROUP-001, GROUP-002 & V1 \\
+Users can make groups (opening bullet) & E7 & GROUP-002 conflict & Conflict \\
+Users create groups later / payment & E7 & GROUP-003 & Later \\
+Add/delete users; member list protect & E7 & GROUP-004--006 & V1 \\
+Custom status 1 text + 3 checkboxes & E7 & GROUP-007 & V1 \\
+Group info text for non-members & E7 & GROUP-008 & V1 \\
+Rename/delete group & E7 & GROUP-009 & V1 \\
+Group settings V1 list & E7, E13 & GROUP-010, SET-001 & V1 \\
+Username visibility; direct join later & E7 & GROUP-011 & Later / TBD UI \\
+Leave group is the always-on member action & E7 & GROUP-012 & V1 \\
+History for new members setting & E7 & GROUP-014 & V1 \\
+Co-admins later & E7 & GROUP-015 & Later \\
+Max group size? & E7 & GROUP-016 & TBD \\
+Text post + date/time + user pic & E8 & POST-001 & V1 \\
+Picture post; camera post verified & E8 & POST-002, POST-003 & V1 \\
+React with emoticons; list who reacted & E8 & POST-004, POST-005 & V1 \\
+Comment + original snippet & E8 & POST-006 & V1 \\
+Delete own (+ comments); edit if allowed & E8 & POST-007, POST-008 & V1 \\
+Admin delete others' posts & E8 & POST-009 & V1 \\
+Click username $\rightarrow$ profile & E8 & POST-011 & V1 \\
+Video/audio/collage later & E8 & POST-012 & Later \\
+Limited-view posts later & E8 & POST-013 & Later \\
+Filter posts by profile params later & E8 & POST-014 & Later \\
+Personal sticky note in chat & E11 & NOTE-001 & V1 \\
+Note on profile; 1--5 stars private & E11 & NOTE-002, NOTE-003 & V1 \\
+Reputation later; profile score later & E11 & NOTE-004, NOTE-005 & Later \\
+In-app camera; handwritten note/ID; tag image & E9 & VERIFY-003--005 & V1 \\
+Manual admin verification & E9 & VERIFY-001 & V1 \\
+AI identification later & E9 & VERIFY-006 & Later \\
+Sticky posts headline + long text & E10 & STICKY-001, STICKY-002 & V1 \\
+Group calendar; admin CRUD events & E10 & CAL-001, CAL-002 & V1 \\
+Bottom nav 2 vs 3 & E12 & NAV-003 & TBD \\
+Avatar $\rightarrow$ own profile; + full screen & E12 & NAV-001, NAV-002 & V1 \\
+Apple not Microsoft; long-press & E12 & NAV-004, POST-010 & V1 \\
+Notifications later; browser-level & E14 & NOTIF-001 & Later \\
+Ads = group posts (transcript) vs A6--D3 (mockup) & E15 & AD-001, AD-002 & TBD \\
+Monetised ads later & E15 & AD-003 & Later \\
+Payments card + Swish; multi-level; profit share & E16 & PAY-001--003 & Later \\
+Platform / community / group admin roles & E17 & ADMIN-001--007 & V1 \\
+High security; GDPR; EU servers & E18 & SEC-006, SEC-007, NFR-003--005 & V1 + TBD mechanics \\
+100 concurrent now; thousands in 2--3 years & NFR & NFR-006, NFR-007 & V1 / growth \\
+Unlimited chats & NFR & NFR-008 & V1 \\
+Web, mobile-first, very fast & NFR & NFR-001, NFR-002 & V1 \\
+PWA offline/install & NFR & assignment only & TBD \\
+Facebook ``I agree'' / join quiz & --- & meeting aside & Not in spec \\
+\end{longtable}
+
+\subsection{Source items that cannot yet become precise stories}
+\begin{itemize}
+  \item Exact first-community schema (founder unsure).
+  \item User-level rights beyond one search example.
+  \item GDPR operational rights (export/erasure).
+  \item Image size/storage.
+  \item Logout and password-reset steps.
+  \item Ads V1 shape.
+  \item Bottom navigation.
+  \item Account and URL models.
+\end{itemize}
+
+% ===========================================================================
+\section{QA / Acceptance Considerations}
+% ===========================================================================
+QA should derive cases from Given/When/Then on every P0 story. The following are cross-cutting tests that are easy to miss.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Isolation:} create two communities with different schemas. A member of A must never see B's users, chats, schema, or search hits --- including by guessing IDs.
+  \item \textbf{Pending user:} login after join must open AD, not A1, until admit.
+  \item \textbf{Search generation:} add a numeric field to community A only; G1 in A shows a min/max control; G1 in B does not.
+  \item \textbf{Member list setting:} with the setting off, a non-admin API call for members is 403/denied, not an empty list pretending to be success if the data exists.
+  \item \textbf{History setting:} add a user after posts exist; they see history only if the flag is on.
+  \item \textbf{Edit setting:} owner edit succeeds only when the group flag is on; admin delete always succeeds.
+  \item \textbf{Private CRM:} user B's session never contains A's note or stars about B (UI and API).
+  \item \textbf{Album gate:} wrong password never returns image bytes.
+  \item \textbf{Camera tag:} upload path must not display ``taken with in-app camera''; capture path must.
+  \item \textbf{Block:} blocked user cannot open a new DM.
+  \item \textbf{Create group:} normal user + menu has no Create; community admin does.
+  \item \textbf{Unread:} viewing a chat does not increment unread for the viewer; other members do increment.
+  \item \textbf{Verified copy:} no screen claims an image cannot be faked.
+\end{enumerate}
+
+Do not write tests for P2 stories as V1 exit criteria.
+
+% ===========================================================================
+\section{Implementation-Readiness Summary}
+% ===========================================================================
+The product is ready to implement as a \textbf{community-scoped, mobile-first chat + profiles} system if the team treats community isolation, dynamic fields, and manual verification as load-bearing, and if it does not start work on payments, reputation, notifications, or social login.
+
+\subsection{Safe to build now}
+Authentication and AD; community-scoped data; profiles (base + dynamic values); albums + password gate; A1 chat list; DM and group messaging; posts/reactions/comments; admin moderation; sticky posts; calendar; V1 group settings; form search; private notes/stars; in-app camera metadata; F1/F2 member admin.
+
+\subsection{Do not build as if decided}
+Three-tab shell vs two-tab shell; dedicated ads product; user-created groups; direct join; hardcoded first-community columns; cross-community anything; kilometre search; native push; Swish/card; reputation/profile score.
+
+\subsection{Recommended implementation order (from the team's own method)}
+The transcript asked for user stories and frontend/mockups first, then backend. Suggested sequence after this document is approved:
+\begin{enumerate}
+  \item Community-scoped routing + shell (A1) with seed data.
+  \item Auth + AD + admit.
+  \item Profile screens + field renderer.
+  \item Groups + membership + settings.
+  \item Posts / comments / reactions.
+  \item Sticky + calendar.
+  \item Search form generated from schema.
+  \item Camera tag + verification review.
+  \item Everything in Future / Later --- not in the first sprint set.
+\end{enumerate}
+
+\subsection{Sign-off}
+This document is internally consistent with S1--S3 as of 22 September 2026. It is a draft until the product owner resolves the TBD list, especially NAV-003, COMM-005, COMM-006, AD-001, DYN-006, and GROUP-002.
+
+\newpage
+\appendix
+\section{Handwritten screen inventory (Mockup 260922)}
+\begin{longtable}{@{}p{1.6cm}p{4.4cm}p{8.2cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Screen} & \textbf{Notes} \\
+\midrule
+\endhead
+--- & Legend & Square = if status/role; circle = go to screen \\
+AA & Community start & URL, name, picture, Login, Join, scrollable about \\
+AB & Login & Username, password, Enter, Forgot password $\rightarrow$ A1 or AD \\
+AC & Join & Username, 2$\times$ password, email, Send $\rightarrow$ email link AB \\
+AD & New user pending & Fill profile (B1/own); DM admin (A4) \\
+A1 & Main chats & Avatar, +, search chats, unread sort, bottom nav \\
+A7 & Admin on A1 & Extra create-group control $\rightarrow$ A9 \\
+A2 & Join a chat & User/group substring; DM or request/join \\
+A9 & Create group & Name, calendar, info 1--3, V1 settings, Create \\
+A10 & View/edit group & Same form + Delete group \\
+A11 & Group users admin & Profile, delete (ask), + add \\
+F2 & Add users to group & Filter, add, open profile \\
+F1 & Add this user to groups & Community admit + group checkboxes \\
+A4 & Chat (DM) & Feed, composer, leave, notes; no calendar/sticky \\
+A4B & Chat (group) & + calendar, info, sticky \\
+B3 & Post menu & Reactions, details, edit, delete, reply, copy \\
+G3 & Group info & Unfinished: name, headline, member list \\
+G2 & Leave DM & Delete+block / leave+block / leave \\
+B2 & Info text & Headline + long body \\
+B5 & Private notes & Chat or profile; text + stars + Save \\
+B4 & Add picture & Camera verified / upload / album \\
+B1 & Group calendar & Month, marked dates, event list \\
+G4 & Edit event & Date, headline, text, save, delete \\
+A5 & Find profiles & Result cards, filter icon \\
+G1 & Filter profiles & Persist between sessions; typed controls \\
+A3/B1 & Profile & Other vs own (ID clash); 3 images; dynamic fields \\
+C5/C8 & Album list & Own vs other; + and long-press delete on own \\
+E1/E2 & Album view & E2 password first; verified+date on images \\
+A6/C4/C9 & Ads lists & All / one user / mine --- conflict with transcript \\
+D2/D3 & Publish / view ad & Editable vs not; profile fields locked on ad \\
+D1 & Filter ads & Remember between sessions \\
+\bottomrule
+\end{longtable}
+
+\section{Wire screenshots --- visual language only}
+The specification's Wire photos are \textbf{not} additional features. Copy density, avatars, unread badges, search-in-list, tappable title, full-width action sheet, add-participant search, and toggle-list pattern. Do not implement Wire calls, self-deleting messages, protocol details, or iOS notification settings.
+
+\section{Dependency map (logical)}
+\begin{verbatim}
+COMM-001 current community
+   -> AUTH-001 Join / AUTH-003 Login
+   -> COMM-004 membership
+        -> NAV-001 A1
+        -> PROF-* / DYN-* values
+        -> SEARCH-*  (needs DYN schema)
+        -> DM-* / GROUP-* / POST-*
+             -> STICKY-* / CAL-* (group only)
+        -> NOTE-*
+        -> VERIFY-* (also sits on AD before membership)
+
+GROUP-001 create
+   -> GROUP-004 membership
+        -> POST-*
+        -> GROUP-010 settings gate history, list, edit, calendar, sticky
+
+DYN-001 field types
+   -> DYN-002 per community
+        -> PROF-015 render
+        -> DYN-003 / SEARCH-002 form
+\end{verbatim}
+
+\section{Glossary}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Term} & \textbf{Meaning in this product} \\
+\midrule
+Community & Isolated interest circle with its own members, groups, and profile schema \\
+Group & Chat room inside one community \\
+Post & Any feed item: text, image, or comment \\
+Verified image & Tagged as captured with the in-app camera + date; not a legal identity proof \\
+Sticky post & Admin-authored info item (headline + long text) on a group \\
+Private note & Author-only text, either on a chat or on a profile \\
+Private rating & Author-only 1--5 stars on a profile; not reputation \\
+Reputation & Later, others' judgement of behaviour \\
+Profile score & Later, automatic completeness points \\
+A4B & Group chat view (calendar + official info) \\
+\bottomrule
+\end{tabularx}
+
+\end{document}

@@ -1,0 +1,25 @@
+---
+description: YAGNI and smallest correct diff. Use when choosing an approach, adding a helper, dependency, or abstraction, or when a request looks larger than V1.
+alwaysApply: false
+---
+
+# Smallest correct change
+
+The best Later feature is one we did not build.
+
+1. Need this for V1? If Later/TBD, stop.
+2. Already in the repo? Reuse.
+3. Stdlib / Next / Supabase already does it? Use that.
+4. Would this slow A1 or A4 (query, bundle, Realtime)? Reject that shape.
+5. Then write the minimum that keeps isolation + the happy path.
+
+No extra abstractions, no second state/date/CSS library, fewest files. Fix the shared function once (authz, scoped query), not every caller.
+
+```ts
+// ❌ disappearing posts — P2
+if (post.expiresAt) hide(post)
+
+// ✅ omit
+```
+
+Mark a known perf ceiling: `// perf: full list until >50 rows; virtualize if A1 grows`.

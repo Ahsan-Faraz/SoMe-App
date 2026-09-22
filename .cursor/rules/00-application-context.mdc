@@ -1,0 +1,27 @@
+---
+description: SoMe App product invariants and source of truth. Use before any feature, schema, screen, or product decision. Blocks invented features, Later work, and silent TBD guesses.
+alwaysApply: true
+---
+
+# SoMe App — source of truth
+
+Wire-like chat + community-scoped profiles. Not Pintap. Not a payments or dating marketplace.
+
+Read when the task needs it: spec v0.33, meeting transcript, mockup `SoMe App 260922`, `docs/User-Stories-and-Requirements.tex`.
+
+## Invariants (never violate)
+
+- Scope every member/chat/search/schema query by **current `community_id`**.
+- Group ≠ community. Group = chat room inside one community.
+- Profile fields are **defs + values**, not hardcoded columns.
+- Verified image = in-app camera + date. Do not claim it cannot be faked.
+- Private notes/ratings: author-only in UI **and** API.
+- V1 group create = community/group admin only.
+
+## Stop — do not implement
+
+**Later:** payments, Swish, reputation, profile score, push, video/audio, co-admins, Google login, cross-community search.
+
+**TBD — ask:** 2 vs 3 bottom tabs; path vs subdomain; account scope; ads-as-posts vs A6–D3; first-community field list; user levels 1–3.
+
+If sources conflict, name the conflict. Do not pick a winner.

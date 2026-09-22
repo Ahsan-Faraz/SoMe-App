@@ -1,0 +1,20 @@
+---
+description: V1 vs Later vs TBD backlog. Use when scoping a sprint, picking the next feature, or asking what to build now.
+alwaysApply: false
+---
+
+# Scope board
+
+Canonical detail: `docs/User-Stories-and-Requirements.tex`. After a TBD is **decided by the user**, update this file.
+
+## V1 (only when asked)
+
+Auth + AD; community routing; A1; DM/groups; posts/images/camera tag; reactions/comments; admin delete; sticky + calendar; V1 settings; admin group create; F1/F2; dynamic field capability; form search; albums + lock; notes/stars; manual verify.
+
+## Later
+
+Video/audio; disappearing posts; notifications; user-created groups; co-admins; hide usernames; payments; reputation; profile score; monetized ads; AI verify; Google login; self-serve multi-community.
+
+## TBD — do not guess
+
+Bottom nav 2 vs 3 · path vs subdomain · account per community vs platform · ads posts vs A6–D3 · first field list · levels 1–3 · 1 vs 3 main photos · A9 direct-join checkbox

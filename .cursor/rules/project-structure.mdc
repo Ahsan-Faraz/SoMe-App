@@ -1,0 +1,87 @@
+---
+description: SoMe folder structure, pinned stack, and package allowlist. Use when creating files, folders, or routes, adding or upgrading a dependency, or setting up next.config / proxy / PWA.
+alwaysApply: false
+---
+
+# Project structure + stack
+
+## Pinned stack (verified 2026-09-23: `npm audit` = 0, `npm run typecheck` + `npm run build` pass)
+
+| Runtime deps (only these) | Dev deps |
+|---|---|
+| `next@16.3.6` · `react@19.3.0` · `react-dom@19.3.0` · `@supabase/supabase-js@2.117.0` · `@supabase/ssr@0.12.7` | `typescript@7.0.2` · `@types/react` · `@types/react-dom` · `@types/node@22` · `tailwindcss@4.3.3` · `@tailwindcss/postcss` |
+
+Node LTS ≥ 22. `.npmrc` has `save-exact` + `engine-strict`; lockfile committed. `npm audit` before every deploy; apply Next security releases the same day. `server-only` is built into Next — don't install it.
+
+## Tree
+
+```
+src/
+  proxy.ts                         # session refresh only
+  app/                             # ROUTES ONLY: page/layout/loading/error/route files
+    layout.tsx  page.tsx  manifest.ts  global-error.tsx  globals.css
+    auth/confirm/route.ts          # email link → verifyOtp → safe relative redirect
+    [community]/
+      page.tsx                     # AA
+      (auth)/login · join · pending          # AB AC AD
+      (member)/                    # layout.tsx = auth + membership gate (added with auth slice)
+        chats/page.tsx             # A1
+        chats/[chatId]/page.tsx    # A4 / A4B   later: calendar/ info/ edit/ members/
+        profiles/page.tsx          # A5 (+ G1 filter sheet)
+        profiles/[userId]/page.tsx # A3 other / B1 own — one screen   later: albums/[albumId]/
+        groups/new/page.tsx        # A9 (admin, added with that slice)
+  features/<domain>/               # everything for ONE domain
+    queries.ts                     # server reads ('server-only')
+    actions.ts                     # Server Actions: low-frequency, privileged
+    browser.ts                     # hot writes from the browser: send, react, mark-read
+    components/                    # Server by default; 'use client' only on the leaf
+    types.ts
+  components/                      # domain-free, app-wide (ServiceWorker)
+    ui/                            # primitives: Sheet, Avatar, Badge, Icon
+  lib/
+    env.ts                         # env reads, fail fast
+    supabase/  server.ts · browser.ts · proxy.ts · database.types.ts (generated)
+    auth/dal.ts                    # getUserId / getMember, React cache()
+public/  sw.js · icons/
+supabase/migrations/               # schema + RLS + indexes in the same file
+```
+
+Domains: `communities` · `auth` · `chats` · `posts` · `profiles` · `fields` · `verification` · `calendar` · `notes` · `albums` · `admin`. Create a folder only when its first slice ships.
+
+## Where does a new file go?
+
+1. A URL? → `app/`. The page stays thin: read params, call `features/x/queries.ts`, render `features/x/components`.
+2. Belongs to one domain? → `features/<domain>/`.
+3. UI with no domain knowledge? → `components/ui/`.
+4. Infrastructure (clients, env, auth)? → `lib/`.
+
+Imports go one way: `app → features → components, lib`. A feature may import another feature's components (chats renders `posts/components/Post`), never its `actions.ts`. Nothing imports from `app/`. `@/` alias only, no `../../`.
+
+Names: folders kebab-case, components `PascalCase.tsx`, everything else camelCase. Route segments use the spec's words (chats, profiles, groups) — not screen IDs.
+
+## `[community]` + URL model (TBD)
+
+Path or subdomain is undecided. Both land in the same tree: with subdomains, `proxy.ts` rewrites `host` → `/[community]/…`. No tree change either way.
+
+## Use the platform instead of a package
+
+| Need | Use |
+|---|---|
+| PWA | `app/manifest.ts` + `public/sw.js` (no next-pwa / Serwist) |
+| Fonts | System font stack (Tailwind `font-sans`) |
+| Dates | `Intl.DateTimeFormat` / `Intl.RelativeTimeFormat` |
+| Image resize | `createImageBitmap` + canvas |
+| Long lists | CSS `content-visibility: auto`; virtualization only if measured |
+| Icons | Inline SVG in `components/ui/Icon.tsx` |
+| Data fetching | Server Components + small hooks (no React Query / SWR) |
+| Validation | Typed guards at the boundary + DB constraints |
+| Calendar B1 | Hand-built month grid |
+
+Banned without a measured reason: state libraries, UI kits, icon packs, animation libraries, axios, lodash, date libraries. ESLint optional, dev-only.
+
+## Config already set
+
+- `next.config.ts`: `cacheComponents: true`, `poweredByHeader: false`, security headers (nosniff, referrer, `frame-ancestors 'none'`, camera self only, HSTS), `sw.js` never cached. Don't enable AVIF.
+- `vercel.json`: functions in `arn1` (Stockholm), next to Supabase `eu-north-1`.
+- `tsconfig.json`: `strict` + `noUncheckedIndexedAccess`. `npm run typecheck` = `next typegen && tsc --noEmit` (gives typed `PageProps<'/route'>` / `LayoutProps`).
+- Never host the server on Windows (Aug 2026 RCE). Deploy to Vercel.

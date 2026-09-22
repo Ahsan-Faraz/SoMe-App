@@ -1,0 +1,31 @@
+---
+description: Scaling ladder and staleness decisions for SoMe. Use when someone proposes caching, Redis, queues, background jobs, read replicas, connection pooling, load balancers, sharding, or when the app is slow under load.
+alwaysApply: false
+---
+
+# Scaling — add one thing only when it breaks
+
+Today: Vercel (already runs many instances behind its own load balancer) + one Supabase Postgres. That is enough for the spec's 100 concurrent users and thousands of members. Do not skip steps.
+
+| Symptom | Check first (free) | Then add | Cost we accept |
+|---|---|---|---|
+| Slow queries, DB CPU high | Missing index, `EXPLAIN ANALYZE` | Bigger Supabase compute | Money |
+| "Too many connections" at a spike | Direct Postgres clients in serverless code | Supavisor **transaction** pooler (port 6543) | No session-level features / prepared statements |
+| Reads still saturate the DB | Indexes + bigger compute done? | Read replica for A5 search and profile views | Replication lag |
+| Same expensive read repeated | Is it really hot? | `'use cache'` + `cacheTag`; on write, `updateTag` (Server Action, read-your-writes) or `revalidateTag(tag, profile)` | Stale until revalidated |
+| User waits on slow side work | Is it needed before the response? | `after()`; if it must retry → Supabase Queues (pgmq) | "Done" means queued, not finished |
+| Data too big for one machine | Not in sight | Sharding by `community_id` | Cross-shard queries (already forbidden: no cross-community search) |
+
+## May be stale vs. never stale (product decision)
+
+- **Cacheable:** community field defs (G1, profiles), community start page AA, group info text.
+- **Never cached, never read from a replica:** messages, unread, membership, roles, block list, private notes/ratings, album access, verification status. You must see your own message and your own admission immediately.
+- Never put user-specific data under a shared cache key — that leaks one member's data to another.
+
+## Stateless servers
+
+Instances are many and short-lived. No sessions, maps, rate limits, or caches in module-level memory. State lives in Supabase (DB, Auth cookies, Storage).
+
+## Not now
+
+Redis, BullMQ, NGINX / own load balancer, microservices, read replicas, sharding. Supabase Auth is already stateless, so a session store is not needed. Before launch, check the Supabase plan's DB connection and Realtime connection quotas (one socket per client).

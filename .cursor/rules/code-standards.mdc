@@ -1,0 +1,28 @@
+---
+description: TypeScript maintainability for SoMe — file size, shared Post/FieldRenderer, typed boundaries, authz. Use when writing or editing .ts/.tsx. Perf practices live in performance.mdc.
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript standards
+
+Smallest diff. Split before ~250–300 LOC. One **Post** (DM + group). One **FieldRenderer** (schema-driven). Use the spec's names: community, group, post, sticky, verified.
+
+```ts
+// ❌ hardcoded community-1
+type Profile = { bikeType: string }
+
+// ✅
+type FieldDef = { id: string; type: 'text' | 'checkbox' | 'number' | 'select' | 'multiselect' | 'image' }
+```
+
+- Strict TS. Validate payloads at the boundary; no `any` there.
+- Never trust a client `communityId` / `groupId` without a membership check. Hide **and** deny gated settings.
+
+```ts
+// ❌ N+1
+for (const c of chats) c.unread = (await countUnread(c.id)).count
+
+// ✅ one RPC: my memberships in this community, unread = last_seq - last_read_seq
+await supabase.rpc('chat_list', { community_id: communityId, page_limit: 50 })
+```

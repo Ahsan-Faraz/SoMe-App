@@ -1,0 +1,36 @@
+---
+description: Community-scoped Next.js/Supabase architecture — layers, tenancy, RLS, privileged paths. Use when adding tables, RLS, API routes, loaders, or server queries. Perf numbers live in performance.mdc.
+globs: "{src,supabase}/**/*.{ts,tsx,sql}"
+alwaysApply: false
+---
+
+# Architecture + data path
+
+Stack: Next.js App Router, Supabase Auth/DB/RLS/Realtime/Storage. No second backend.
+
+Thread `communityId` through routes and queries. Browser = publishable key + RLS. Privileged admit/verify/album-password = server + service-role.
+
+```ts
+// ❌ unbounded, slow, leaky
+await supabase.from('profiles').select('*')
+
+// ✅ tenant + columns + page
+await supabase.from('profiles')
+  .select('id, username, avatar_url, status')
+  .eq('community_id', communityId)
+  .limit(PAGE)
+```
+
+## Layers
+
+`src/app/` routes only · `src/features/<domain>/` queries, actions, components · `src/components/` domain-free UI (no service-role) · `src/lib/auth/dal.ts` membership + authz · `src/lib/supabase/` clients · `supabase/migrations/` schema, RLS, **and indexes in the same migration**. Full tree: `project-structure.mdc`.
+
+## Must
+
+- Every tenant table has `community_id` (or reaches it through chat membership).
+- Dynamic fields: `profile_field_defs` (per community) + `profile_field_values` (typed columns — see performance.mdc).
+- Messages carry a per-chat `seq`; unread is `chats.last_seq - memberships.last_read_seq`.
+- Notes/ratings RLS: `author_id = (select auth.uid())`.
+- Regenerate DB types after migrations.
+- Stateless server code: no per-user state in module-level memory (sessions, Maps, rate limits). Instances are many and short-lived.
+- Use `supabase-js` (HTTP, pooled by Supabase). Any direct Postgres client in serverless code must use the Supavisor transaction pooler, never the direct port.
