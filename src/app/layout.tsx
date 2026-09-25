@@ -12,13 +12,13 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#ffffff',
+  themeColor: '#fafafa',
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning className="bg-white font-sans text-neutral-900 antialiased">
+      <body suppressHydrationWarning className="bg-canvas font-sans text-ink antialiased">
         {children}
         <ServiceWorker />
       </body>

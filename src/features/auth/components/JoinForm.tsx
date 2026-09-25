@@ -39,11 +39,11 @@ export function JoinForm({ community, communityName }: { community: string; comm
   if (sentTo) {
     return (
       <div className="grid justify-items-center gap-4 pt-6 text-center">
-        <span className="grid size-16 place-items-center rounded-full bg-accent-soft text-accent">
+        <span className="grid size-16 place-items-center rounded-full bg-sunken text-accent">
           <Icon name="mail" className="size-8" />
         </span>
         <h2 className="text-xl font-semibold">{t.join.sentTitle}</h2>
-        <p className="text-neutral-600">{t.join.sentBody(sentTo)}</p>
+        <p className="text-ink-soft">{t.join.sentBody(sentTo)}</p>
         <Link href={`/${community}/login`} className={`${buttonClass('primary')} mt-4`}>
           {t.join.toLogin}
         </Link>
@@ -53,7 +53,7 @@ export function JoinForm({ community, communityName }: { community: string; comm
 
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
-      <p className="text-neutral-600">{t.join.subtitle(communityName)}</p>
+      <p className="text-ink-soft">{t.join.subtitle(communityName)}</p>
       <TextField id="username" name="username" label={t.join.username} autoComplete="username" autoCapitalize="none" required />
       <TextField
         id="password"

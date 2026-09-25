@@ -1,18 +1,50 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-accent: #0667c8;
-  --color-accent-hover: #0556a8;
-  --color-accent-soft: #e8f1fb;
-  --color-danger: #c62828;
+  /* Wire light UI. https://brand.wire.com/color/ — default accent is Blue. */
+  --color-accent: #0772de;
+  --color-accent-hover: #0667c8;
+  --color-danger: #e41734;
+  --color-ink: #17181a;
+  --color-ink-soft: #34383b;
+  --color-muted: #54585b;
+  --color-line: #eaeaea;
+  --color-canvas: #ffffff;
+  --color-sunken: #fafafa;
+  --color-rail: #edeff0;
+  --color-soft: #e8eaec;
+  --color-soft-hover: #dcdfe2;
+  /* Platform UI font like the Wire web app: San Francisco, Segoe UI, Roboto. Zero download. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  /* Fluid shells: rail from a large phone, chat split once both columns fit. */
+  --breakpoint-rail: 40rem;
+  --breakpoint-split: 64rem;
 }
 
 html {
+  accent-color: var(--color-accent);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: 100dvh;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 16px;
+  line-height: 1.4;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-ink);
+  box-shadow: 0 0 0 1000px var(--color-canvas) inset;
 }

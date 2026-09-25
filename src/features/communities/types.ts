@@ -3,5 +3,7 @@ export type Community = {
   name: string
   headline: string
   about: readonly string[]
+  heroSrc: string
+  aboutSrc: string
   adminUserId: string
 }

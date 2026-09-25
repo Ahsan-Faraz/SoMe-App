@@ -46,13 +46,13 @@ export function LoginForm({ community }: { community: string }) {
       <button
         type="button"
         onClick={() => setShowForgotNote(true)}
-        className="justify-self-center py-2 text-sm font-medium text-accent"
+        className="justify-self-center py-2 text-[15px] font-semibold text-accent hover:underline"
       >
         {t.login.forgot}
       </button>
-      {showForgotNote ? <p className="text-center text-sm text-neutral-500">{t.login.forgotUnavailable}</p> : null}
+      {showForgotNote ? <p className="text-center text-sm text-muted">{t.login.forgotUnavailable}</p> : null}
 
-      <p className="mt-4 rounded-xl bg-neutral-100 p-3 text-center text-xs text-neutral-600">{t.login.demoHint}</p>
+      <p className="mt-4 rounded-xl bg-sunken px-4 py-3 text-center text-[13px] text-muted">{t.login.demoHint}</p>
     </form>
   )
 }

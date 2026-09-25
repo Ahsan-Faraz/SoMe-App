@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { AuthShell } from '@/features/auth/components/AuthAside'
 import { JoinForm } from '@/features/auth/components/JoinForm'
 import { getCommunity } from '@/features/communities/queries'
 import { t } from '@/lib/i18n'
@@ -20,11 +21,11 @@ async function JoinContent({ params }: PageProps<'/[community]/join'>) {
   if (!community) notFound()
 
   return (
-    <>
+    <div className="min-h-dvh w-full bg-canvas">
       <ScreenHeader title={t.join.title} backHref={`/${slug}`} />
-      <main className="mx-auto max-w-md px-6 pt-6 pb-12">
+      <AuthShell community={community} src={community.aboutSrc} alt="Two riders on a gravel path outside Stockholm" title={t.join.heading}>
         <JoinForm community={slug} communityName={community.name} />
-      </main>
-    </>
+      </AuthShell>
+    </div>
   )
 }

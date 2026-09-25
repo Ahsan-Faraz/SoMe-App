@@ -5,7 +5,7 @@ export function ComingSoon({ title, backHref }: { title: string; backHref?: stri
   return (
     <>
       <ScreenHeader title={title} backHref={backHref} />
-      <main className="mx-auto max-w-md px-6 py-16 text-center text-neutral-500">{t.common.comingSoon}</main>
+      <main className="w-full bg-canvas px-6 py-16 text-center text-muted">{t.common.comingSoon}</main>
     </>
   )
 }

@@ -26,14 +26,18 @@ async function PendingContent({ params }: PageProps<'/[community]/pending'>) {
   const adminChatId = await getAdminChatId(slug)
 
   return (
-    <>
+    <div className="min-h-dvh w-full bg-canvas">
       <ScreenHeader title={t.pending.title} />
-      <main className="mx-auto max-w-md px-6 pt-6 pb-12">
+      <main className="grid w-full gap-8 px-5 pt-6 pb-12 sm:px-8 min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-16 min-[52rem]:px-12 min-[52rem]:pt-14">
+        <div className="hidden min-[52rem]:block">
+          <h2 className="text-4xl font-medium tracking-tight">{community.name}</h2>
+          <p className="mt-3 max-w-md text-[15px] text-ink">{community.headline}</p>
+        </div>
         <PendingSteps
           profileHref={`/${slug}/profiles/${viewer.userId}`}
           adminChatHref={`/${slug}/chats/${adminChatId}`}
         />
       </main>
-    </>
+    </div>
   )
 }

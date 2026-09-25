@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { AuthShell } from '@/features/auth/components/AuthAside'
 import { LoginForm } from '@/features/auth/components/LoginForm'
 import { getCommunity } from '@/features/communities/queries'
 import { t } from '@/lib/i18n'
@@ -20,11 +21,11 @@ async function LoginContent({ params }: PageProps<'/[community]/login'>) {
   if (!community) notFound()
 
   return (
-    <>
+    <div className="min-h-dvh w-full bg-canvas">
       <ScreenHeader title={t.login.title} backHref={`/${slug}`} />
-      <main className="mx-auto max-w-md px-6 pt-8 pb-12">
+      <AuthShell community={community} src={community.heroSrc} alt={`${community.name} riders by the water`} title={t.login.heading}>
         <LoginForm community={slug} />
-      </main>
-    </>
+      </AuthShell>
+    </div>
   )
 }

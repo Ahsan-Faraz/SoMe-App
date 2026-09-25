@@ -16,3 +16,7 @@ export async function signIn(username: string, _password: string): Promise<{ rol
 export async function signUp(_input: { username: string; password: string; email: string }): Promise<void> {
   await wait(MOCK_LATENCY_MS)
 }
+
+export function signOut(): void {
+  document.cookie = `${MOCK_SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`
+}
