@@ -10,7 +10,7 @@ const MAX_SCORE = 5
 type Saved = { text: string; score: number }
 
 // B5. Stored on the author's device only until the notes table exists; the key includes the author.
-export function PrivateNotes({ storageKey, title }: { storageKey: string; title: string }) {
+export function PrivateNotes({ storageKey }: { storageKey: string }) {
   const [text, setText] = useState('')
   const [score, setScore] = useState(0)
   const [saved, setSaved] = useState(false)
@@ -31,10 +31,7 @@ export function PrivateNotes({ storageKey, title }: { storageKey: string; title:
 
   return (
     <form onSubmit={onSubmit} className="mx-auto grid w-full max-w-2xl gap-6 px-5 py-6 sm:px-8">
-      <div>
-        <h2 className="text-[24px] leading-tight font-bold">{title}</h2>
-        <p className="mt-1 text-[14px] text-muted">{t.notes.privacy}</p>
-      </div>
+      <p className="text-[14px] text-muted">{t.notes.privacy}</p>
 
       <label className="grid gap-1.5 text-[14px] font-semibold">
         {t.notes.label}
@@ -45,7 +42,7 @@ export function PrivateNotes({ storageKey, title }: { storageKey: string; title:
             setSaved(false)
           }}
           rows={8}
-          className="resize-y rounded-xl border border-black/15 bg-canvas px-4 py-3 text-[16px] leading-relaxed font-normal outline-none hover:border-black/30 focus:border-accent focus:ring-2 focus:ring-accent/20"
+          className="resize-y rounded-xl border border-line-strong bg-canvas px-4 py-3 text-[16px] leading-relaxed font-normal outline-none hover:border-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
         />
       </label>
 
@@ -64,7 +61,7 @@ export function PrivateNotes({ storageKey, title }: { storageKey: string; title:
                   setScore(score === value ? 0 : value)
                   setSaved(false)
                 }}
-                className={`grid size-11 place-items-center rounded-xl hover:bg-black/5 ${score >= value ? 'text-accent' : 'text-black/15'}`}
+                className={`grid size-11 place-items-center rounded-xl hover:bg-hover ${score >= value ? 'text-accent' : 'text-line-strong'}`}
               >
                 <Icon name="starSolid" className="size-7" />
               </button>

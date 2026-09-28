@@ -14,3 +14,18 @@ export function formatChatTime(iso: string, now: number): string {
   if (now - date.getTime() < 6 * DAY_MS) return weekdayFormat.format(date)
   return dateFormat.format(date)
 }
+
+const stampFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+
+const postDateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
+
+// A post's published date + time: "28 Sept, 21:09".
+export function formatPostTime(iso: string): string {
+  const date = new Date(iso)
+  return `${postDateFormat.format(date)}, ${timeFormat.format(date)}`
+}
+
+// Full date and time, e.g. for when a camera photo was verified.
+export function formatStamp(iso: string | number): string {
+  return stampFormat.format(new Date(iso))
+}

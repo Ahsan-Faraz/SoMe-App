@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
-import { getInfoPost, INFO_POST_COUNT } from '@/features/groups/queries'
+import { getGroupInfo, getInfoPost } from '@/features/groups/queries'
 import { t } from '@/lib/i18n'
 
 export default function InfoPostPage(props: PageProps<'/[community]/chats/[chatId]/info/[n]'>) {
@@ -22,21 +22,21 @@ async function InfoPostContent({ params }: PageProps<'/[community]/chats/[chatId
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   const index = Number(n)
-  const post = Number.isInteger(index) ? await getInfoPost(chatId, index) : null
-  if (!post) notFound()
+  const [post, group] = await Promise.all([Number.isInteger(index) ? getInfoPost(chatId, index) : null, getGroupInfo(chatId, viewer.role === 'admin')])
+  if (!post || !group) notFound()
 
   return (
     <div className="min-h-dvh w-full bg-canvas">
       <ScreenHeader title={post.groupName} backHref={`/${community}/chats/${chatId}`} />
-      <nav aria-label={t.groupInfo.info} className="flex justify-center gap-1 border-b border-black/10 px-2 py-1.5">
-        {Array.from({ length: INFO_POST_COUNT }, (_, i) => i + 1).map((value) => (
+      <nav aria-label={t.groupInfo.info} className="flex gap-1 overflow-x-auto border-b border-line px-2 py-1.5 sm:justify-center">
+        {group.infoHeadlines.map((_, i) => i + 1).map((value) => (
           <Link
             key={value}
             href={`/${community}/chats/${chatId}/info/${value}`}
             aria-current={value === post.n ? 'page' : undefined}
-            className={`inline-flex h-9 items-center rounded-lg px-4 text-[15px] font-bold ${value === post.n ? 'bg-accent text-white' : 'hover:bg-black/5'}`}
+            className={`inline-flex h-9 shrink-0 items-center rounded-lg px-4 text-[15px] font-bold ${value === post.n ? 'bg-accent text-white' : 'hover:bg-hover'}`}
           >
-            {t.chats.info(value)}
+            {group.infoHeadlines[value - 1]}
           </Link>
         ))}
       </nav>

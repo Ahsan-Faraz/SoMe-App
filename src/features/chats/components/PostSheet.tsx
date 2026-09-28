@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
 import type { ChatMessage } from '../types'
 
@@ -24,8 +25,8 @@ export function PostSheet({
   onReply: (author: string) => void
   onNotice: (text: string) => void
 }) {
+  // B3: Details = who reacted. Edit/Delete only on own posts, or for admins (B5).
   const rows = [
-    t.chats.whoReacted,
     t.chats.details,
     ...(canEdit ? [t.chats.edit] : []),
     ...(canDelete ? [t.chats.delete] : []),
@@ -34,21 +35,33 @@ export function PostSheet({
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 lg:items-stretch lg:justify-end" role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 lg:items-stretch lg:justify-end" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="w-full rounded-t-3xl bg-canvas p-2 pb-6 shadow-2xl lg:h-full lg:max-w-md lg:overflow-y-auto lg:rounded-none" onClick={(event) => event.stopPropagation()}>
-        <span className="mx-auto mt-1 block h-1 w-10 rounded-full bg-black/15 lg:hidden" />
+        <span className="mx-auto mt-1 block h-1 w-10 rounded-full bg-line-strong lg:hidden" />
         <div className="mx-2 my-2 flex justify-around rounded-2xl bg-rail px-2 py-2 text-2xl">
           {emojis.map((emoji) => (
             <button key={emoji} type="button" className="rounded-full px-2 py-1 hover:bg-canvas" onClick={onClose}>
               {emoji}
             </button>
           ))}
+          <button
+            type="button"
+            aria-label={t.chats.moreEmoji}
+            title={t.chats.moreEmoji}
+            className="grid size-10 place-items-center rounded-full text-ink hover:bg-canvas"
+            onClick={() => {
+              onNotice(t.chats.moreEmoji)
+              onClose()
+            }}
+          >
+            <Icon name="plus" className="size-5" />
+          </button>
         </div>
         {rows.map((label) => (
           <button
             key={label}
             type="button"
-            className={`block w-full rounded-xl px-4 py-3 text-left text-[16px] font-medium hover:bg-black/5 ${label === t.chats.delete ? 'text-danger' : ''}`}
+            className={`block w-full rounded-xl px-4 py-3 text-left text-[16px] font-medium hover:bg-hover ${label === t.chats.delete ? 'text-danger' : ''}`}
             onClick={() => {
               if (label === t.chats.copy) {
                 void navigator.clipboard.writeText(message.body).then(onCopied)

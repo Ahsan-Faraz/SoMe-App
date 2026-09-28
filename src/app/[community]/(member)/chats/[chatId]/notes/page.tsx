@@ -5,7 +5,6 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { getChatSummary } from '@/features/chats/queries'
 import { PrivateNotes } from '@/features/notes/components/PrivateNotes'
-import { t } from '@/lib/i18n'
 
 export default function ChatNotesPage(props: PageProps<'/[community]/chats/[chatId]/notes'>) {
   return (
@@ -25,8 +24,8 @@ async function ChatNotesContent({ params }: PageProps<'/[community]/chats/[chatI
 
   return (
     <div className="min-h-dvh w-full bg-canvas">
-      <ScreenHeader title={t.notes.title} backHref={`/${community}/chats/${chat.id}`} />
-      <PrivateNotes storageKey={`some:notes:${community}:${viewer.userId}:chat:${chat.id}`} title={chat.name} />
+      <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}`} />
+      <PrivateNotes storageKey={`some:notes:${community}:${viewer.userId}:chat:${chat.id}`} />
     </div>
   )
 }

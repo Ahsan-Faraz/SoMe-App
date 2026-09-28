@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* dark: follows the resolved theme the head script writes to <html data-theme>. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
   /* Wire light UI. https://brand.wire.com/color/ — default accent is Blue. */
   --color-accent: #0772de;
@@ -14,11 +17,58 @@
   --color-rail: #edeff0;
   --color-soft: #e8eaec;
   --color-soft-hover: #dcdfe2;
+  --color-line-strong: #d9d9d9;
+  --color-hover: rgb(0 0 0 / 0.05);
   /* Platform UI font like the Wire web app: San Francisco, Segoe UI, Roboto. Zero download. */
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   /* Fluid shells: rail from a large phone, chat split once both columns fit. */
   --breakpoint-rail: 40rem;
   --breakpoint-split: 64rem;
+}
+
+/* Dark palette. The inline script in the root layout sets data-theme before first paint
+   (from the saved choice or the system setting, see src/lib/theme.ts). The media query
+   covers the moment before that script runs and browsers without JS. */
+html {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-accent: #3b8ef0;
+  --color-accent-hover: #5aa1f3;
+  --color-danger: #ff5c70;
+  --color-ink: #eceef0;
+  --color-ink-soft: #c7cbcf;
+  --color-muted: #9aa0a6;
+  --color-line: #2d3033;
+  --color-line-strong: #3c4044;
+  --color-canvas: #17181a;
+  --color-sunken: #111214;
+  --color-rail: #25282b;
+  --color-soft: #2b2e32;
+  --color-soft-hover: #363a3e;
+  --color-hover: rgb(255 255 255 / 0.07);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme: dark;
+    --color-accent: #3b8ef0;
+    --color-accent-hover: #5aa1f3;
+    --color-danger: #ff5c70;
+    --color-ink: #eceef0;
+    --color-ink-soft: #c7cbcf;
+    --color-muted: #9aa0a6;
+    --color-line: #2d3033;
+    --color-line-strong: #3c4044;
+    --color-canvas: #17181a;
+    --color-sunken: #111214;
+    --color-rail: #25282b;
+    --color-soft: #2b2e32;
+    --color-soft-hover: #363a3e;
+    --color-hover: rgb(255 255 255 / 0.07);
+  }
 }
 
 html {

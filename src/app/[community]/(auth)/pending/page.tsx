@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { PendingSteps } from '@/features/auth/components/PendingSteps'
 import { getViewer } from '@/features/auth/queries'
@@ -27,7 +28,7 @@ async function PendingContent({ params }: PageProps<'/[community]/pending'>) {
 
   return (
     <div className="min-h-dvh w-full bg-canvas">
-      <ScreenHeader title={t.pending.title} />
+      <ScreenHeader title={t.pending.title} right={<ThemeToggle className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover" />} />
       <main className="grid w-full gap-8 px-5 pt-6 pb-12 sm:px-8 min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-16 min-[52rem]:px-12 min-[52rem]:pt-14">
         <div className="hidden min-[52rem]:block">
           <h2 className="text-4xl font-medium tracking-tight">{community.name}</h2>

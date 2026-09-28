@@ -21,10 +21,10 @@ async function DesktopChats({ params }: { params: LayoutProps<'/[community]/chat
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const chats = await listChats(community, Date.now())
+  const chats = await listChats(community)
 
   return (
-    <aside className="hidden h-full min-h-0 flex-col border-r border-black/10 split:flex">
+    <aside className="hidden h-full min-h-0 flex-col border-r border-line split:flex">
       <ChatIndex community={community} viewer={viewer} chats={chats} now={Date.now()} pane />
     </aside>
   )

@@ -2,18 +2,24 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useDeferredValue, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon } from '@/components/ui/Icon'
 import { formatChatTime } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { watchHidden } from '../hidden'
 import type { ChatListItem } from '../types'
 
 export function ChatList({ community, chats, now }: { community: string; chats: ChatListItem[]; now: number }) {
   const path = usePathname()
   const [query, setQuery] = useState('')
+  const [left, setLeft] = useState<string[]>([])
   const deferredQuery = useDeferredValue(query.trim().toLowerCase())
-  const visible = deferredQuery ? chats.filter((chat) => chat.name.toLowerCase().includes(deferredQuery)) : chats
+
+  useEffect(() => watchHidden(community, (hidden) => setLeft(hidden.left)), [community])
+
+  const open = chats.filter((chat) => !left.includes(chat.id))
+  const visible = deferredQuery ? open.filter((chat) => chat.name.toLowerCase().includes(deferredQuery)) : open
 
   return (
     <>
@@ -43,7 +49,7 @@ export function ChatList({ community, chats, now }: { community: string; chats: 
                 href={`/${community}/chats/${chat.id}`}
                 aria-current={path === `/${community}/chats/${chat.id}` ? 'page' : undefined}
                 className={`mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 ${
-                  path === `/${community}/chats/${chat.id}` ? 'bg-accent/10' : 'hover:bg-black/[0.04]'
+                  path === `/${community}/chats/${chat.id}` ? 'bg-accent/10' : 'hover:bg-hover'
                 }`}
               >
                 <Avatar name={chat.name} seed={chat.id} shape={chat.kind === 'group' ? 'square' : 'circle'} />

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { buttonClass } from '@/components/ui/Button'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
@@ -11,19 +12,23 @@ const features: { icon: IconName; title: string; body: string }[] = [
   { icon: 'camera', ...t.start.features.verified },
 ]
 
+const toggle = 'inline-flex size-10 items-center justify-center rounded-full text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent'
+
 export function CommunityStart({ community }: { community: Community }) {
   const [firstParagraph, ...rest] = community.about
   const login = `/${community.slug}/login`
   const join = `/${community.slug}/join`
 
   return (
-    <main className="min-h-dvh w-full bg-canvas px-5 pt-8 pb-16 sm:px-8 min-[52rem]:pt-0 min-[52rem]:pb-0 lg:px-16 xl:px-24">
+    <main className="relative min-h-dvh w-full bg-canvas px-5 pt-8 pb-16 sm:px-8 min-[52rem]:pt-0 min-[52rem]:pb-0 lg:px-16 xl:px-24">
+      <ThemeToggle className={`${toggle} absolute top-3 right-3 z-10 min-[52rem]:hidden`} />
       <header className="mx-auto hidden h-20 max-w-7xl items-center justify-between min-[52rem]:flex">
         <Link href={`/${community.slug}`} className="flex items-center gap-3">
           <Image src="/icons/logo.png" alt="" width={40} height={40} priority className="size-10" />
           <span className="text-[18px] font-bold">{community.name}</span>
         </Link>
         <nav className="flex items-center gap-2">
+          <ThemeToggle className={toggle} />
           <Link href={login} className={`${buttonClass('ghost')} h-10! w-auto!`}>
             {t.start.login}
           </Link>
@@ -61,7 +66,7 @@ export function CommunityStart({ community }: { community: Community }) {
           <Link href={login} className={`${buttonClass('primary')} min-[52rem]:w-40`}>
             {t.start.login}
           </Link>
-          <Link href={join} className={`${buttonClass('secondary')} min-[52rem]:w-40 min-[52rem]:bg-white min-[52rem]:hover:bg-white/90`}>
+          <Link href={join} className={`${buttonClass('secondary')} min-[52rem]:w-40 min-[52rem]:bg-white min-[52rem]:text-neutral-900 min-[52rem]:hover:bg-white/90`}>
             {t.start.join}
           </Link>
         </div>
@@ -149,7 +154,7 @@ export function CommunityStart({ community }: { community: Community }) {
             <p className="mt-2 text-[17px] text-white/85">{t.start.ctaBody}</p>
           </div>
           <div className="flex shrink-0 gap-3">
-            <Link href={join} className={`${buttonClass('secondary')} w-40! bg-white! hover:bg-white/90!`}>
+            <Link href={join} className={`${buttonClass('secondary')} w-40! bg-white! text-neutral-900! hover:bg-white/90!`}>
               {t.start.join}
             </Link>
             <Link href={login} className={`${buttonClass('ghost')} w-40! border-white/40! text-white! hover:bg-white/10!`}>

@@ -8,7 +8,7 @@ const base =
 const variants: Record<Variant, string> = {
   primary: 'bg-accent text-white shadow-sm hover:bg-accent-hover active:bg-accent-hover',
   secondary: 'bg-soft text-ink hover:bg-soft-hover active:bg-soft-hover',
-  ghost: 'text-ink hover:bg-black/5',
+  ghost: 'text-ink hover:bg-hover',
 }
 
 export function buttonClass(variant: Variant = 'primary'): string {

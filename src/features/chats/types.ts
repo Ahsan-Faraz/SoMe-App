@@ -8,6 +8,9 @@ export type ChatMessage = {
   reactions: string | null
   comment: string | null
   image: boolean
+  imageSrc: string | null
+  verified: boolean
+  verifiedDate: string | null
 }
 
 export type ChatPanel = 'calendar' | 'info1' | 'info2' | 'info3'

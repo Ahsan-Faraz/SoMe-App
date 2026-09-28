@@ -38,12 +38,12 @@ async function GroupInfoContent({ params }: PageProps<'/[community]/chats/[chatI
 
         <section>
           <h3 className="mb-2 px-1 text-[12px] font-semibold tracking-wide text-muted uppercase">{t.groupInfo.info}</h3>
-          <ul className="divide-y divide-black/10 overflow-hidden rounded-2xl border border-black/10">
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
             {group.infoHeadlines.map((headline, index) => (
               <li key={headline}>
                 <Link
                   href={`/${community}/chats/${group.id}/info/${index + 1}`}
-                  className="flex h-14 items-center gap-3 px-4 text-[16px] font-semibold hover:bg-black/[0.04]"
+                  className="flex h-14 items-center gap-3 px-4 text-[16px] font-semibold hover:bg-hover"
                 >
                   <span className="grid size-7 place-items-center rounded-lg bg-rail text-[13px] font-bold">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate">{headline}</span>
@@ -58,10 +58,10 @@ async function GroupInfoContent({ params }: PageProps<'/[community]/chats/[chatI
           {group.members ? (
             <>
               <h3 className="mb-2 px-1 text-[12px] font-semibold tracking-wide text-muted uppercase">{t.groupInfo.members(group.members.length)}</h3>
-              <ul className="divide-y divide-black/10 overflow-hidden rounded-2xl border border-black/10">
+              <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
                 {group.members.map((member) => (
                   <li key={member.id} className="[contain-intrinsic-size:auto_60px] [content-visibility:auto]">
-                    <Link href={`/${community}/profiles/${member.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.04]">
+                    <Link href={`/${community}/profiles/${member.id}?back=${encodeURIComponent(`/${community}/chats/${group.id}/info`)}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-hover">
                       <Avatar name={member.username} seed={member.id} size="sm" />
                       <span className="min-w-0 flex-1 truncate text-[16px] font-semibold">{member.username}</span>
                       <Icon name="chevronRight" className="size-5 text-muted" />
@@ -74,6 +74,25 @@ async function GroupInfoContent({ params }: PageProps<'/[community]/chats/[chatI
             <p className="rounded-2xl bg-sunken px-4 py-4 text-center text-[15px] text-muted">{t.groupInfo.hidden}</p>
           )}
         </section>
+
+        {viewer.role === 'admin' ? (
+          <Link
+            href={`/${community}/groups/${group.id}`}
+            className="flex h-14 items-center gap-3 rounded-2xl border border-line px-4 text-[16px] font-semibold hover:bg-hover"
+          >
+            <Icon name="users" className="size-5 shrink-0" />
+            <span className="flex-1">{t.groups.edit}</span>
+            <Icon name="chevronRight" className="size-5 shrink-0 text-muted" />
+          </Link>
+        ) : null}
+
+        <Link
+          href={`/${community}/chats/${group.id}/leave`}
+          className="flex h-14 items-center gap-3 rounded-2xl border border-line px-4 text-[16px] font-semibold text-danger hover:bg-hover"
+        >
+          <Icon name="leave" className="size-5 shrink-0" />
+          <span className="flex-1">{t.groupInfo.leave}</span>
+        </Link>
       </main>
     </div>
   )

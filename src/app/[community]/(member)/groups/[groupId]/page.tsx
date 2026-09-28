@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { GroupForm } from '@/features/groups/components/GroupForm'
-import { getGroup } from '@/features/groups/queries'
+import { getGroup, listInfoFields } from '@/features/groups/queries'
 import { t } from '@/lib/i18n'
 import { RouteSkeleton } from '../../../loading'
 
@@ -21,13 +21,13 @@ async function GroupContent({ params }: PageProps<'/[community]/groups/[groupId]
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role !== 'admin') redirect(`/${community}/chats`)
 
-  const group = await getGroup(groupId)
+  const [group, infos] = await Promise.all([getGroup(groupId), listInfoFields(groupId)])
   if (!group) notFound()
 
   return (
     <div className="min-h-dvh w-full bg-canvas">
-      <ScreenHeader title={group.name} backHref={`/${community}/chats`} />
-      <GroupForm community={community} group={group} />
+      <ScreenHeader title={group.name} backHref={`/${community}/chats/${group.id}/info`} />
+      <GroupForm community={community} group={group} infos={infos} />
     </div>
   )
 }

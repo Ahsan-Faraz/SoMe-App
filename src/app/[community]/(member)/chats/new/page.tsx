@@ -26,7 +26,7 @@ async function NewChatContent({ params }: PageProps<'/[community]/chats/new'>) {
   return (
     <div className="min-h-dvh w-full bg-canvas">
       <ScreenHeader title={t.chats.joinTitle} backHref={`/${community}/chats`} />
-      <Directory entries={entries} />
+      <Directory community={community} entries={entries} />
     </div>
   )
 }

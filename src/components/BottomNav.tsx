@@ -14,7 +14,7 @@ export function BottomNav({ community, active }: { community: string; active: Ta
   return (
     <nav
       aria-label={t.nav.label}
-      className="fixed inset-x-0 bottom-0 z-10 border-t border-black/10 bg-canvas pb-[env(safe-area-inset-bottom)] rail:hidden"
+      className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)] rail:hidden"
     >
       <ul className="grid grid-cols-3">
         {tabs.map((tab) => {

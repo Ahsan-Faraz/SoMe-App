@@ -1,17 +1,20 @@
 import 'server-only'
-import { formatChatTime } from '@/lib/format'
+import { cache } from 'react'
+import { formatPostTime, formatStamp } from '@/lib/format'
 import { mockChats, mockGroups, mockMessages, mockUsers } from '@/mocks/data'
 import type { ChatListItem, ChatThread, DirectoryEntry } from './types'
 
 const PAGE_LIMIT = 50
 
 // Unread chats first, then newest activity — the same order the chat_list RPC will return.
-export async function listChats(_communitySlug: string, now: number): Promise<ChatListItem[]> {
+// cache(): the chats layout (desktop pane) and the A1 page share one query per request.
+export const listChats = cache(async (_communitySlug: string): Promise<ChatListItem[]> => {
+  const now = Date.now()
   return mockChats
     .map(({ minutesAgo, ...chat }) => ({ ...chat, lastMessageAt: new Date(now - minutesAgo * 60_000).toISOString() }))
     .sort((a, b) => Number(b.unread > 0) - Number(a.unread > 0) || b.lastMessageAt.localeCompare(a.lastMessageAt))
     .slice(0, PAGE_LIMIT)
-}
+})
 
 // The DM between the viewer and the community admin (AD → A4). Real version finds or creates it.
 export async function getAdminChatId(_communitySlug: string): Promise<string> {
@@ -67,10 +70,13 @@ export async function getChat(chatId: string, now: number): Promise<ChatThread |
       authorId: message.mine ? null : mockUsers.find((user) => user.username === message.author)?.id ?? null,
       mine: message.mine,
       body: message.body,
-      timeLabel: formatChatTime(new Date(now - message.minutesAgo * 60_000).toISOString(), now),
+      timeLabel: formatPostTime(new Date(now - message.minutesAgo * 60_000).toISOString()),
       reactions: message.reactions ?? null,
       comment: message.comment ?? null,
       image: message.image ?? false,
+      imageSrc: null,
+      verified: message.image ?? false,
+      verifiedDate: message.image ? formatStamp(now - message.minutesAgo * 60_000) : null,
     })),
   }
 }

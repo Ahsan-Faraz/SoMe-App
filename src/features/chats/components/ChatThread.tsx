@@ -7,28 +7,37 @@ import Link from 'next/link'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
+import type { Album } from '@/features/albums/types'
 import type { ChatMessage } from '../types'
 
 const PostSheet = dynamic(() => import('./PostSheet').then((mod) => mod.PostSheet), { ssr: false })
+const PictureSheet = dynamic(() => import('./PictureSheet').then((mod) => mod.PictureSheet), { ssr: false })
 
 const LONG_PRESS_MS = 450
 
 export function ChatThread({
   community,
   chatId,
+  backHref,
   messages,
   isAdmin,
+  viewerId,
+  albums,
 }: {
   community: string
   chatId: string
+  backHref: string
   messages: ChatMessage[]
   isAdmin: boolean
+  viewerId: string
+  albums: Album[]
 }) {
   const [items, setItems] = useState(messages)
   const [draft, setDraft] = useState('')
   const [selected, setSelected] = useState<ChatMessage | null>(null)
   const [picture, setPicture] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const profileHref = (userId: string) => `/${community}/profiles/${userId}?back=${encodeURIComponent(backHref)}`
 
   function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -36,7 +45,7 @@ export function ChatThread({
     if (!body) return
     setItems((current) => [
       ...current,
-      { id: `local-${current.length}`, author: t.chats.you, authorId: null, mine: true, body, timeLabel: t.chats.justNow, reactions: null, comment: null, image: false },
+      { id: `local-${current.length}`, author: t.chats.you, authorId: null, mine: true, body, timeLabel: t.chats.justNow, reactions: null, comment: null, image: false, imageSrc: null, verified: false, verifiedDate: null },
     ])
     setDraft('')
   }
@@ -63,7 +72,7 @@ export function ChatThread({
             onPointerDown={(event) => press(message, event)}
           >
             {message.authorId ? (
-              <Link href={`/${community}/profiles/${message.authorId}`} aria-label={message.author}>
+              <Link href={profileHref(message.authorId)} aria-label={message.author}>
                 <Avatar name={message.author} seed={message.authorId} />
               </Link>
             ) : (
@@ -72,7 +81,7 @@ export function ChatThread({
             <div className="min-w-0 flex-1">
               <p className="text-[16px]">
                 {message.authorId ? (
-                  <Link href={`/${community}/profiles/${message.authorId}`} className="font-bold text-ink hover:underline">
+                  <Link href={profileHref(message.authorId)} className="font-bold text-ink hover:underline">
                     {message.author}
                   </Link>
                 ) : (
@@ -82,20 +91,33 @@ export function ChatThread({
               </p>
               <p className="mt-1 whitespace-pre-wrap text-[16px] leading-normal">{message.body}</p>
               {message.reactions ? (
-                <p className="mt-2 inline-flex rounded-full border border-black/10 px-2.5 py-0.5 text-[14px]">{message.reactions}</p>
+                <p className="mt-2 inline-flex rounded-full border border-line px-2.5 py-0.5 text-[14px]">{message.reactions}</p>
               ) : null}
-              {message.comment ? <p className="mt-1.5 border-l-2 border-black/15 pl-3 text-[14px] text-muted">{message.comment}</p> : null}
+              {message.comment ? <p className="mt-1.5 border-l-2 border-line-strong pl-3 text-[14px] text-muted">{message.comment}</p> : null}
               {message.image ? (
                 <figure className="mt-2 max-w-md">
-                  <Image
-                    src="/community/ride.png"
-                    alt={t.chats.verified}
-                    width={640}
-                    height={360}
-                    sizes="(min-width: 640px) 28rem, 90vw"
-                    className="aspect-video w-full rounded-xl object-cover"
-                  />
-                  <figcaption className="mt-1 text-[13px] font-semibold text-accent">✓ {t.chats.verified}</figcaption>
+                  {message.imageSrc ? (
+                    // Captures are data URLs, which next/image does not serve.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={message.imageSrc} alt={message.verified ? t.chats.verified : t.chats.addPicture} className="aspect-video w-full rounded-xl object-cover" />
+                  ) : (
+                    <Image
+                      src="/community/ride.png"
+                      alt={message.verified ? t.chats.verified : t.chats.addPicture}
+                      width={640}
+                      height={360}
+                      sizes="(min-width: 640px) 28rem, 90vw"
+                      className="aspect-video w-full rounded-xl object-cover"
+                    />
+                  )}
+                  {message.verified ? (
+                    <figcaption className="mt-1 text-[13px] font-semibold text-accent">
+                      ✓ {t.chats.verified}
+                      {message.verifiedDate ? ` · ${message.verifiedDate}` : ''}
+                    </figcaption>
+                  ) : message.imageSrc ? (
+                    <figcaption className="mt-1 text-[13px] text-muted">{message.verifiedDate}</figcaption>
+                  ) : null}
                 </figure>
               ) : null}
             </div>
@@ -124,7 +146,7 @@ export function ChatThread({
           }}
           placeholder={t.chats.placeholder}
           aria-label={t.chats.message}
-          className="max-h-32 min-h-11 flex-1 resize-none rounded-3xl border border-black/15 bg-canvas px-4 py-2.5 text-[16px] outline-none focus:border-accent"
+          className="max-h-32 min-h-11 flex-1 resize-none rounded-3xl border border-line-strong bg-canvas px-4 py-2.5 text-[16px] outline-none focus:border-accent"
         />
         <button
           type="submit"
@@ -150,27 +172,32 @@ export function ChatThread({
       ) : null}
 
       {picture ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 lg:items-stretch lg:justify-end" onClick={() => setPicture(false)}>
-          <div className="w-full rounded-t-2xl bg-canvas p-2 pb-6 lg:h-full lg:max-w-md lg:rounded-none" onClick={(event) => event.stopPropagation()}>
-            <p className="px-4 py-3 text-[14px] text-muted">{t.chats.cameraNote}</p>
-            {[t.chats.camera, t.chats.upload, t.chats.fromAlbum].map((label) => (
-              <button
-                key={label}
-                type="button"
-                className="block w-full rounded-lg px-4 py-3 text-left text-[17px] hover:bg-sunken"
-                onClick={() => {
-                  setNotice(label)
-                  setPicture(false)
-                }}
-              >
-                {label}
-              </button>
-            ))}
-            <button type="button" className="mt-1 w-full rounded-lg px-4 py-3 text-[17px] font-semibold text-accent" onClick={() => setPicture(false)}>
-              {t.chats.cancel}
-            </button>
-          </div>
-        </div>
+        <PictureSheet
+          community={community}
+          viewerId={viewerId}
+          albums={albums}
+          onClose={() => setPicture(false)}
+          onPick={(shot) => {
+            setItems((current) => [
+              ...current,
+              {
+                id: `local-${current.length}`,
+                author: t.chats.you,
+                authorId: null,
+                mine: true,
+                body: '',
+                timeLabel: t.chats.justNow,
+                reactions: null,
+                comment: null,
+                image: true,
+                imageSrc: shot.src,
+                verified: shot.verified,
+                verifiedDate: shot.date,
+              },
+            ])
+            setPicture(false)
+          }}
+        />
       ) : null}
     </>
   )

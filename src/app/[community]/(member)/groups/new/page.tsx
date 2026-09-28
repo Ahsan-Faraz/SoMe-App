@@ -23,7 +23,7 @@ async function NewGroupContent({ params }: PageProps<'/[community]/groups/new'>)
   return (
     <div className="min-h-dvh w-full bg-canvas">
       <ScreenHeader title={t.groups.create} backHref={`/${community}/chats`} />
-      <GroupForm community={community} group={null} />
+      <GroupForm community={community} group={null} infos={[]} />
     </div>
   )
 }

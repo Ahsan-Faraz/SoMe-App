@@ -25,7 +25,7 @@ async function ChatsContent({ params }: PageProps<'/[community]/chats'>) {
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   const now = Date.now()
-  const chats = await listChats(community, now)
+  const chats = await listChats(community)
 
   return (
     <>

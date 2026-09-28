@@ -43,6 +43,16 @@ export const mockChats: MockChat[] = [
   { id: 'g-gear', kind: 'group', name: 'Gear & Repairs', lastMessage: 'Jonas: Anyone have a spare 11-speed chain?', minutesAgo: 60 * 50, unread: 0 },
   { id: 'dm-sara', kind: 'dm', name: 'Sara Holm', lastMessage: 'Great ride today', minutesAgo: 60 * 24 * 4, unread: 0 },
   { id: 'dm-jonas', kind: 'dm', name: 'Jonas Ek', lastMessage: null, minutesAgo: 60 * 24 * 12, unread: 0 },
+  { id: 'g-commute', kind: 'group', name: 'Winter Commuters', lastMessage: 'Lina: Studded tyres are on', minutesAgo: 60 * 24 * 13, unread: 0 },
+  { id: 'g-lidingo', kind: 'group', name: 'Lidingö Loop', lastMessage: 'Oskar: Saturday 09:00 at Ropsten', minutesAgo: 60 * 24 * 14, unread: 0 },
+  { id: 'g-beginners', kind: 'group', name: 'New Riders', lastMessage: 'Maja: Is a hybrid bike fine?', minutesAgo: 60 * 24 * 15, unread: 0 },
+  { id: 'g-routes', kind: 'group', name: 'Route Sharing', lastMessage: 'Anna: GPX for Tyresta is up', minutesAgo: 60 * 24 * 16, unread: 0 },
+  { id: 'g-sale', kind: 'group', name: 'Buy & Sell', lastMessage: 'Erik: Selling 700x40 tyres', minutesAgo: 60 * 24 * 18, unread: 0 },
+  { id: 'g-coffee', kind: 'group', name: 'Coffee Rides', lastMessage: 'Sara: Café in Saltsjöbaden?', minutesAgo: 60 * 24 * 20, unread: 0 },
+  { id: 'g-touring', kind: 'group', name: 'Bikepacking', lastMessage: 'Jonas: Gotland in June?', minutesAgo: 60 * 24 * 22, unread: 0 },
+  { id: 'g-night', kind: 'group', name: 'Night Rides', lastMessage: 'Peter: Headlamp recommendations', minutesAgo: 60 * 24 * 25, unread: 0 },
+  { id: 'g-kids', kind: 'group', name: 'Family Rides', lastMessage: 'Anna: Short loop in Hagaparken', minutesAgo: 60 * 24 * 28, unread: 0 },
+  { id: 'g-race', kind: 'group', name: 'Vätternrundan Training', lastMessage: 'Sara: 150 km this Sunday', minutesAgo: 60 * 24 * 31, unread: 0 },
 ]
 
 export const mockMessages: Record<
@@ -102,6 +112,13 @@ export const mockInfoPosts: Record<string, { headline: string; body: string }[]>
     },
   ],
 }
+
+export const mockEvents: { id: string; groupId: string; date: string; headline: string; text: string }[] = [
+  { id: 'ev-sep-8', groupId: 'g-tuesday', date: '2026-09-08', headline: 'Tuesday gravel', text: 'Meet at Slussen, 18:00. Lights on.' },
+  { id: 'ev-sep-8b', groupId: 'g-tuesday', date: '2026-09-08', headline: 'Coffee stop', text: 'Halfway in Nacka. The group waits.' },
+  { id: 'ev-sep-22', groupId: 'g-tuesday', date: '2026-09-22', headline: 'Tuesday gravel', text: '42 km loop. Shorter option splits at Hammarby.' },
+  { id: 'ev-jul-6', groupId: 'g-tuesday', date: '2026-07-06', headline: 'Tuesday gravel', text: 'Meet at Slussen, 18:00.' },
+]
 
 export const mockGroupMembers: Record<string, string[]> = {
   'g-tuesday': ['u-anna', 'u-erik', 'u-sara'],

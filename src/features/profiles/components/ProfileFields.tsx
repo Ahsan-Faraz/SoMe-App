@@ -32,7 +32,7 @@ export function ProfileFields({ own, about, status, headline }: { own: boolean; 
     <form className="mt-6 grid gap-4 min-[52rem]:mt-0" onSubmit={(event) => event.preventDefault()}>
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
         {t.profiles.text}
-        <input value={text} onChange={(event) => setText(event.target.value)} className="h-11 rounded-xl border border-black/15 bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
+        <input value={text} onChange={(event) => setText(event.target.value)} className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
       </label>
       <label className="flex items-center gap-2 text-[15px]">
         <input type="checkbox" checked={bike} onChange={(event) => setBike(event.target.checked)} />
@@ -40,7 +40,7 @@ export function ProfileFields({ own, about, status, headline }: { own: boolean; 
       </label>
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
         {t.profiles.select}
-        <select value={kind} onChange={(event) => setKind(event.target.value)} className="h-11 rounded-xl border border-black/15 bg-canvas px-3 text-[16px] font-normal text-ink">
+        <select value={kind} onChange={(event) => setKind(event.target.value)} className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink">
           <option>Gravel</option>
           <option>Road</option>
           <option>MTB</option>
@@ -48,7 +48,7 @@ export function ProfileFields({ own, about, status, headline }: { own: boolean; 
       </label>
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
         {t.profiles.number}
-        <input inputMode="numeric" value={years} onChange={(event) => setYears(event.target.value)} className="h-11 rounded-xl border border-black/15 bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
+        <input inputMode="numeric" value={years} onChange={(event) => setYears(event.target.value)} className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
       </label>
       <fieldset className="text-[15px]">
         <legend className="mb-1.5 text-[14px] font-semibold text-ink">{t.profiles.multi}</legend>
@@ -65,12 +65,12 @@ export function ProfileFields({ own, about, status, headline }: { own: boolean; 
       </fieldset>
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
         {t.profiles.area}
-        <textarea value={area} onChange={(event) => setArea(event.target.value)} rows={3} className="rounded-xl border border-black/15 bg-canvas px-3 py-2 text-[16px] font-normal text-ink outline-none focus:border-accent" />
+        <textarea value={area} onChange={(event) => setArea(event.target.value)} rows={3} className="rounded-xl border border-line-strong bg-canvas px-3 py-2 text-[16px] font-normal text-ink outline-none focus:border-accent" />
       </label>
       <Field label={t.profiles.status} value={status} />
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
         {t.profiles.headline}
-        <input defaultValue={headline} className="h-11 rounded-xl border border-black/15 bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
+        <input defaultValue={headline} className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
       </label>
     </form>
   )

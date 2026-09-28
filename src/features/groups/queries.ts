@@ -14,6 +14,11 @@ export async function getGroup(groupId: string): Promise<GroupForm | null> {
   return { ...group, headline: group.headline }
 }
 
+// A10: the three info posts, flattened as header, text, header, text… for the edit form.
+export async function listInfoFields(groupId: string): Promise<string[]> {
+  return infoPostsFor(groupId).flatMap((post) => [post.headline, post.body])
+}
+
 export async function listGroupMembers(groupId: string): Promise<GroupMember[]> {
   const ids = mockGroupMembers[groupId] ?? []
   return ids.flatMap((id) => {
@@ -46,6 +51,14 @@ export async function getInfoPost(groupId: string, n: number): Promise<InfoPost 
 
 function infoPostsFor(groupId: string) {
   return (mockInfoPosts[groupId] ?? mockInfoPosts.default ?? []).slice(0, INFO_POST_COUNT)
+}
+
+export async function listAssignments(userId: string): Promise<{ id: string; name: string; member: boolean }[]> {
+  return mockGroups.map((group) => ({
+    id: group.id,
+    name: group.name,
+    member: (mockGroupMembers[group.id] ?? []).includes(userId),
+  }))
 }
 
 export async function listPeopleToAdd(groupId: string): Promise<GroupMember[]> {

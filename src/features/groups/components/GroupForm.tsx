@@ -18,11 +18,11 @@ const blank: GroupValues = {
   directJoin: false,
 }
 
-export function GroupForm({ community, group }: { community: string; group: GroupValues | null }) {
+export function GroupForm({ community, group, infos: seedInfos }: { community: string; group: GroupValues | null; infos: string[] }) {
   const router = useRouter()
   const editing = group !== null
   const [values, setValues] = useState(group ?? blank)
-  const [infos, setInfos] = useState(['', '', '', '', '', ''])
+  const [infos, setInfos] = useState(() => Array.from({ length: 6 }, (_, i) => seedInfos[i] ?? ''))
 
   function setFlag(key: 'calendar' | 'history' | 'memberList' | 'editPosts' | 'directJoin', checked: boolean) {
     setValues((current) => ({ ...current, [key]: checked }))
@@ -33,7 +33,7 @@ export function GroupForm({ community, group }: { community: string; group: Grou
       className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4 px-4 py-4 sm:px-8 min-[64rem]:px-12"
       onSubmit={(event) => {
         event.preventDefault()
-        router.push(editing ? `/${community}/chats/${group.id}` : `/${community}/chats`)
+        router.push(editing ? `/${community}/chats/${group.id}/info` : `/${community}/chats`)
       }}
     >
       <label className="col-span-full grid gap-1.5 text-[14px] font-semibold text-ink">
@@ -42,7 +42,7 @@ export function GroupForm({ community, group }: { community: string; group: Grou
           required
           value={values.name}
           onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
-          className="h-11 rounded-xl border border-black/15 bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
+          className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
         />
       </label>
       <label className="flex items-center gap-2.5 text-[16px] font-medium">
@@ -56,7 +56,7 @@ export function GroupForm({ community, group }: { community: string; group: Grou
             <input
               value={infos[index * 2] ?? ''}
               onChange={(event) => setInfos((current) => current.map((item, i) => (i === index * 2 ? event.target.value : item)))}
-              className="h-11 rounded-xl border border-black/15 bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
+              className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
             />
           </label>
           <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
@@ -65,7 +65,7 @@ export function GroupForm({ community, group }: { community: string; group: Grou
               rows={2}
               value={infos[index * 2 + 1] ?? ''}
               onChange={(event) => setInfos((current) => current.map((item, i) => (i === index * 2 + 1 ? event.target.value : item)))}
-              className="rounded-xl border border-black/15 bg-canvas px-3 py-2 text-[16px] font-normal text-ink outline-none focus:border-accent"
+              className="rounded-xl border border-line-strong bg-canvas px-3 py-2 text-[16px] font-normal text-ink outline-none focus:border-accent"
             />
           </label>
         </div>
@@ -93,7 +93,7 @@ export function GroupForm({ community, group }: { community: string; group: Grou
         <input
           value={values.headline}
           onChange={(event) => setValues((current) => ({ ...current, headline: event.target.value }))}
-          className="h-11 rounded-xl border border-black/15 bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
+          className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
         />
       </label>
       <Button type="submit" className="col-span-full max-w-sm">{editing ? t.groups.edit : t.groups.save}</Button>

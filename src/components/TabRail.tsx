@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon, type IconName } from '@/components/ui/Icon'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { LogoutButton } from '@/features/auth/components/LogoutButton'
 import { t } from '@/lib/i18n'
 
@@ -33,7 +34,7 @@ export function TabRail({
   return (
     <nav
       aria-label={t.nav.label}
-      className={`sticky top-0 hidden h-dvh flex-col border-r border-black/10 bg-rail py-4 transition-[width] duration-200 rail:flex ${
+      className={`sticky top-0 hidden h-dvh flex-col border-r border-line bg-rail py-4 transition-[width] duration-200 rail:flex ${
         open ? 'w-60 px-3' : 'w-[4.5rem] items-center'
       }`}
     >
@@ -41,7 +42,7 @@ export function TabRail({
         <Link
           href={`/${community}/profiles/${userId}`}
           aria-label={t.chats.yourProfile}
-          className={`flex items-center gap-3 rounded-lg py-1 hover:bg-black/5 ${open ? 'px-1' : ''}`}
+          className={`flex items-center gap-3 rounded-lg py-1 hover:bg-hover ${open ? 'px-1' : ''}`}
         >
           <Avatar name={username} seed={userId} size="sm" />
           {open ? (
@@ -68,7 +69,7 @@ export function TabRail({
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={open ? undefined : tab.label}
                 title={open ? undefined : tab.label}
-                className={`${row} ${isActive ? 'bg-accent text-white' : 'text-ink hover:bg-black/5'}`}
+                className={`${row} ${isActive ? 'bg-accent text-white' : 'text-ink hover:bg-hover'}`}
               >
                 <Icon name={tab.icon} className="size-5 shrink-0" />
                 {open ? tab.label : null}
@@ -79,14 +80,15 @@ export function TabRail({
       </ul>
 
       <div className={`mt-auto grid gap-1 ${open ? '' : 'justify-items-center'}`}>
-        <LogoutButton community={community} withLabel={open} className={`${row} text-ink hover:bg-black/5`} />
+        <ThemeToggle withLabel={open} className={`${row} text-ink hover:bg-hover`} />
+        <LogoutButton community={community} withLabel={open} className={`${row} text-ink hover:bg-hover`} />
         <button
           type="button"
           aria-expanded={open}
           aria-label={open ? undefined : t.common.expand}
           title={open ? undefined : t.common.expand}
           onClick={() => setOpen((value) => !value)}
-          className={`${row} text-ink hover:bg-black/5`}
+          className={`${row} text-ink hover:bg-hover`}
         >
           <Icon name={open ? 'chevronLeft' : 'chevronRight'} className="size-5 shrink-0" />
           {open ? t.common.collapse : null}
