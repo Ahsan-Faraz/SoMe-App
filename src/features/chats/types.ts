@@ -1,3 +1,8 @@
+// What the viewer may do in this chat: group settings, but admins can always do everything.
+export type ChatRules = { post: boolean; comment: boolean; react: boolean; edit: boolean }
+
+export type Reaction = { emoji: string; count: number; mine: boolean }
+
 export type ChatMessage = {
   id: string
   author: string
@@ -5,7 +10,7 @@ export type ChatMessage = {
   mine: boolean
   body: string
   timeLabel: string
-  reactions: string | null
+  reactions: Reaction[]
   comment: string | null
   image: boolean
   imageSrc: string | null

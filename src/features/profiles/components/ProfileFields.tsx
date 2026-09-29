@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { GrowingTextarea } from '@/components/ui/GrowingTextarea'
+import { MultiSelect } from '@/components/ui/MultiSelect'
 import { t } from '@/lib/i18n'
 
-const days = ['Tue', 'Sun']
+const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export function ProfileFields({ own, about, status, headline }: { own: boolean; about: string; status: string; headline: string }) {
   const [text, setText] = useState(about)
@@ -32,7 +34,7 @@ export function ProfileFields({ own, about, status, headline }: { own: boolean; 
     <form className="mt-6 grid gap-4 min-[52rem]:mt-0" onSubmit={(event) => event.preventDefault()}>
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
         {t.profiles.text}
-        <input value={text} onChange={(event) => setText(event.target.value)} className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
+        <GrowingTextarea value={text} onChange={(event) => setText(event.target.value)} className="rounded-xl border border-line-strong bg-canvas px-3 py-2.5 text-[16px] leading-normal font-normal text-ink outline-none focus:border-accent" />
       </label>
       <label className="flex items-center gap-2 text-[15px]">
         <input type="checkbox" checked={bike} onChange={(event) => setBike(event.target.checked)} />
@@ -50,22 +52,10 @@ export function ProfileFields({ own, about, status, headline }: { own: boolean; 
         {t.profiles.number}
         <input inputMode="numeric" value={years} onChange={(event) => setYears(event.target.value)} className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent" />
       </label>
-      <fieldset className="text-[15px]">
-        <legend className="mb-1.5 text-[14px] font-semibold text-ink">{t.profiles.multi}</legend>
-        {days.map((day) => (
-          <label key={day} className="mr-4 inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={picked.includes(day)}
-              onChange={() => setPicked((current) => (current.includes(day) ? current.filter((item) => item !== day) : [...current, day]))}
-            />
-            {day}
-          </label>
-        ))}
-      </fieldset>
+      <MultiSelect label={t.profiles.multi} options={days} value={picked} onChange={setPicked} placeholder={t.profiles.choose} />
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
         {t.profiles.area}
-        <textarea value={area} onChange={(event) => setArea(event.target.value)} rows={3} className="rounded-xl border border-line-strong bg-canvas px-3 py-2 text-[16px] font-normal text-ink outline-none focus:border-accent" />
+        <GrowingTextarea value={area} onChange={(event) => setArea(event.target.value)} className="rounded-xl border border-line-strong bg-canvas px-3 py-2.5 text-[16px] leading-normal font-normal text-ink outline-none focus:border-accent" />
       </label>
       <Field label={t.profiles.status} value={status} />
       <label className="grid gap-1.5 text-[14px] font-semibold text-ink">
@@ -80,7 +70,7 @@ function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-[14px] font-semibold text-ink">{label}</dt>
-      <dd className="mt-0.5 text-[16px] text-ink-soft">{value}</dd>
+      <dd className="mt-0.5 text-[16px] whitespace-pre-wrap text-ink-soft">{value}</dd>
     </div>
   )
 }

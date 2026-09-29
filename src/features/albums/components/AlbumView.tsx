@@ -103,6 +103,8 @@ export function AlbumView({ community, userId, albumId, own, seed }: { community
         {album.images.map((image) => (
           <li
             key={image.id}
+            // iOS: long-press is our delete; no text selection or Safari image menu (touch only).
+            className="pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
             onContextMenu={(event) => {
               if (!own) return
               event.preventDefault()
@@ -117,7 +119,7 @@ export function AlbumView({ community, userId, albumId, own, seed }: { community
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.src} alt="" className="aspect-video w-full rounded-2xl object-cover" />
+            <img src={image.src} alt="" draggable={false} className="aspect-video w-full rounded-2xl object-cover" />
             <p className="mt-1 text-[14px] text-muted">{image.verified ? `✓ ${t.chats.verified} · ${image.date}` : image.date}</p>
           </li>
         ))}

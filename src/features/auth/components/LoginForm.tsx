@@ -29,7 +29,7 @@ export function LoginForm({ community }: { community: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} noValidate className="grid gap-4">
       <TextField id="username" name="username" label={t.login.username} autoComplete="username" autoCapitalize="none" />
       <TextField id="password" name="password" type="password" label={t.login.password} autoComplete="current-password" />
 

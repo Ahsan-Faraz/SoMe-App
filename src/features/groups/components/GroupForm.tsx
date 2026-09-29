@@ -16,6 +16,9 @@ const blank: GroupValues = {
   memberList: true,
   editPosts: true,
   directJoin: false,
+  posting: true,
+  commenting: true,
+  reactions: true,
 }
 
 export function GroupForm({ community, group, infos: seedInfos }: { community: string; group: GroupValues | null; infos: string[] }) {
@@ -24,7 +27,7 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
   const [values, setValues] = useState(group ?? blank)
   const [infos, setInfos] = useState(() => Array.from({ length: 6 }, (_, i) => seedInfos[i] ?? ''))
 
-  function setFlag(key: 'calendar' | 'history' | 'memberList' | 'editPosts' | 'directJoin', checked: boolean) {
+  function setFlag(key: 'calendar' | 'history' | 'memberList' | 'editPosts' | 'directJoin' | 'posting' | 'commenting' | 'reactions', checked: boolean) {
     setValues((current) => ({ ...current, [key]: checked }))
   }
 
@@ -74,6 +77,9 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
         [
           ['history', t.groups.history],
           ['memberList', t.groups.memberList],
+          ['posting', t.groups.posting],
+          ['commenting', t.groups.commenting],
+          ['reactions', t.groups.reactions],
           ['editPosts', t.groups.editPosts],
           ['directJoin', t.groups.directJoin],
         ] as const

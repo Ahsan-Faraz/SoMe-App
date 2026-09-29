@@ -33,6 +33,11 @@ export function chatIdForUser(userId: string): string | null {
   return userChats[userId] ?? null
 }
 
+// The other person in a DM, so notes about them are the same from the chat and their profile.
+export function dmPartnerId(chatId: string): string | null {
+  return Object.keys(userChats).find((userId) => userChats[userId] === chatId) ?? null
+}
+
 export async function listDirectory(community: string): Promise<DirectoryEntry[]> {
   const people = mockUsers.map((user) => ({
     id: user.id,
@@ -71,7 +76,7 @@ export async function getChat(chatId: string, now: number): Promise<ChatThread |
       mine: message.mine,
       body: message.body,
       timeLabel: formatPostTime(new Date(now - message.minutesAgo * 60_000).toISOString()),
-      reactions: message.reactions ?? null,
+      reactions: (message.reactions ?? []).map((reaction) => ({ ...reaction, mine: false })),
       comment: message.comment ?? null,
       image: message.image ?? false,
       imageSrc: null,

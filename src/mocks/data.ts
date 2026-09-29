@@ -57,12 +57,12 @@ export const mockChats: MockChat[] = [
 
 export const mockMessages: Record<
   string,
-  { author: string; mine: boolean; body: string; minutesAgo: number; reactions?: string; comment?: string; image?: boolean }[]
+  { author: string; mine: boolean; body: string; minutesAgo: number; reactions?: { emoji: string; count: number }[]; comment?: string; image?: boolean }[]
 > = {
   'g-tuesday': [
-    { author: 'Anna Lind', mine: false, body: 'Meeting at Slussen 18:00. Lights on, please.', minutesAgo: 40, reactions: '👍 2', comment: 'Erik: I will bring a tube.' },
+    { author: 'Anna Lind', mine: false, body: 'Meeting at Slussen 18:00. Lights on, please.', minutesAgo: 40, reactions: [{ emoji: '👍', count: 2 }], comment: 'Erik: I will bring a tube.' },
     { author: 'Erik Berg', mine: false, body: 'I can bring a spare tube.', minutesAgo: 28, image: true },
-    { author: 'You', mine: true, body: 'I will be there. Leaving Södermalm at 17:30.', minutesAgo: 18, reactions: '👍 1' },
+    { author: 'You', mine: true, body: 'I will be there. Leaving Södermalm at 17:30.', minutesAgo: 18, reactions: [{ emoji: '👍', count: 1 }] },
     { author: 'Anna Lind', mine: false, body: 'Meeting at Slussen 18:00 👍', minutesAgo: 12 },
   ],
   'dm-anna': [
@@ -84,10 +84,10 @@ export const mockProfiles = [
 ]
 
 export const mockGroups = [
-  { id: 'g-tuesday', name: 'Tuesday Gravel Ride', headline: 'Weekly gravel from Slussen', directJoin: false, calendar: true, history: true, memberList: true, editPosts: true },
-  { id: 'g-mtb', name: 'MTB Nacka', headline: 'Trail conditions and meeting points', directJoin: true, calendar: true, history: false, memberList: true, editPosts: true },
-  { id: 'g-road', name: 'Road Cycling Sundays', headline: 'The Sunday route', directJoin: false, calendar: false, history: true, memberList: false, editPosts: false },
-  { id: 'g-gear', name: 'Gear & Repairs', headline: 'Parts, tools, and workshop time', directJoin: true, calendar: false, history: true, memberList: true, editPosts: true },
+  { id: 'g-tuesday', name: 'Tuesday Gravel Ride', headline: 'Weekly gravel from Slussen', directJoin: false, calendar: true, history: true, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
+  { id: 'g-mtb', name: 'MTB Nacka', headline: 'Trail conditions and meeting points', directJoin: true, calendar: true, history: false, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
+  { id: 'g-road', name: 'Road Cycling Sundays', headline: 'The Sunday route', directJoin: false, calendar: false, history: true, memberList: false, editPosts: false, posting: true, commenting: true, reactions: true },
+  { id: 'g-gear', name: 'Gear & Repairs', headline: 'Parts, tools, and workshop time', directJoin: true, calendar: false, history: true, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
 ]
 
 // Info 1–3 per group (headline + body). Groups without an entry use the default set.

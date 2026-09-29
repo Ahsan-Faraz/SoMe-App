@@ -57,7 +57,8 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
             <li key={album.id}>
               <Link
                 href={`/${community}/profiles/${userId}/albums/${album.id}`}
-                className="block"
+                // iOS: long-press is our delete; no text selection or Safari link/image menu (touch only).
+                className="block pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
                 onContextMenu={(event) => {
                   if (!own) return
                   event.preventDefault()
@@ -73,7 +74,7 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
               >
                 {cover ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={cover} alt="" className="aspect-square w-full rounded-2xl object-cover" />
+                  <img src={cover} alt="" draggable={false} className="aspect-square w-full rounded-2xl object-cover" />
                 ) : (
                   <span className="grid aspect-square w-full place-items-center rounded-2xl bg-rail text-muted">
                     <Icon name="image" />

@@ -52,7 +52,7 @@ export function JoinForm({ community, communityName }: { community: string; comm
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       <p className="text-ink-soft">{t.join.subtitle(communityName)}</p>
       <TextField id="username" name="username" label={t.join.username} autoComplete="username" autoCapitalize="none" required />
       <TextField

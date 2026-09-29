@@ -43,7 +43,7 @@ export function Photos({ verified, community, userId, own }: { verified: string;
             )}
             {slot === 0 ? (
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pt-6 pb-2 text-[11px] text-white">
-                {t.chats.verified} · {mine?.date || verified}
+                {mine && !mine.verified ? mine.date : `${t.chats.verified} · ${mine?.date || verified}`}
               </span>
             ) : null}
           </button>
@@ -60,7 +60,7 @@ export function Photos({ verified, community, userId, own }: { verified: string;
               <Image src={shot.src} alt={shot.alt} width={1280} height={720} className="max-h-[80dvh] w-full rounded-2xl object-cover" style={{ objectPosition: shot.position }} />
             )}
             <figcaption className="mt-3 text-center text-[13px] text-white">
-              {open === 0 ? `${t.chats.verified} · ${mine?.date || verified}` : shot.alt}
+              {open === 0 ? (mine && !mine.verified ? mine.date : `${t.chats.verified} · ${mine?.date || verified}`) : shot.alt}
             </figcaption>
           </figure>
         </div>

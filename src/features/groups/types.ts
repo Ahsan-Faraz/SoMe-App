@@ -7,6 +7,9 @@ export type GroupForm = {
   memberList: boolean
   editPosts: boolean
   directJoin: boolean
+  posting: boolean
+  commenting: boolean
+  reactions: boolean
 }
 
 export type GroupMember = { id: string; username: string }

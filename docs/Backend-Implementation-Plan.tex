@@ -1,0 +1,731 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Packages (same set as User-Stories-and-Requirements.tex, plus nothing new)
+% ---------------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.2cm,headheight=14pt]{geometry}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{needspace}
+
+\definecolor{navy}{HTML}{1B365D}
+\definecolor{steel}{HTML}{2E5984}
+\definecolor{p0}{HTML}{1B7A4E}
+\definecolor{p1}{HTML}{B45309}
+\definecolor{tbd}{HTML}{B91C1C}
+\definecolor{rowalt}{HTML}{F8FAFC}
+\definecolor{hdrbg}{HTML}{1B365D}
+
+\hypersetup{
+  colorlinks=true, linkcolor=steel, urlcolor=steel, citecolor=steel,
+  pdftitle={SoMe App --- Backend and Database Implementation Plan},
+  pdfauthor={Product Engineering}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{steel}SoMe App --- Backend \& Database Plan}
+\fancyhead[R]{\small\color{steel}2026-09-29}
+\fancyfoot[C]{\small\color{steel}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}{\Large\bfseries\color{navy}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries\color{steel}}{\thesubsection}{0.7em}{}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.2em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=0.2em,topsep=0.3em}
+\setstretch{1.08}
+
+\newcommand{\hdr}[1]{\textcolor{white}{\textbf{#1}}}
+\newcommand{\vone}{\textcolor{p0}{\textbf{V1}}}
+\newcommand{\later}{\textcolor{p1}{\textbf{Later}}}
+\newcommand{\tbd}{\textcolor{tbd}{\textbf{TBD}}}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+{\Huge\bfseries\color{navy} SoMe App\par}
+\vspace{0.6cm}
+{\LARGE\color{steel} Backend and Database Implementation Plan\par}
+\vspace{1cm}
+{\large Analysis before implementation\par}
+\vspace{0.4cm}
+{\normalsize 2026-09-29\par}
+\vfill
+\begin{minipage}{0.85\textwidth}
+\small
+\textbf{Sources cross-checked:} spec v0.33 (via \code{docs/User-Stories-and-Requirements.tex}), meeting
+transcript notes captured there, mockup \emph{SoMe App 260922}, \code{.cursor/rules/*} (architecture,
+performance, scaling, project-structure, progress-tracker), and the built frontend in \code{src/}.
+
+Where sources disagree, this document names the conflict and states the \textbf{safest reversible
+assumption}. It does not pick a product winner.
+\end{minipage}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{Summary}
+% ===========================================================================
+\begin{itemize}
+  \item \textbf{Stack:} Supabase (Postgres, Auth, Storage, Realtime) in \code{eu-north-1}, and Next.js 16 on
+        Vercel functions in \code{arn1}. There is no other service. No Redis, queue, workers, GraphQL or global
+        client store. Nothing measured calls for them.
+  \item \textbf{Transport:}
+        \begin{itemize}
+          \item Server Components read through the DAL (\code{cache()} + \code{getClaims()}).
+          \item Hot writes (send, react, mark-read) go from the browser to a Postgres RPC under RLS.
+          \item Privileged work (admit, group membership, album password, login by username) runs as Server Actions.
+        \end{itemize}
+  \item \textbf{Size:} 15 tables and 3 storage buckets. Every table maps to a V1 story. The analysis also dropped
+        two tables that looked necessary:
+        \begin{itemize}
+          \item \textbf{Verification} is a camera photo in the admin DM, so it needs no table of its own.
+          \item \textbf{Album unlock} is enforced by short-lived signed URLs issued only after the password check,
+                so it needs no table either.
+        \end{itemize}
+  \item \textbf{Biggest design correction:} the planned per-user Realtime channel for A1 means one Broadcast per
+        member per message. That is 460 writes for one post in a 460-member group, the same fan-out the unread
+        design avoids. \textbf{Recommendation:} in V1, A1 refetches its single RPC on focus and navigation (\S\ref{sec:rt}).
+  \item \textbf{Blocking TBDs for later slices:} account scope, the ads model (AD-001), and direct join.
+        Slices 1--10 can proceed on the safe assumptions below. Ads wait for AD-001.
+\end{itemize}
+
+% ===========================================================================
+\section{Feature and functionality inventory}
+% ===========================================================================
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{1.9cm} L{5.2cm} L{2.2cm} L{1.1cm} L{4.6cm}}
+\rowcolor{hdrbg}\hdr{Area} & \hdr{Feature} & \hdr{Stories} & \hdr{Scope} & \hdr{Backend needed}\\
+\endhead
+Auth & Join (username, password $\times$2, email) $\rightarrow$ email link $\rightarrow$ pending & AUTH-001/002 & \vone & Auth signUp, member row, confirm route\\
+Auth & Login with username + password & AUTH-003 & \vone & Server-side username$\rightarrow$email lookup + signIn\\
+Auth & Pending: edit profile, DM admin only & AUTH-004 & \vone & RLS gate on \code{members.state}\\
+Auth & Logout & AUTH-005 & \vone & \code{signOut}\\
+Auth & Forgot password & AUTH-006 & \tbd & Supabase reset; UI missing\\
+Auth & Google login & --- & \later & ---\\
+Community & Start AA / About AB & COMM-001/002 & \vone & \code{communities} read, cacheable\\
+Community & Account scope (per community vs platform) & COMM-006 & \tbd & Shapes auth (\S\ref{sec:tbd})\\
+Community & Path vs subdomain & --- & \tbd & None (routing only)\\
+Admin & Admit (F1 ``Community'' checkbox) & ADMIN-001 & \vone & Privileged RPC\\
+Admin & Assign groups (F1), add (F2), remove (A11) & ADMIN-002, GROUP-005 & \vone & Privileged RPC\\
+Admin & Create / edit / rename / delete group (A10) & GROUP-001..004 & \vone & Chats + settings + info posts\\
+Admin & Custom member status (1 text + 3 checkboxes) & GROUP-007 & \vone & Columns on \code{chat\_members}; \textbf{UI missing}\\
+Admin & Co-admins & --- & \later & ---\\
+Profile & Base fields: username, icon, photos, status, location, about $\le$ 32k, headline & PROF-001..006 & \vone & \code{members} columns + avatar bucket\\
+Profile & 1 vs 3 main photos & PROF-003 & \tbd & Schema supports both\\
+Profile & Latest login & PROF-007 & \vone & \code{members.last\_login\_at}\\
+Profile & Dynamic fields (defs + values) & DYN-001..005 & \vone & \code{profile\_field\_defs}, \code{profile\_field\_values}\\
+Profile & First-community field list & DYN & \tbd & Seed data only\\
+Profile & Profile score, reputation & --- & \later & ---\\
+Search & A5 list + G1 filter, remembered on account & SEARCH-001..004 & \vone & One RPC + \code{members.search\_filter}\\
+Search & Cross-community search & --- & \later & ---\\
+Chat & A1 list, unread, unread-first, local search & DM-001/002 & \vone & \code{chat\_list} RPC\\
+Chat & A2 directory (users + groups) & DM-003 & \vone & \code{directory} RPC\\
+Chat & Open / create DM & DM-004 & \vone & \code{open\_dm} RPC\\
+Chat & G2 leave; leave+delete (bilateral); leave+block & DM-005..007 & \vone & RPCs + \code{blocks}\\
+Chat & Who can contact me & --- & \tbd & Not built\\
+Posts & Text, image, camera image & POST-001..003 & \vone & \code{send\_message} + chat bucket\\
+Posts & Keyset history paging & POST-004, NFR & \vone & PK \code{(chat\_id, seq)}\\
+Posts & React + who reacted & POST-005 & \vone & \code{reactions}\\
+Posts & Comment with snippet & POST-006 & \vone & \code{messages.reply\_to\_seq}\\
+Posts & Edit own (group flag), delete own, admin deletes any & POST-007/008 & \vone & RPCs\\
+Posts & Edit in DMs & --- & \tbd & Off until decided\\
+Verify & In-app camera photo + date to admin DM & VERIFY-001..005 & \vone & \code{messages.camera}, \code{captured\_at}\\
+Group & G3 info, member list gated & GROUP-006 & \vone & \code{group\_info} RPC\\
+Group & Sticky info posts 1--3 (B2) & STICKY-001..003 & \vone & \code{group\_info\_posts}\\
+Group & Calendar A4/A12, admin CRUD & CAL-001..004 & \vone & \code{events}\\
+Group & Direct join & GROUP & \tbd & Flag stored, join disabled\\
+Group & Max group size & --- & \tbd & Not enforced\\
+Notes & Private notes, stars 1--5 on profile & NOTE-001..004 & \vone & \code{notes}, author-only\\
+Albums & Albums, optional password, camera/upload & ALB & \vone & \code{albums}, \code{album\_images}, bucket\\
+Ads & A6--D3 screens vs ads-as-posts & AD-001 & \tbd & Build last\\
+Other & Push, payments/Swish, video/audio & --- & \later & ---\\
+GDPR & Export / erase mechanics & SEC & \tbd & Cascades designed in\\
+\end{longtable}
+}
+
+% ===========================================================================
+\section{Frontend to backend mapping}
+% ===========================================================================
+The frontend reads mocks through \code{src/features/*/queries.ts} (server-only) and persists client state in
+localStorage. The backend replaces the \emph{bodies} of those functions and the localStorage modules.
+Component props stay the same unless listed in \S\ref{sec:contract}.
+
+\subsection{Reads}
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{2.2cm} L{3.4cm} L{7.6cm} L{1.6cm}}
+\rowcolor{hdrbg}\hdr{Screen} & \hdr{Current source} & \hdr{Becomes} & \hdr{Trips}\\
+\endhead
+AA / AB & \code{communities/queries} mock & select by slug in \code{'use cache'} + \code{cacheTag} & 0--1\\
+Session & \code{mocks/session}, \code{getViewer()} & DAL \code{getMember(slug)}: \code{getClaims()} + one \code{members} row, \code{cache()} & 1\\
+A1 & \code{listChats} & \code{rpc('chat\_list', \{community, limit 50\})} & 1\\
+A2 & \code{listDirectory} & \code{rpc('directory', \{community, q, limit 30\})}, debounced 200 ms & 1\\
+B1 / B3 & \code{getThread} & \code{rpc('list\_messages', \{chat, before\_seq, limit 30\})} + one \code{createSignedUrls} batch & 2\\
+B1 scroll back & none (loads all) & same RPC with \code{before\_seq} = oldest seq & 1/page\\
+G3 & \code{getGroupInfo} & \code{rpc('group\_info')}; members only if \code{member\_list} or admin & 1\\
+B2 & \code{getInfoPost} & PK select on \code{group\_info\_posts} & 1\\
+A10 & \code{getGroup}, \code{listInfoFields} & \code{Promise.all} of two PK selects & 1\\
+A11 / F2 & \code{listGroupMembers}, \code{listPeopleToAdd} & \code{rpc('group\_members')}, \code{rpc('addable\_members')} & 1\\
+F1 & \code{listAssignments} & \code{rpc('member\_assignments')} & 1\\
+A5 & \code{profiles/queries} & \code{rpc('search\_profiles', \{community, filter, after, limit 30\})} & 1\\
+A3 & \code{getProfile} & \code{rpc('profile')}: base + values + defs & 1\\
+A4 / A12 & \code{calendar/storage} (localStorage) & select \code{events} by chat and date range, limit 200 & 1\\
+B5 & \code{PrivateNotes} (localStorage) & PK select on \code{notes} & 1\\
+Albums & \code{albums/storage} (localStorage) & select by owner; images only via Server Action after password & 1\\
+A6, D1--D3 & \code{ads/storage} (localStorage) & \code{rpc('search\_ads')}, select by id & 1\\
+\end{longtable}
+}
+
+\subsection{Writes}
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{2.6cm} L{3.4cm} L{4.6cm} L{4.2cm}}
+\rowcolor{hdrbg}\hdr{UI action} & \hdr{Component} & \hdr{Transport} & \hdr{Backend}\\
+\endhead
+Join & \code{JoinForm} & Browser \code{auth.signUp} after \code{username\_available} & Trigger creates pending \code{members} row\\
+Login & \code{LoginForm} & \textbf{Server Action} & username$\rightarrow$email, \code{signInWithPassword}, \code{last\_login\_at} in \code{after()}\\
+Logout & \code{LogoutButton} & Browser \code{auth.signOut()} & ---\\
+Send & \code{ChatThread} & Browser \code{rpc('send\_message')}, optimistic & seq + insert + bump + Broadcast, one transaction\\
+Image / camera & \code{PictureSheet}, \code{CameraCapture} & Storage upload (full + thumb), then \code{send\_message} & Bucket RLS by chat membership\\
+React & \code{PostSheet} & \code{rpc('toggle\_reaction')}, optimistic & PK upsert/delete + Broadcast\\
+Who reacted & \code{PostSheet} (stub) & select \code{reactions} (chat, seq) limit 100 & ---\\
+Edit / delete & \code{PostSheet} (stub) & \code{rpc('edit\_message')}, \code{rpc('delete\_message')} & Flag and role checks\\
+Comment & \code{PostSheet} & \code{send\_message} with \code{reply\_to\_seq} & FK cascade\\
+Mark read & open / leave thread & \code{rpc('mark\_read')} on open and \code{pagehide}/unmount & One row update\\
+Leave / delete / block & \code{LeaveChat} (localStorage) & \code{leave\_chat}, \code{delete\_dm}, \code{block\_user} & \S\ref{sec:api}\\
+Open DM & Directory, profile & \code{rpc('open\_dm')} & Find-or-create\\
+Group CRUD & \code{GroupForm} (no-op) & Server Action $\rightarrow$ \code{save\_group}, \code{delete\_group} & One transaction\\
+Admit / assign & \code{AssignGroups} (localStorage) & Server Action $\rightarrow$ \code{admit\_member}, \code{set\_group\_member} & Admin check in RPC\\
+Add / remove member & \code{AddList}, \code{MemberList} & Server Action $\rightarrow$ \code{set\_group\_member} & same\\
+Profile edit & \code{ProfileFields} (demo), \code{ReplacePhoto} (localStorage) & \code{rpc('save\_profile')}; avatar to public bucket & Values replaced per def\\
+Filter save & \code{ProfileFilter} (localStorage) & update \code{members.search\_filter}, debounced 500 ms & One column\\
+Calendar CRUD & \code{EventForm}, \code{CalendarBoard} & Direct table under RLS (group admin) & ---\\
+Notes / stars & \code{PrivateNotes} & Direct upsert under RLS (author) & ---\\
+Albums & \code{AlbumView}, \code{AlbumList} & Owner insert/upload; \textbf{Server Action} for password and unlock & bcrypt via pgcrypto\\
+Ads & \code{AdEditor}, \code{AdFilterForm} & Direct under RLS; filter in \code{members.ad\_filter} & Blocked on AD-001\\
+\end{longtable}
+}
+
+\subsection{Frontend contract changes the backend forces}\label{sec:contract}
+\begin{enumerate}
+  \item \code{getViewer()} returns \code{u-me}. It must return the real \code{auth.uid()} and member state.
+        Delete \code{mocks/session.ts} and \code{roleForUsername}.
+  \item \code{ChatMessage}:
+        \begin{itemize}
+          \item \code{reactions} becomes \code{\{emoji, count, mine\}[]}.
+          \item \code{comment} becomes \code{replyTo: \{seq, author, snippet\}}.
+          \item \code{image}/\code{imageSrc} become \code{thumbUrl} and \code{fullPath} (full URL signed on tap).
+          \item \code{timeLabel} is formatted on the server.
+          \item Add \code{seq} as the paging cursor.
+        \end{itemize}
+  \item Group G2 currently offers ``leave and block''. DM-005..007 make delete and block DM-only, so groups show only
+        ``Leave''.
+  \item \code{ProfileFields} hardcodes demo fields and must render from \code{profile\_field\_defs} (FieldRenderer).
+  \item \code{lib/image.ts}:
+        \begin{itemize}
+          \item It outputs a JPEG data URL. It must output a WebP \code{Blob}, with a JPEG q 0.8 fallback, at
+                $\sim$1600 px plus a 256 px thumbnail.
+          \item Data URLs in localStorage exceed the quota after a few photos.
+        \end{itemize}
+  \item Missing UI that V1 stories need (the columns are added now):
+        \begin{itemize}
+          \item the custom member status editor (GROUP-007)
+          \item a ``show sticky posts'' toggle on A10 (STICKY-003)
+          \item a forgot-password page (AUTH-006, flow TBD)
+        \end{itemize}
+\end{enumerate}
+
+% ===========================================================================
+\section{Database design}
+% ===========================================================================
+\subsection{Conventions}
+\begin{itemize}
+  \item UUID primary keys, except \code{messages}: PK \code{(chat\_id, seq)}.
+  \item Every tenant table carries \code{community\_id not null}, including child tables, so RLS filters on an
+        indexed local column.
+  \item \code{timestamptz} everywhere. Lengths are enforced in \code{check} constraints, so a direct browser call
+        cannot bypass them.
+  \item Enums use \code{text} + \code{check}, so a new value is a one-line migration.
+  \item RLS is on for every table, and policies use \code{(select auth.uid())}.
+  \item Two \code{security definer stable} helpers with \code{search\_path = ''} are the only intentional RLS
+        crossings: \code{is\_member(community)} and \code{is\_chat\_member(chat)}.
+\end{itemize}
+
+\subsection{Tables}
+{\small
+\begin{verbatim}
+communities (id uuid pk, slug text unique check (slug ~ '^[a-z0-9-]{2,40}$'),
+  name, headline, about text[], hero_path, about_path,
+  admin_user_id uuid not null references auth.users on delete restrict, created_at)
+
+members (                                   -- membership + community-scoped profile
+  community_id uuid references communities on delete cascade,
+  user_id uuid references auth.users on delete cascade,
+  username text not null check (char_length(username) between 3 and 32),
+  role  text default 'member'  check (role in ('member','admin')),
+  state text default 'pending' check (state in ('pending','approved')),
+  status text check (status in ('couple','man','woman','other')),
+  country, region, place (<= 80), headline (<= 120), about (<= 32000),
+  icon_path, photo_paths text[] check (cardinality(photo_paths) <= 3),
+  search_filter jsonb, ad_filter jsonb, last_login_at, created_at,
+  primary key (community_id, user_id))
+  unique index (community_id, lower(username))
+  index (user_id, community_id)
+  index (community_id, state)
+
+profile_field_defs (id pk, community_id, key, label,
+  kind check (kind in ('text','longtext','checkbox','number','select','multiselect','area')),
+  options text[], position smallint, searchable bool, on_card bool, for_status text[],
+  unique (community_id, key))
+
+profile_field_values (id bigint identity pk, community_id, user_id,
+  field_def_id references profile_field_defs on delete cascade,
+  value_text (<= 4000), value_num numeric, value_bool boolean,
+  foreign key (community_id, user_id) references members on delete cascade)
+  unique index (field_def_id, user_id, coalesce(value_text,''))
+  index (field_def_id, value_num)
+  index (field_def_id, value_text)
+  index (community_id, user_id)
+
+chats (id pk, community_id references communities on delete cascade,
+  kind check (kind in ('dm','group')), name (group: 1..80), headline (<= 200),
+  dm_user_a uuid, dm_user_b uuid,                         -- dm only, a < b
+  calendar, history, member_list, edit_posts bool default true,
+  direct_join bool default false, show_sticky bool default true,
+  last_seq bigint default 0, last_message_at, last_message_preview, created_by, created_at)
+  unique index (community_id, dm_user_a, dm_user_b) where kind = 'dm'
+  index (community_id, last_message_at desc)
+
+chat_members (chat_id references chats on delete cascade, user_id, community_id,
+  role check (role in ('member','admin')),
+  last_read_seq bigint default 0,
+  visible_from_seq bigint default 0,                      -- history off: last_seq at join
+  member_status_text (<= 60), member_flags boolean[3],    -- GROUP-007
+  joined_at, primary key (chat_id, user_id),
+  foreign key (community_id, user_id) references members on delete cascade)
+  index (user_id, community_id)
+
+messages (chat_id references chats on delete cascade, seq bigint, community_id,
+  author_id references auth.users on delete cascade,
+  body (<= 8000), image_path, thumb_path,
+  camera bool default false, captured_at,                 -- a client claim, not proof
+  reply_to_seq bigint, edited_at, created_at,
+  primary key (chat_id, seq),
+  foreign key (chat_id, reply_to_seq) references messages on delete cascade,
+  check (body is not null or image_path is not null))
+
+reactions (chat_id, seq, user_id, community_id, emoji (<= 16), created_at,
+  primary key (chat_id, seq, user_id, emoji),
+  foreign key (chat_id, seq) references messages on delete cascade)
+
+blocks (community_id, blocker_id, blocked_id, created_at,
+  primary key (community_id, blocker_id, blocked_id), check (blocker_id <> blocked_id))
+  index (community_id, blocked_id)
+
+group_info_posts (chat_id references chats on delete cascade, n smallint check (n between 1 and 3),
+  community_id, headline (<= 120), body (<= 32000), primary key (chat_id, n))
+
+events (id pk, chat_id references chats on delete cascade, community_id,
+  on_date date, headline (<= 120), body (<= 4000), created_by, created_at)
+  index (chat_id, on_date)
+
+notes (author_id, community_id, target_kind check (target_kind in ('chat','user')),
+  target_id, body (<= 32000), stars smallint check (stars between 1 and 5), updated_at,
+  primary key (author_id, target_kind, target_id))
+
+albums (id pk, community_id, owner_id, name (1..80),
+  password_hash text,                                     -- crypt(pw, gen_salt('bf', 10))
+  created_at, foreign key (community_id, owner_id) references members on delete cascade)
+  index (community_id, owner_id)
+
+album_images (id pk, album_id references albums on delete cascade, community_id,
+  path, thumb_path, camera bool, captured_at, created_at)
+  index (album_id, created_at desc)
+
+ads (id pk, community_id, user_id, looking_for, headline (<= 120), body (<= 4000),
+  region, place, image_path, camera bool, published_at, updated_at,
+  foreign key (community_id, user_id) references members on delete cascade)
+  index (community_id, published_at desc)
+\end{verbatim}
+}
+Age and status are \textbf{not} stored on ads. They are read from the author's profile, so ``from profile, not
+editable'' holds and the data cannot drift.
+
+\subsection{Relationships}
+{\small
+\begin{verbatim}
+communities 1-* members *-1 auth.users
+communities 1-* profile_field_defs 1-* profile_field_values *-1 members
+communities 1-* chats 1-* chat_members *-1 members
+chats 1-* messages 1-* reactions ; messages 1-* messages (reply_to_seq)
+chats(group) 1-3 group_info_posts ; chats(group) 1-* events
+members 1-* albums 1-* album_images ; members 1-* ads ; members 1-* notes (author)
+\end{verbatim}
+}
+Deleting a user or community cascades everything (the GDPR erase path). Storage objects are removed in
+\code{after()}.
+
+\subsection{Query patterns}
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{2cm} L{9.4cm} L{3.4cm}}
+\rowcolor{hdrbg}\hdr{Pattern} & \hdr{SQL shape} & \hdr{Index}\\
+\endhead
+A1 & \code{chat\_members join chats where user\_id = me and community\_id = \$c order by has\_unread desc, last\_message\_at desc limit 50}; DM name via one join to \code{members} & \code{chat\_members(user\_id, community\_id)}, chats PK\\
+Unread & \code{greatest(last\_seq - greatest(last\_read\_seq, visible\_from\_seq), 0)} in the A1 select & none; no \code{COUNT}\\
+Thread & \code{where chat\_id = \$1 and seq > visible\_from and seq < \$cursor order by seq desc limit 30}; reactions for those 30 via PK prefix & messages PK\\
+Search & approved members in community + one \code{exists} on \code{profile\_field\_values} per active filter; keyset on \code{lower(username)}, limit 30 & username unique, \code{pfv\_num}/\code{pfv\_text}\\
+Directory & substring on username and group name in one community, limit 30 & scan in one community; \code{pg\_trgm} only if measured $>$ 50 ms\\
+Calendar & \code{events where chat\_id and on\_date between \$a and \$b limit 200} & \code{(chat\_id, on\_date)}\\
+\end{longtable}
+}
+No \code{select('*')}, no \code{count: 'exact'}, and no OFFSET on any list.
+
+\subsection{Transactions (each inside one Postgres function)}
+\begin{itemize}
+  \item \code{send\_message}:
+        \begin{enumerate}
+          \item Check membership, block, and state.
+          \item \code{update chats set last\_seq = last\_seq + 1, last\_message\_at, preview \ldots\ returning last\_seq}.
+                The row lock serializes seq per chat only.
+          \item Insert the message.
+          \item \code{realtime.send()} to \code{chat:\{id\}}.
+        \end{enumerate}
+  \item \code{delete\_message}: delete, then recompute the preview from \code{max(seq)} if the deleted message was last.
+  \item \code{save\_group}: upsert the chat, upsert 3 info posts, and on create insert the creator as group admin.
+  \item \code{set\_group\_member}: insert with \code{visible\_from\_seq = case when history then 0 else last\_seq end},
+        or delete.
+  \item \code{delete\_dm}: delete the chat row. The cascade removes the other side's access (DM-006).
+  \item \code{save\_profile}: update base columns, then replace values per submitted def.
+  \item Join trigger on \code{auth.users} insert: creates the pending \code{members} row and the DM with the
+        community admin (AUTH-004).
+\end{itemize}
+
+% ===========================================================================
+\section{API design}\label{sec:api}
+% ===========================================================================
+``API'' means Postgres RPCs, Server Actions, and one Route Handler. PostgREST is the REST layer, so no extra
+REST layer is added.
+
+\subsection{Authentication and authorization}
+\begin{itemize}
+  \item \textbf{Authentication:} Supabase Auth cookies, refreshed only in \code{proxy.ts}. The server verifies them
+        with \code{getClaims()} (local JWT check).
+  \item \textbf{Authorization:} always in Postgres (RLS or an in-function check), never only in the UI. Roles:
+        \begin{itemize}
+          \item \emph{approved member}
+          \item \emph{pending member}: own profile, plus the DM with the admin only
+          \item \emph{community admin} (\code{members.role})
+          \item \emph{group admin} (\code{chat\_members.role}; in V1 only the creator)
+          \item \emph{author}: own posts, notes, albums, and ads
+        \end{itemize}
+\end{itemize}
+
+\subsection{RPCs}
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{2.7cm} L{3.8cm} L{3.4cm} L{2.6cm} L{2.4cm}}
+\rowcolor{hdrbg}\hdr{RPC} & \hdr{Input} & \hdr{Output} & \hdr{Authz} & \hdr{Errors}\\
+\endhead
+\code{username\_available} & slug, username & boolean & anon & \code{invalid\_username}\\
+\code{chat\_list} & community, limit $\le$ 100 & id, kind, name, preview, last\_message\_at, unread & approved (pending: admin DM) & ---\\
+\code{directory} & community, q, limit $\le$ 50 & kind, id, name, member & approved & ---\\
+\code{open\_dm} & community, user & chat id & approved, or pending to admin; not blocked & \code{blocked}, \code{self}\\
+\code{list\_messages} & chat, before\_seq?, limit $\le$ 50 & seq, author, body, paths, camera, reply\_to, reactions, edited, created\_at & chat member, seq $>$ visible\_from & \code{not\_member}\\
+\code{send\_message} & chat, body?, paths?, camera, captured\_at?, reply\_to\_seq? & seq, created\_at & chat member & \code{not\_member}, \code{blocked}, \code{empty}, \code{bad\_path}\\
+\code{edit\_message} & chat, seq, body & --- & author + \code{edit\_posts}; DMs off & \code{edit\_disabled}, \code{forbidden}\\
+\code{delete\_message} & chat, seq & --- & author or group admin & \code{forbidden}\\
+\code{toggle\_reaction} & chat, seq, emoji & on & chat member & \code{not\_member}\\
+\code{mark\_read} & chat, seq & --- & self; \code{greatest()} & ---\\
+\code{leave\_chat} & chat & --- & self & ---\\
+\code{delete\_dm} & chat & --- & DM participant & \code{not\_dm}\\
+\code{block\_user} & community, user & --- & self; also leaves DM & ---\\
+\code{group\_info} & chat & name, headline, flags, info headlines, members or null & community member & \code{not\_found}\\
+\code{search\_profiles} & community, filter, after?, limit $\le$ 50 & user, username, icon, status, region, place, card values & approved & \code{bad\_filter}\\
+\code{profile} & community, user & base + values + defs + last login & approved (own: pending) & \code{not\_found}\\
+\code{save\_profile} & community, base, values & --- & self & \code{too\_long}, \code{bad\_value}\\
+\end{longtable}
+}
+Errors are raised as SQLSTATE \code{P0001} with the code as the message.
+
+\textbf{Direct table access under RLS} (one statement is enough, so no RPC):
+\begin{itemize}
+  \item \code{events} writes (group admin) and reads (chat member, \code{calendar} on)
+  \item \code{notes} (author only)
+  \item \code{members.search\_filter} and \code{ad\_filter} (self; column grant)
+  \item \code{albums} and \code{album\_images} insert (owner)
+  \item \code{ads} (author)
+\end{itemize}
+
+\subsection{Server Actions}
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{3.4cm} L{4.6cm} L{7cm}}
+\rowcolor{hdrbg}\hdr{Action} & \hdr{Why server} & \hdr{Steps}\\
+\endhead
+\code{signInAction} & username$\rightarrow$email must not reach anon (enumeration) & Service-role lookup, \code{signInWithPassword} on the cookie client, \code{last\_login\_at} in \code{after()}; always the same \code{invalid\_credentials} error\\
+\code{admitMember}, \code{setGroupMember}, \code{saveGroup}, \code{deleteGroup} & Admin work goes through the server & RPC with the user's JWT; the RPC checks role; RLS still applies (no service role)\\
+\code{setAlbumPassword} & Hashing is server-controlled & \code{crypt(pw, gen\_salt('bf', 10))}, owner only\\
+\code{openAlbum} & Wrong password never returns bytes & \code{album\_check} returns paths only for owner, no password, or matching hash; then one service-role \code{createSignedUrls(paths, 3600)}\\
+\end{longtable}
+}
+Return shape: \code{\{ok: true, data\} | \{ok: false, error: ErrorCode\}}, mapped to \code{t.errors.*}. Raw DB
+messages never reach the client.
+
+\subsection{Route Handler}
+\code{GET /auth/confirm}: \code{verifyOtp}, then redirect to \code{/\{community\}/login} (AUTH-002).
+
+\subsection{Validation}
+\begin{itemize}
+  \item Client: HTML constraints, for UX only.
+  \item Server Actions: typed \code{FormData} guards (no zod; it is not on the allowlist).
+  \item Postgres: check constraints and RPC checks are the authority.
+  \item \code{save\_profile} validates each value against its def's kind and options.
+  \item \code{lib/limits.ts} mirrors the SQL limits.
+\end{itemize}
+
+\subsection{Storage}
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{1.6cm} L{3.2cm} L{3.8cm} L{3.8cm} L{2.4cm}}
+\rowcolor{hdrbg}\hdr{Bucket} & \hdr{Visibility} & \hdr{Path} & \hdr{Read} & \hdr{Write}\\
+\endhead
+\code{avatars} & public, immutable 1 y & \code{\{community\}/\{user\}/\{uuid\}.webp} & unguessable URL & owner folder\\
+\code{chat} & private & \code{\{chat\_id\}/\{uuid\}.webp} + thumb & \code{is\_chat\_member}; batch signed URLs & chat member\\
+\code{albums} & private & \code{\{album\_id\}/\{uuid\}.webp} & owner, else only via \code{openAlbum} & owner\\
+\end{longtable}
+}
+\begin{itemize}
+  \item Private buckets set \code{file\_size\_limit} and \code{allowed\_mime\_types = \{image/webp, image/jpeg\}}.
+  \item \code{MAX\_IMAGE\_BYTES} is one constant. Its value is TBD (SEC-008); proposed 5 MB.
+  \item Avatars are public because \code{performance.mdc} lists only chat, album, and verification images as
+        private. The tradeoff is flagged in \S\ref{sec:tbd}.
+  \item Deletes remove DB rows first and storage in \code{after()}. A failure leaves only an unreachable file.
+\end{itemize}
+
+% ===========================================================================
+\section{Performance strategy}
+% ===========================================================================
+\subsection{Round trips}
+\begin{itemize}
+  \item One RPC per screen (\S3.1).
+  \item \code{getMember()} is shared by layout and page via \code{cache()}.
+  \item \code{getClaims()} is local, with no network call.
+\end{itemize}
+
+\subsection{Rendering}
+\begin{itemize}
+  \item \code{cacheComponents} is on: the static shell paints first, and data sits in \code{<Suspense>} with
+        \code{RouteSkeleton}.
+  \item \code{'use cache'} is used only for the community row, field defs, and group name/headline/info posts
+        (invalidated with \code{updateTag}).
+  \item It is never used for messages, unread counts, membership, roles, blocks, notes, album access, or verification.
+\end{itemize}
+
+\subsection{Hot writes}
+\begin{itemize}
+  \item Send, react, and mark-read go browser $\rightarrow$ Supabase in the same region.
+  \item Send and react are optimistic: send inserts a local row keyed by a client UUID and replaces it with the
+        returned seq.
+  \item Mark-read runs on open and on leave only.
+\end{itemize}
+
+\subsection{Realtime}\label{sec:rt}
+\begin{itemize}
+  \item One private Broadcast topic \code{chat:\{id\}}, only while a thread is open.
+  \item The write RPCs call \code{realtime.send()} in the same transaction.
+  \item Topic authorization is an RLS policy on \code{realtime.messages} using \code{is\_chat\_member}, checked at join.
+  \item There is no \code{postgres\_changes} subscription.
+  \item \textbf{A1 without a per-user channel (recommended change to \code{performance.mdc}):}
+        \begin{itemize}
+          \item A1 refetches \code{chat\_list} on visibility, focus, and back-navigation.
+          \item This costs one query per focus instead of one write per member per message.
+          \item If live badges are wanted later, add the per-user channel with a member-count cap, after measurement.
+        \end{itemize}
+\end{itemize}
+
+\subsection{Database}
+\begin{itemize}
+  \item The indexes in \S4.2 cover every list. RLS predicates touch only indexed columns.
+  \item Targets, checked with \code{EXPLAIN ANALYZE} on seeded data before each slice is done:
+        \begin{itemize}
+          \item A1 $<$ 20 ms
+          \item thread page $<$ 15 ms
+          \item search $<$ 50 ms at 5k members
+        \end{itemize}
+\end{itemize}
+
+\subsection{Payload and bundle}
+\begin{itemize}
+  \item Lists carry thumbnail URLs. The full image is signed on tap.
+  \item A1 refreshes through \code{router.refresh()}, so it ships no Supabase client and stays inside 150 KB gzipped.
+\end{itemize}
+
+% ===========================================================================
+\section{Security}
+% ===========================================================================
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{4cm} L{11cm}}
+\rowcolor{hdrbg}\hdr{Threat} & \hdr{Control}\\
+\endhead
+Cross-community read & \code{community\_id} on every table; RLS requires \code{is\_member}; every RPC checks community\\
+Pending user reads community & RLS requires \code{state = 'approved'} except own row and the admin DM\\
+Reading chats you're not in & \code{is\_chat\_member} on messages, reactions, events, \code{chat/*} storage, Realtime topic\\
+History leak & \code{seq > visible\_from\_seq} in RPC and policy\\
+Member list when disabled & \code{group\_info} returns null server-side unless \code{member\_list} or admin\\
+Notes leak & RLS \code{author\_id = (select auth.uid())}; no admin override; stars never aggregated\\
+Album password bypass & \code{password\_hash} not granted to clients; no bucket read policy for non-owners; only \code{openAlbum} signs\\
+Album brute force & bcrypt cost 10 + Vercel Firewall rate-limit rule; no counter table unless abuse is observed\\
+Login brute force / enumeration & Supabase Auth limits, generic error, server-only lookup. \textbf{Risk:} server-side sign-in pools every login behind Vercel egress IPs for Supabase's per-IP limit. Before launch, either raise the limit and add a per-client-IP firewall rule, or verify that forwarded IPs are honoured.\\
+Blocked user DMs & \code{open\_dm} and \code{send\_message} check \code{blocks} both ways\\
+Editing others' posts & \code{edit\_message} requires the author\\
+Service-role leak & Only in \code{lib/supabase/admin.ts} with \code{server-only}; used only for login lookup and album signing\\
+Mass assignment & Column grants: clients update only the two filter columns directly; role and state change only via admin RPCs\\
+Fake verified photo & \code{camera} is a client claim shown as ``Camera $\cdot$ date''; not claimed unfakeable (VERIFY-005)\\
+EXIF leak & Client re-encodes (strips EXIF); bucket mime allowlist\\
+XSS & React escaping; no \code{dangerouslySetInnerHTML}\\
+CSRF & Next Origin check on actions; \code{SameSite=Lax}\\
+Secrets & \code{.env.local} only; nothing committed\\
+\end{longtable}
+}
+
+% ===========================================================================
+\section{Scalability}
+% ===========================================================================
+Follow the \code{scaling.mdc} ladder: measure, then climb one rung.
+\begin{enumerate}
+  \item \textbf{Now} (up to about 10k members per community):
+        \begin{itemize}
+          \item one Supabase instance
+          \item PostgREST pooling (no direct \code{pg} client, so no Supavisor yet)
+          \item stateless functions
+        \end{itemize}
+  \item \textbf{Messages growth:}
+        \begin{itemize}
+          \item 1k posts/day for 3 years is about 1M rows.
+          \item A keyset read on the PK stays O(log n) at 100M rows.
+          \item Hash-partition by \code{chat\_id} only if vacuum or index size is a measured problem.
+        \end{itemize}
+  \item \textbf{Realtime:} cost scales with viewers of open chats, not members. The plan quota is the ceiling;
+        upgrade the plan before adding infrastructure.
+  \item \textbf{Search:} bounded by \code{community\_id}. Add \code{pg\_trgm} and partial indexes per hot def before
+        any search service.
+  \item \textbf{Not needed:}
+        \begin{itemize}
+          \item Redis: Postgres serves in $<$ 20 ms.
+          \item Queues: the only async work is storage cleanup via \code{after()}.
+          \item Read replicas and microservices.
+        \end{itemize}
+\end{enumerate}
+
+% ===========================================================================
+\section{Implementation order}
+% ===========================================================================
+One slice per change. Each slice ships:
+\begin{itemize}
+  \item its migration, indexes, and RLS
+  \item pgTAP tests
+  \item replacement of the mock or localStorage bodies
+  \item a typecheck
+  \item a mobile-width happy-path check
+  \item \code{EXPLAIN ANALYZE} of its hot query
+\end{itemize}
+
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{0.5cm} L{2.4cm} L{1.8cm} L{5.6cm} L{4.6cm}}
+\rowcolor{hdrbg}\hdr{\#} & \hdr{Slice} & \hdr{Depends} & \hdr{Delivers} & \hdr{Critical tests}\\
+\endhead
+0 & Foundation & Supabase project, \code{.env.local} & config, helpers migration, pgcrypto, generated types, \code{admin.ts}, \code{limits.ts}, test harness & helpers false for non-members\\
+1 & Auth + members & 0 & join trigger, \code{username\_available}, \code{signInAction}, \code{/auth/confirm}, logout, \code{getMember()}, pending gate & pending cannot read members; case-insensitive unique username; generic login error\\
+2 & Profiles & 1 & defs + values, \code{profile}, \code{save\_profile}, avatar upload, FieldRenderer & value type vs def; self-only writes; 32k limit\\
+3 & Chats core & 1 & chats, chat\_members, messages, \code{chat\_list}, \code{list\_messages}, \code{send\_message}, \code{mark\_read}, Broadcast, keyset scroll-back & seq monotonic under concurrency; unread math; non-member 0 rows; history gate\\
+4 & DMs & 3 & \code{open\_dm}, admin DM on join, leave, delete, block, directory; group G2 = Leave only & block prevents new DM; bilateral delete\\
+5 & Groups + admin & 3 & \code{save\_group}, \code{delete\_group}, \code{group\_info}, info posts, \code{set\_group\_member}, \code{admit\_member} & admin-only create; member list hidden server-side; history-off\\
+6 & Post actions + images & 3 & reactions, who reacted, edit, delete, replies, chat bucket + batch signing & edit blocked when flag off; admin deletes any; reply cascade\\
+7 & Calendar & 5 & \code{events} RLS, A4/A12 & member cannot write; non-member cannot read\\
+8 & Notes & 1 & \code{notes} RLS, B5 & admin reads 0 rows\\
+9 & Search & 2 & \code{search\_profiles}, \code{search\_filter}, G1 & cross-community 0 rows; AND filters; stable keyset\\
+10 & Albums & 2 & albums, images, bucket, \code{setAlbumPassword}, \code{openAlbum} & wrong password: no paths, no URLs; hash unselectable\\
+11 & Ads & 2 + \textbf{AD-001} & \code{ads}, \code{search\_ads}, \code{ad\_filter} & age/status from profile\\
+\end{longtable}
+}
+\textbf{Test tooling within the allowlist:}
+\begin{itemize}
+  \item pgTAP via \code{supabase test db} for database and RLS (a Postgres extension, not an npm package).
+  \item \code{node --test} with built-in type stripping for pure TS helpers.
+  \item No Jest, Vitest, or Playwright.
+\end{itemize}
+
+% ===========================================================================
+\section{Conflicts, TBDs, and safe assumptions}\label{sec:tbd}
+% ===========================================================================
+{\small
+\rowcolors{2}{rowalt}{white}
+\begin{longtable}{L{0.5cm} L{6cm} L{2.2cm} L{6.2cm}}
+\rowcolor{hdrbg}\hdr{\#} & \hdr{Item} & \hdr{Source} & \hdr{Safe assumption}\\
+\endhead
+1 & Ads: posts (transcript) vs A6--D3 (mockup) & AD-001 & \textbf{Conflict, not resolved.} UI follows mockup; slice 11 waits\\
+2 & Account scope per community vs platform & COMM-006 & One \code{auth.users} per email; username and profile per community; second community with same email unsupported until decided\\
+3 & Path vs subdomain & TBD & Path, as built; backend unaffected\\
+4 & 2 vs 3 bottom tabs & TBD & No backend impact\\
+5 & Direct join & GROUP & Flag stored, default off; no join RPC\\
+6 & 1 vs 3 main photos & PROF-003 & \code{photo\_paths} capped at 3; UI uses the first\\
+7 & Edit posts in DMs & POST-007 & Off\\
+8 & Admin edits others' posts (mockup B3) vs delete only (POST-008) & mockup vs stories & \textbf{Conflict.} Admin deletes any, edits only own\\
+9 & Uncheck ``Community'' on F1 for approved member & ADMIN-001 & No revoke; control disabled for approved members\\
+10 & Forgot password flow, link lifetime & AUTH-006 & Supabase default (1 h) once approved; UI missing\\
+11 & Image size limit & SEC-008 & One constant, proposed 5 MB\\
+12 & Message body limit & unspecified & 8000 chars, one constant\\
+13 & Who can contact me & TBD & Not built; blocks only\\
+14 & User levels 1--3 & TBD & Not modelled\\
+15 & First-community field list & TBD & Placeholder seed\\
+16 & Max group size & TBD & Not enforced\\
+17 & GDPR export / erase & TBD & Erase = \code{auth.admin.deleteUser} + cascades; export not built\\
+18 & Stars on chat notes (UI) vs profiles only (NOTE-003) & UI vs stories & Nullable column; product to confirm\\
+19 & Per-user A1 channel (rules) vs O(members) fan-out & rules vs cost & Drop for V1; \textbf{rule owner to confirm}\\
+20 & G2 block/delete on groups (UI) vs DM-only (stories) & UI vs stories & Follow stories: groups get Leave only\\
+21 & Avatars public vs private & \code{performance.mdc} & Public, unguessable immutable paths; flag for privacy review\\
+\end{longtable}
+}
+
+% ===========================================================================
+\section{Unnecessary or inefficient parts of the current plan}
+% ===========================================================================
+\begin{itemize}
+  \item \textbf{Verification table or workflow:} unnecessary. A camera image in the admin DM plus
+        \code{members.state} covers it.
+  \item \textbf{Album-unlock table or cookie:} unnecessary. One-hour signed URLs are the session unlock.
+  \item \textbf{Per-user A1 Broadcast:} inefficient (\S\ref{sec:rt}).
+  \item \textbf{localStorage persistence} for filters, notes, albums, calendar, assignments, and photos:
+        \begin{itemize}
+          \item per-device, while stories say ``on this account''
+          \item exceeds quota with data URLs
+          \item exposes ``private'' notes to anyone sharing the device
+        \end{itemize}
+  \item \textbf{JPEG data URLs from \code{imageDataUrl}:} inefficient. Use WebP Blobs uploaded directly.
+  \item \textbf{Redis, queues, a search service, replicas:} unnecessary at V1 scale.
+\end{itemize}
+
+\end{document}

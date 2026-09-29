@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
+import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
 import { adFilterCount, readAdFilter, watchAdFilter, writeAdFilter } from '../storage'
@@ -26,19 +28,20 @@ export function AdsFilterButton({ community }: { community: string }) {
 
 export function AdFilterForm({ community }: { community: string }) {
   const [filter, setFilter] = useState<AdFilter>(emptyAdFilter)
-  const [ready, setReady] = useState(false)
+  const router = useRouter()
 
-  useEffect(() => {
-    setFilter(readAdFilter(community))
-    setReady(true)
-  }, [community])
-
-  useEffect(() => {
-    if (ready) writeAdFilter(community, filter)
-  }, [ready, community, filter])
+  // D1: edit freely here; the search runs once on Show. Saved between sessions.
+  useEffect(() => setFilter(readAdFilter(community)), [community])
 
   return (
-    <form className="mx-auto grid max-w-lg gap-5 px-4 py-6 sm:px-8" onSubmit={(event) => event.preventDefault()}>
+    <form
+      className="mx-auto grid max-w-lg gap-5 px-4 pt-6 sm:px-8"
+      onSubmit={(event) => {
+        event.preventDefault()
+        writeAdFilter(community, filter)
+        router.push(`/${community}/ads`)
+      }}
+    >
       <Field label={t.profiles.substring}>
         <input value={filter.text} onChange={(event) => setFilter({ ...filter, text: event.target.value })} className={input} />
       </Field>
@@ -87,9 +90,14 @@ export function AdFilterForm({ community }: { community: string }) {
       <Field label={t.profiles.place}>
         <input value={filter.place} onChange={(event) => setFilter({ ...filter, place: event.target.value })} className={input} />
       </Field>
-      <button type="button" onClick={() => setFilter(emptyAdFilter)} className="justify-self-start text-[15px] font-semibold text-accent">
-        {t.profiles.clear}
-      </button>
+      <div className="sticky bottom-0 -mx-4 mt-2 flex items-center gap-4 border-t border-line bg-canvas px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-8 sm:px-8">
+        <button type="button" onClick={() => setFilter(emptyAdFilter)} className="text-[15px] font-semibold text-accent">
+          {t.profiles.clear}
+        </button>
+        <Button type="submit" className="flex-1">
+          {t.ads.show}
+        </Button>
+      </div>
     </form>
   )
 }

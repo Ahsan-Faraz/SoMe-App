@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { ChatThread } from '@/features/chats/components/ChatThread'
-import { getChat } from '@/features/chats/queries'
+import { dmPartnerId, getChat } from '@/features/chats/queries'
 import { listAlbums } from '@/features/albums/queries'
 import { getGroup, getInfoPost } from '@/features/groups/queries'
 import { t } from '@/lib/i18n'
@@ -31,6 +31,16 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
   if (!chat) notFound()
 
   const base = `/${community}/chats/${chat.id}`
+  const admin = viewer.role === 'admin'
+  const partner = chat.kind === 'dm' ? dmPartnerId(chat.id) : null
+  // B5: a DM's notes are the notes about that person — the same screen as from their profile.
+  const notesHref = partner ? `/${community}/profiles/${partner}/notes?back=${encodeURIComponent(base)}` : `${base}/notes`
+  const rules = {
+    post: admin || !group || group.posting,
+    comment: admin || !group || group.commenting,
+    react: admin || !group || group.reactions,
+    edit: admin || !group || group.editPosts,
+  }
   const iconLink = `${tool} hover:bg-hover`
 
   return (
@@ -48,7 +58,7 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
         backHref={viewer.role === 'pending' ? `/${community}/pending` : `/${community}/chats`}
         right={
           <span className="flex">
-            <Link href={`${base}/notes`} aria-label={t.chats.notes} title={t.chats.notes} className={iconLink}>
+            <Link href={notesHref} aria-label={t.chats.notes} title={t.chats.notes} className={iconLink}>
               <Icon name="star" className="size-5" />
             </Link>
             {chat.kind === 'group' && group ? (
@@ -79,7 +89,7 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
           ) : null}
         </div>
       ) : null}
-      <ChatThread community={community} chatId={chat.id} backHref={base} messages={chat.messages} isAdmin={viewer.role === 'admin'} viewerId={viewer.userId} albums={albums} />
+      <ChatThread community={community} chatId={chat.id} backHref={base} messages={chat.messages} isAdmin={admin} rules={rules} viewerId={viewer.userId} albums={albums} />
     </div>
   )
 }

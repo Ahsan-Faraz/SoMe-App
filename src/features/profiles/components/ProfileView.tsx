@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { buttonClass } from '@/components/ui/Button'
 import { ThemePicker } from '@/components/ThemePicker'
-import { Icon, type IconName } from '@/components/ui/Icon'
+import { Icon } from '@/components/ui/Icon'
 import { LogoutButton } from '@/features/auth/components/LogoutButton'
 import { t } from '@/lib/i18n'
 import type { Profile } from '../types'
@@ -11,14 +11,10 @@ import { ProfileFields } from './ProfileFields'
 export function ProfileView({
   community,
   profile,
-  chatId,
-  isAdmin,
   section,
 }: {
   community: string
   profile: Profile
-  chatId: string | null
-  isAdmin: boolean
   section: string | null
 }) {
   return (
@@ -35,48 +31,53 @@ export function ProfileView({
         </dl>
       </div>
       <ProfileFields own={profile.own} about={profile.about} status={profile.status} headline={profile.headline} />
-      <div className="mt-8 min-[52rem]:col-span-2">
-        {section ? <p className="mb-4 rounded-xl bg-rail px-4 py-3 text-[16px] font-semibold">{section}</p> : null}
-        {profile.own || !chatId ? null : (
-          <Link href={`/${community}/chats/${chatId}`} className={`${buttonClass('primary')} mb-4 min-[52rem]:max-w-xs`}>
-            <Icon name="chatSolid" className="mr-2 size-5" />
-            {t.profiles.dm}
-          </Link>
-        )}
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line min-[52rem]:grid min-[52rem]:grid-cols-3 min-[52rem]:divide-x min-[52rem]:divide-y-0">
-          <ActionRow href={`/${community}/profiles/${profile.id}/notes`} icon="note" label={t.profiles.notes} />
-          <ActionRow href={`/${community}/profiles/${profile.id}/albums`} icon="image" label={t.profiles.albums} />
-          <ActionRow href={`/${community}/profiles/${profile.id}/ads`} icon="megaphone" label={t.profiles.ads} />
-        </ul>
-        {isAdmin && !profile.own ? (
-          <Link href={`/${community}/profiles/${profile.id}/groups`} className="mt-5 flex h-14 items-center gap-3 rounded-2xl border border-line px-4 text-[16px] font-semibold hover:bg-hover">
-            <Icon name="users" className="size-5 shrink-0" />
-            <span className="flex-1">{t.profiles.addToGroups}</span>
-            <Icon name="chevronRight" className="size-5 shrink-0 text-muted" />
-          </Link>
-        ) : null}
-        {profile.own ? <ThemePicker className="mt-6 min-[52rem]:max-w-sm" /> : null}
-        {profile.own ? (
-          <LogoutButton
-            community={community}
-            withLabel
-            className="mt-5 flex h-14 w-full items-center gap-3 rounded-2xl border border-line px-4 text-left text-[16px] font-semibold text-danger hover:bg-hover min-[52rem]:max-w-xs"
-          />
-        ) : null}
-      </div>
+      {section || profile.own ? (
+        <div className="mt-8 min-[52rem]:col-span-2">
+          {section ? <p className="mb-4 rounded-xl bg-rail px-4 py-3 text-[16px] font-semibold">{section}</p> : null}
+          {profile.own ? <ThemePicker className="min-[52rem]:max-w-sm" /> : null}
+          {profile.own ? (
+            <LogoutButton
+              community={community}
+              withLabel
+              className="mt-5 flex h-14 w-full items-center gap-3 rounded-2xl border border-line px-4 text-left text-[16px] font-semibold text-danger hover:bg-hover min-[52rem]:max-w-xs"
+            />
+          ) : null}
+        </div>
+      ) : null}
     </main>
   )
 }
 
-function ActionRow({ href, icon, label }: { href: string; icon: IconName; label: string }) {
+// A3/B1 bottom bar — fixed, not scrolling: DM (not on your own profile), then Albums · + · Ads.
+// "+" = add this person to groups, admins only.
+export function ProfileActions({ community, profile, chatId, isAdmin }: { community: string; profile: Profile; chatId: string | null; isAdmin: boolean }) {
+  const base = `/${community}/profiles/${profile.id}`
   return (
-    <li>
-      <Link href={href} className="flex h-14 items-center gap-3 px-4 text-[16px] font-semibold hover:bg-hover">
-        <Icon name={icon} className="size-5 shrink-0" />
-        <span className="flex-1">{label}</span>
-        <Icon name="chevronRight" className="size-5 shrink-0 text-muted" />
-      </Link>
-    </li>
+    <nav aria-label={profile.username} className="sticky bottom-0 z-10 border-t border-line bg-canvas px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto grid max-w-xl gap-2">
+        {profile.own || !chatId ? null : (
+          <Link href={`/${community}/chats/${chatId}`} className={buttonClass('primary')}>
+            <Icon name="chatSolid" className="mr-2 size-5" />
+            {t.profiles.dm}
+          </Link>
+        )}
+        <div className="flex items-center gap-2">
+          <Link href={`${base}/albums`} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-rail text-[16px] font-semibold hover:bg-soft-hover">
+            <Icon name="image" className="size-5" />
+            {t.profiles.albums}
+          </Link>
+          {isAdmin && !profile.own ? (
+            <Link href={`${base}/groups`} aria-label={t.profiles.addToGroups} title={t.profiles.addToGroups} className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-white hover:bg-accent-hover">
+              <Icon name="plus" className="size-5" />
+            </Link>
+          ) : null}
+          <Link href={`${base}/ads`} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-rail text-[16px] font-semibold hover:bg-soft-hover">
+            <Icon name="megaphone" className="size-5" />
+            {t.profiles.ads}
+          </Link>
+        </div>
+      </div>
+    </nav>
   )
 }
 
