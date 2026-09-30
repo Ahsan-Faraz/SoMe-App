@@ -48,9 +48,13 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
           className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
         />
       </label>
-      <label className="flex items-center gap-2.5 text-[16px] font-medium">
-        <input type="checkbox" checked={values.calendar} onChange={(event) => setFlag('calendar', event.target.checked)} />
-        {t.groups.calendar}
+      <label className="col-span-full grid gap-1.5 text-[14px] font-semibold text-ink">
+        {t.groups.headline}
+        <input
+          value={values.headline}
+          onChange={(event) => setValues((current) => ({ ...current, headline: event.target.value }))}
+          className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
+        />
       </label>
       {[0, 1, 2].map((index) => (
         <div key={index} className="grid gap-2">
@@ -82,6 +86,7 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
           ['reactions', t.groups.reactions],
           ['editPosts', t.groups.editPosts],
           ['directJoin', t.groups.directJoin],
+          ['calendar', t.groups.calendar],
         ] as const
       ).map(([key, label]) => (
         <label key={key} className="flex items-center gap-2.5 text-[16px] font-medium">
@@ -94,14 +99,6 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
           {t.groups.users}
         </Link>
       ) : null}
-      <label className="col-span-full grid gap-1.5 text-[14px] font-semibold text-ink">
-        {t.groups.headline}
-        <input
-          value={values.headline}
-          onChange={(event) => setValues((current) => ({ ...current, headline: event.target.value }))}
-          className="h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent"
-        />
-      </label>
       <Button type="submit" className="col-span-full max-w-sm">{editing ? t.groups.edit : t.groups.save}</Button>
       {editing ? (
         <Button variant="ghost" className="col-span-full max-w-sm !text-danger" onClick={() => router.push(`/${community}/chats`)}>

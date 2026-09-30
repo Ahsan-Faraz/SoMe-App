@@ -23,8 +23,8 @@ async function ProfilesContent({ params }: PageProps<'/[community]/profiles'>) {
   const profiles = await listProfiles()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
-      <main className="pb-[calc(4rem+env(safe-area-inset-bottom))] rail:pb-0">
+    <div className="flex h-app w-full flex-col bg-canvas">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <ProfileList community={community} profiles={profiles} />
       </main>
       <BottomNav community={community} active="profiles" />

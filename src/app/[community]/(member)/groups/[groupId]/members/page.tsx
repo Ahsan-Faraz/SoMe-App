@@ -27,7 +27,7 @@ async function MembersContent({ params }: PageProps<'/[community]/groups/[groupI
   if (!group) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader
         title={`${group.name} – ${t.groups.members}`}
         backHref={`/${community}/groups/${group.id}`}

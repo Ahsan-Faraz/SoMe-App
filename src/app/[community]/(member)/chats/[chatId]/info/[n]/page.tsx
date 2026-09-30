@@ -26,7 +26,7 @@ async function InfoPostContent({ params }: PageProps<'/[community]/chats/[chatId
   if (!post || !group) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={post.groupName} backHref={`/${community}/chats/${chatId}`} />
       <nav aria-label={t.groupInfo.info} className="flex gap-1 overflow-x-auto border-b border-line px-2 py-1.5 sm:justify-center">
         {group.infoHeadlines.map((_, i) => i + 1).map((value) => (

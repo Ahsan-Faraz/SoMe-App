@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
-import { loadEvents, subscribe, type CalEvent } from '../storage'
+import { loadEvents, saveEvents, subscribe, type CalEvent } from '../storage'
 
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long' })
 const dayHeading = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -28,6 +28,7 @@ export function CalendarBoard({
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() })
   const [day, setDay] = useState(today.getDate())
   const [events, setEvents] = useState(seed)
+  const [ask, setAsk] = useState<string | null>(null)
 
   useEffect(() => {
     const refresh = () => setEvents(loadEvents(storageKey, seed))
@@ -51,7 +52,7 @@ export function CalendarBoard({
 
   return (
     <div className="px-4 pt-5 pb-10 sm:px-8">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="grid max-w-md grid-cols-2 gap-2">
         <Stepper label={monthName.format(new Date(year, month, 1))} onPrev={() => shiftMonth(-1)} onNext={() => shiftMonth(1)} prevLabel={t.calendar.monthPrev} nextLabel={t.calendar.monthNext} />
         <Stepper label={String(year)} onPrev={() => setCursor({ year: year - 1, month })} onNext={() => setCursor({ year: year + 1, month })} prevLabel={t.calendar.yearPrev} nextLabel={t.calendar.yearNext} />
       </div>
@@ -80,14 +81,38 @@ export function CalendarBoard({
       {listed.length === 0 ? <p className="mt-3 text-[16px] text-muted">{t.calendar.empty}</p> : null}
       <ul className="mt-2 divide-y divide-line">
         {listed.map((event) => (
-          <li key={event.id} className="py-4">
-            {isAdmin ? (
-              <Link href={`${base}/${event.id}`} className="block hover:text-accent">
-                <EventBody event={event} />
-              </Link>
-            ) : (
+          <li key={event.id} className="flex items-start gap-2 py-4">
+            <span className="min-w-0 flex-1">
               <EventBody event={event} />
-            )}
+            </span>
+            {isAdmin ? (
+              ask === event.id ? (
+                <span className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      saveEvents(storageKey, events.filter((item) => item.id !== event.id))
+                      setAsk(null)
+                    }}
+                    className="h-10 rounded-xl bg-danger px-3 text-[15px] font-semibold text-white"
+                  >
+                    {t.calendar.delete}
+                  </button>
+                  <button type="button" onClick={() => setAsk(null)} className="h-10 rounded-xl bg-soft px-3 text-[15px] font-semibold">
+                    {t.chats.cancel}
+                  </button>
+                </span>
+              ) : (
+                <span className="flex shrink-0">
+                  <Link href={`${base}/${event.id}`} aria-label={t.calendar.edit} title={t.calendar.edit} className="grid size-10 place-items-center rounded-full text-ink hover:bg-hover">
+                    <Icon name="pencil" className="size-5" />
+                  </Link>
+                  <button type="button" aria-label={t.calendar.delete} title={t.calendar.delete} onClick={() => setAsk(event.id)} className="grid size-10 place-items-center rounded-full text-ink hover:bg-danger/10 hover:text-danger">
+                    <Icon name="trash" className="size-5" />
+                  </button>
+                </span>
+              )
+            ) : null}
           </li>
         ))}
       </ul>
@@ -106,12 +131,12 @@ function EventBody({ event }: { event: CalEvent }) {
 
 function Stepper({ label, onPrev, onNext, prevLabel, nextLabel }: { label: string; onPrev: () => void; onNext: () => void; prevLabel: string; nextLabel: string }) {
   return (
-    <span className="inline-flex h-11 items-center rounded-xl border border-line bg-canvas">
-      <button type="button" aria-label={prevLabel} onClick={onPrev} className="grid size-11 place-items-center rounded-l-xl hover:bg-rail">
+    <span className="flex h-11 items-center rounded-xl border border-line bg-canvas">
+      <button type="button" aria-label={prevLabel} onClick={onPrev} className="grid h-11 w-9 shrink-0 place-items-center rounded-l-xl hover:bg-rail">
         <Icon name="chevronLeft" className="size-5" />
       </button>
-      <span className="min-w-24 px-2 text-center text-[16px] font-bold">{label}</span>
-      <button type="button" aria-label={nextLabel} onClick={onNext} className="grid size-11 place-items-center rounded-r-xl hover:bg-rail">
+      <span className="min-w-0 flex-1 truncate text-center text-[16px] font-bold">{label}</span>
+      <button type="button" aria-label={nextLabel} onClick={onNext} className="grid h-11 w-9 shrink-0 place-items-center rounded-r-xl hover:bg-rail">
         <Icon name="chevronRight" className="size-5" />
       </button>
     </span>

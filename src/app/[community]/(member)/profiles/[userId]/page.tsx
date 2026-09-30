@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
+import { Screen } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { chatIdForUser } from '@/features/chats/queries'
@@ -36,24 +37,30 @@ async function ProfileContent({ params, searchParams }: PageProps<'/[community]/
   const self = `/${community}/profiles/${profile.id}`
 
   return (
-    <div className="flex min-h-dvh w-full flex-col bg-canvas lg:min-h-full">
-      <ScreenHeader
-        title={profile.username}
-        backHref={backHref}
-        leading={<ProfileIcon community={community} userId={profile.id} name={profile.username} own={profile.own} />}
-        right={
-          profile.own ? undefined : (
-            <Link href={`${self}/notes?back=${encodeURIComponent(self)}`} aria-label={t.profiles.notes} title={t.profiles.notes} className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover">
-              <Icon name="star" className="size-6" />
-            </Link>
-          )
-        }
-      />
-      <div className="flex-1">
-        <ProfileView community={community} profile={profile} section={section} />
-      </div>
-      <ProfileActions community={community} profile={profile} chatId={chatId} isAdmin={viewer.role === 'admin'} />
-    </div>
+    <Screen
+      header={
+        <ScreenHeader
+          title={profile.username}
+          backHref={backHref}
+          leading={<ProfileIcon community={community} userId={profile.id} name={profile.username} own={profile.own} />}
+          right={
+            profile.own ? undefined : (
+              <Link
+                href={`${self}/notes?back=${encodeURIComponent(self)}`}
+                aria-label={t.profiles.notes}
+                title={t.profiles.notes}
+                className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover"
+              >
+                <Icon name="star" className="size-6" />
+              </Link>
+            )
+          }
+        />
+      }
+      footer={<ProfileActions community={community} profile={profile} chatId={chatId} isAdmin={viewer.role === 'admin'} />}
+    >
+      <ProfileView community={community} profile={profile} section={section} />
+    </Screen>
   )
 }
 

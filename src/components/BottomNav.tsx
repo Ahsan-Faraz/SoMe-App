@@ -10,11 +10,12 @@ const tabs: { id: Tab; icon: IconName; label: string }[] = [
   { id: 'ads', icon: 'megaphoneSolid', label: t.nav.ads },
 ]
 
+// Sits at the bottom of a one-screen tab shell (h-app flex column); only the list above it scrolls.
 export function BottomNav({ community, active }: { community: string; active: Tab }) {
   return (
     <nav
       aria-label={t.nav.label}
-      className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)] rail:hidden"
+      className="shrink-0 border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)] rail:hidden"
     >
       <ul className="grid grid-cols-3">
         {tabs.map((tab) => {

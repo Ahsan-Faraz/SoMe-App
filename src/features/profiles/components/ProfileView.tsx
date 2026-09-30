@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { buttonClass } from '@/components/ui/Button'
+import { bottomBar } from '@/components/ui/Screen'
 import { ThemePicker } from '@/components/ThemePicker'
 import { Icon } from '@/components/ui/Icon'
 import { LogoutButton } from '@/features/auth/components/LogoutButton'
@@ -20,11 +21,13 @@ export function ProfileView({
   return (
     <main className="mx-auto max-w-6xl px-5 pt-5 pb-12 sm:px-8 min-[52rem]:grid min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-x-14 min-[52rem]:px-12 min-[52rem]:pt-8">
       <div>
-        <Photos verified={profile.lastLogin} community={community} userId={profile.id} own={profile.own} />
+        <Photos main={profile.photo} community={community} userId={profile.id} own={profile.own} />
         <p className="mt-4 text-[14px] text-muted">
           {t.profiles.latestLogin}: <span className="font-semibold text-ink">{profile.lastLogin}</span>
         </p>
         <dl className="mt-3 grid text-[16px]">
+          <Row label={t.profiles.score} value={String(profile.score)} />
+          <Row label={t.profiles.reputation} value={String(profile.reputation)} />
           <Row label={t.profiles.age} value={String(profile.age)} />
           <Row label={t.profiles.district} value={profile.district} />
           <Row label={t.profiles.place} value={profile.place} />
@@ -53,7 +56,7 @@ export function ProfileView({
 export function ProfileActions({ community, profile, chatId, isAdmin }: { community: string; profile: Profile; chatId: string | null; isAdmin: boolean }) {
   const base = `/${community}/profiles/${profile.id}`
   return (
-    <nav aria-label={profile.username} className="sticky bottom-0 z-10 border-t border-line bg-canvas px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <nav aria-label={profile.username} className={bottomBar}>
       <div className="mx-auto grid max-w-xl gap-2">
         {profile.own || !chatId ? null : (
           <Link href={`/${community}/chats/${chatId}`} className={buttonClass('primary')}>

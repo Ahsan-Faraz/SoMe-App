@@ -34,7 +34,7 @@ export function TabRail({
   return (
     <nav
       aria-label={t.nav.label}
-      className={`sticky top-0 hidden h-dvh flex-col border-r border-line bg-rail py-4 transition-[width] duration-200 rail:flex ${
+      className={`sticky top-0 hidden h-app flex-col border-r border-line bg-rail py-4 transition-[width] duration-200 rail:flex ${
         open ? 'w-60 px-3' : 'w-[4.5rem] items-center'
       }`}
     >

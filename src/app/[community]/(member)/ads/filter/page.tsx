@@ -21,7 +21,7 @@ async function AdsFilterContent({ params }: PageProps<'/[community]/ads/filter'>
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="flex h-app w-full flex-col bg-canvas">
       <ScreenHeader title={t.ads.filter} backHref={`/${community}/ads`} />
       <AdFilterForm community={community} />
     </div>

@@ -26,7 +26,7 @@ async function ProfileAdsContent({ params }: PageProps<'/[community]/profiles/[u
   if (!profile) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={profile.own ? t.ads.mine : profile.username} backHref={`/${community}/profiles/${profile.id}`} right={profile.own ? <PublishAdLink community={community} /> : undefined} />
       <AdList community={community} seed={ads} onlyUserId={profile.id} />
     </div>

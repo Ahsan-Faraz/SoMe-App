@@ -29,7 +29,7 @@ async function ChatsContent({ params }: PageProps<'/[community]/chats'>) {
 
   return (
     <>
-      <div className="flex min-h-dvh flex-col bg-canvas split:hidden">
+      <div className="flex h-app flex-col bg-canvas split:hidden">
         <ChatIndex community={community} viewer={viewer} chats={chats} now={now} />
         <BottomNav community={community} active="chats" />
       </div>

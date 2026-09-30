@@ -34,7 +34,8 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
   const admin = viewer.role === 'admin'
   const partner = chat.kind === 'dm' ? dmPartnerId(chat.id) : null
   // B5: a DM's notes are the notes about that person — the same screen as from their profile.
-  const notesHref = partner ? `/${community}/profiles/${partner}/notes?back=${encodeURIComponent(base)}` : `${base}/notes`
+  // The star (notes) is for DM chats only, not groups.
+  const notesHref = partner ? `/${community}/profiles/${partner}/notes?back=${encodeURIComponent(base)}` : null
   const rules = {
     post: admin || !group || group.posting,
     comment: admin || !group || group.commenting,
@@ -44,7 +45,7 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
   const iconLink = `${tool} hover:bg-hover`
 
   return (
-    <div className="flex min-h-dvh w-full flex-col bg-canvas lg:min-h-full">
+    <div className="flex h-app w-full flex-col bg-canvas">
       <ScreenHeader
         title={
           chat.kind === 'group' ? (
@@ -58,9 +59,11 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
         backHref={viewer.role === 'pending' ? `/${community}/pending` : `/${community}/chats`}
         right={
           <span className="flex">
-            <Link href={notesHref} aria-label={t.chats.notes} title={t.chats.notes} className={iconLink}>
-              <Icon name="star" className="size-5" />
-            </Link>
+            {notesHref ? (
+              <Link href={notesHref} aria-label={t.chats.notes} title={t.chats.notes} className={iconLink}>
+                <Icon name="star" className="size-5" />
+              </Link>
+            ) : null}
             {chat.kind === 'group' && group ? (
               <Link href={`${base}/info`} aria-label={t.groupInfo.title} title={t.groupInfo.title} className={iconLink}>
                 <Icon name="info" className="size-5" />
@@ -75,7 +78,7 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
         }
       />
       {chat.kind === 'group' && (group?.calendar || info) ? (
-        <div className="sticky top-14 z-10 flex items-center gap-1 border-b border-line bg-canvas px-2 py-1.5 text-ink sm:px-6">
+        <div className="flex shrink-0 items-center gap-1 border-b border-line bg-canvas px-2 py-1.5 text-ink sm:px-6">
           {group?.calendar ? (
             <Link href={`${base}/calendar`} aria-label={t.chats.calendar} title={t.chats.calendar} className={`${iconLink} shrink-0`}>
               <Icon name="calendar" className="size-5" />

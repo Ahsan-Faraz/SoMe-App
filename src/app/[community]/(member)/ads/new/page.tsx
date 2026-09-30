@@ -25,7 +25,7 @@ async function NewAdContent({ params }: PageProps<'/[community]/ads/new'>) {
   if (!profile) redirect(`/${community}/ads`)
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="flex h-app w-full flex-col bg-canvas">
       <ScreenHeader title={t.ads.publish} backHref={`/${community}/ads`} />
       <AdEditor
         community={community}

@@ -21,7 +21,7 @@ async function FilterContent({ params }: PageProps<'/[community]/profiles/filter
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="flex h-app w-full flex-col bg-canvas">
       <ScreenHeader title={t.profiles.filter} backHref={`/${community}/profiles`} />
       <ProfileFilterForm community={community} />
     </div>

@@ -5,11 +5,11 @@ import { getCommunity } from '@/features/communities/queries'
 
 export default function MemberLayout({ children, params }: LayoutProps<'/[community]'>) {
   return (
-    <div className="min-h-dvh w-full bg-canvas rail:grid rail:h-dvh rail:grid-cols-[auto_minmax(0,1fr)] rail:overflow-hidden">
+    <div className="min-h-app w-full bg-canvas rail:grid rail:h-app rail:grid-cols-[auto_minmax(0,1fr)] rail:overflow-hidden">
       <Suspense fallback={<div className="hidden rail:block" />}>
         <MemberNav params={params} />
       </Suspense>
-      <div className="min-h-dvh min-w-0 rail:h-dvh rail:overflow-y-auto">{children}</div>
+      <div className="min-h-app min-w-0 rail:h-app rail:overflow-y-auto">{children}</div>
     </div>
   )
 }

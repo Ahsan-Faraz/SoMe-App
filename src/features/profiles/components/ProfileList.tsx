@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
@@ -55,18 +56,25 @@ export function ProfileList({ community, profiles }: { community: string; profil
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] p-2">
           {visible.map((profile) => (
-            <li key={profile.id} className="[contain-intrinsic-size:auto_140px] [content-visibility:auto]">
+            <li key={profile.id} className="[contain-intrinsic-size:auto_170px] [content-visibility:auto]">
               <Link href={`/${community}/profiles/${profile.id}`} className="m-2 flex gap-3 rounded-2xl border border-line p-4 hover:border-accent/40 hover:bg-accent/[0.03]">
                 <Avatar name={profile.username} seed={profile.id} />
                 <span className="min-w-0 flex-1 text-[14px]">
-                  <span className="flex items-baseline justify-between gap-3">
-                    <span className="truncate text-[16px] font-bold">{profile.username}</span>
-                    <span className="shrink-0 rounded-full bg-rail px-2 py-0.5 text-[12px] font-semibold">{profile.status}</span>
-                  </span>
+                  <span className="block truncate text-[16px] font-bold">{profile.username}</span>
                   <span className="mt-1 block text-ink-soft">{profile.age}</span>
                   <span className="block text-ink-soft">{profile.district}</span>
                   <span className="block text-ink-soft">{profile.place}</span>
                   <span className="mt-1 block truncate font-semibold text-ink">{profile.headline}</span>
+                </span>
+                <span className="grid shrink-0 justify-items-end gap-1.5">
+                  <span className="rounded-full bg-rail px-2 py-0.5 text-[12px] font-semibold">{profile.status}</span>
+                  {profile.photo ? (
+                    <>
+                      {/* Thumbnail only (96 px); the full image loads on the profile. */}
+                      <Image src={profile.photo.src} alt="" width={96} height={96} sizes="96px" className="size-24 rounded-xl object-cover" />
+                      {profile.photo.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.verified}</span> : null}
+                    </>
+                  ) : null}
                 </span>
               </Link>
             </li>

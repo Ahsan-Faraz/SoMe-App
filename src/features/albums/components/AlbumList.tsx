@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
+import { scrollArea } from '@/components/ui/Screen'
 import { t } from '@/lib/i18n'
 import { albumKey, loadAlbums, saveAlbums } from '../storage'
 import type { Album } from '../types'
@@ -17,6 +18,10 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
   const [ask, setAsk] = useState<string | null>(null)
 
   useEffect(() => setAlbums(loadAlbums(key, seed)), [key, seed])
+  // The header "+" links to ?add=1; open the form even when this page is already showing.
+  useEffect(() => {
+    if (startAdding) setAdding(true)
+  }, [startAdding])
 
   function commit(next: Album[]) {
     setAlbums(next)
@@ -24,7 +29,7 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
   }
 
   return (
-    <div className="px-4 py-5 sm:px-8">
+    <div className={`${scrollArea} px-4 py-5 sm:px-8`}>
       {adding ? (
         <form
           className="mb-5 flex gap-2"
@@ -52,7 +57,8 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
       {albums.length === 0 ? <p className="py-10 text-center text-muted">{t.albums.empty}</p> : null}
       <ul className="grid grid-cols-2 gap-4 min-[40rem]:grid-cols-3">
         {albums.map((album) => {
-          const cover = album.images[0]?.src
+          // Locked albums never show a photo, only a folder, until the password is given.
+          const cover = album.password ? undefined : album.images[0]?.src
           return (
             <li key={album.id}>
               <Link
@@ -76,8 +82,13 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={cover} alt="" draggable={false} className="aspect-square w-full rounded-2xl object-cover" />
                 ) : (
-                  <span className="grid aspect-square w-full place-items-center rounded-2xl bg-rail text-muted">
-                    <Icon name="image" />
+                  <span className="relative grid aspect-square w-full place-items-center rounded-2xl bg-rail text-muted">
+                    <Icon name={album.password ? 'folder' : 'image'} className="size-12" />
+                    {album.password ? (
+                      <span className="absolute right-3 bottom-3 grid size-8 place-items-center rounded-full bg-canvas text-ink" aria-label={t.albums.lockedLabel} title={t.albums.lockedLabel}>
+                        <Icon name="lock" className="size-4" />
+                      </span>
+                    ) : null}
                   </span>
                 )}
                 <span className="mt-2 block truncate text-[15px] font-semibold">{album.name}</span>
@@ -105,11 +116,6 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
             </button>
           </div>
         </div>
-      ) : null}
-      {own ? (
-        <button type="button" aria-label={t.albums.add} onClick={() => setAdding(true)} className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] grid size-14 place-items-center rounded-full bg-accent text-white shadow-lg rail:bottom-6">
-          <Icon name="plus" />
-        </button>
       ) : null}
     </div>
   )

@@ -57,10 +57,11 @@ export const mockChats: MockChat[] = [
 
 export const mockMessages: Record<
   string,
-  { author: string; mine: boolean; body: string; minutesAgo: number; reactions?: { emoji: string; count: number }[]; comment?: string; image?: boolean }[]
+  { author: string; mine: boolean; body: string; minutesAgo: number; reactions?: { emoji: string; count: number }[]; replyTo?: { author: string; body: string }; image?: boolean }[]
 > = {
   'g-tuesday': [
-    { author: 'Anna Lind', mine: false, body: 'Meeting at Slussen 18:00. Lights on, please.', minutesAgo: 40, reactions: [{ emoji: '👍', count: 2 }], comment: 'Erik: I will bring a tube.' },
+    { author: 'Anna Lind', mine: false, body: 'Meeting at Slussen 18:00. Lights on, please.', minutesAgo: 40, reactions: [{ emoji: '👍', count: 2 }] },
+    { author: 'Erik Berg', mine: false, body: 'I will bring a tube.', minutesAgo: 35, reactions: [{ emoji: '🙏', count: 1 }], replyTo: { author: 'Anna Lind', body: 'Meeting at Slussen 18:00. Lights on, please.' } },
     { author: 'Erik Berg', mine: false, body: 'I can bring a spare tube.', minutesAgo: 28, image: true },
     { author: 'You', mine: true, body: 'I will be there. Leaving Södermalm at 17:30.', minutesAgo: 18, reactions: [{ emoji: '👍', count: 1 }] },
     { author: 'Anna Lind', mine: false, body: 'Meeting at Slussen 18:00 👍', minutesAgo: 12 },
@@ -76,11 +77,11 @@ export const mockMessages: Record<
 }
 
 export const mockProfiles = [
-  { id: 'u-admin', username: 'Peter Admin', about: 'Community admin. Road and gravel.', place: 'Stockholm', status: 'Man', age: 46, district: 'Stockholm', headline: 'Rides and routes', lastLogin: '22 Sep, 18:10' },
-  { id: 'u-anna', username: 'Anna Lind', about: 'Gravel on weekdays, long rides on Sunday.', place: 'Södermalm', status: 'Woman', age: 34, district: 'Södermalm', headline: 'Gravel, lights on', lastLogin: '23 Sep, 09:02' },
-  { id: 'u-erik', username: 'Erik Berg', about: 'Mountain bike in Nacka. Happy to fix a puncture.', place: 'Nacka', status: 'Man', age: 29, district: 'Nacka', headline: 'Trails when they are dry', lastLogin: '21 Sep, 16:40' },
-  { id: 'u-sara', username: 'Sara Holm', about: 'Road cycling. I post the Sunday route.', place: 'Solna', status: 'Woman', age: 38, district: 'Solna', headline: 'Sunday road ride', lastLogin: '23 Sep, 07:15' },
-  { id: 'u-jonas', username: 'Jonas Ek', about: 'Workshop and spare parts.', place: 'Årsta', status: 'Man', age: 41, district: 'Årsta', headline: 'Chains and tyres', lastLogin: '20 Sep, 12:00' },
+  { id: 'u-admin', username: 'Peter Admin', about: 'Community admin. Road and gravel.', place: 'Stockholm', status: 'Man', age: 46, district: 'Stockholm', headline: 'Rides and routes', lastLogin: '22 Sep, 18:10', photo: { src: '/community/hero.png', verified: true, date: '2 Sep 2026' } },
+  { id: 'u-anna', username: 'Anna Lind', about: 'Gravel on weekdays, long rides on Sunday.', place: 'Södermalm', status: 'Woman', age: 34, district: 'Södermalm', headline: 'Gravel, lights on', lastLogin: '23 Sep, 09:02', photo: { src: '/community/ride.png', verified: true, date: '23 Sep 2026' } },
+  { id: 'u-erik', username: 'Erik Berg', about: 'Mountain bike in Nacka. Happy to fix a puncture.', place: 'Nacka', status: 'Man', age: 29, district: 'Nacka', headline: 'Trails when they are dry', lastLogin: '21 Sep, 16:40', photo: { src: '/community/hero.png', verified: false, date: '11 Aug 2026' } },
+  { id: 'u-sara', username: 'Sara Holm', about: 'Road cycling. I post the Sunday route.', place: 'Solna', status: 'Woman', age: 38, district: 'Solna', headline: 'Sunday road ride', lastLogin: '23 Sep, 07:15', photo: { src: '/community/ride.png', verified: true, date: '19 Sep 2026' } },
+  { id: 'u-jonas', username: 'Jonas Ek', about: 'Workshop and spare parts.', place: 'Årsta', status: 'Man', age: 41, district: 'Årsta', headline: 'Chains and tyres', lastLogin: '20 Sep, 12:00', photo: null },
 ]
 
 export const mockGroups = [

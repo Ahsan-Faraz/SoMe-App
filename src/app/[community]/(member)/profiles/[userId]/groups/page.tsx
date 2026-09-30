@@ -25,7 +25,7 @@ async function AssignGroupsContent({ params }: PageProps<'/[community]/profiles/
   if (!profile || profile.own) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={profile.username} backHref={`/${community}/profiles/${profile.id}`} />
       <AssignGroups storageKey={`some:assign:${community}:${profile.id}`} admitted groups={groups} />
     </div>

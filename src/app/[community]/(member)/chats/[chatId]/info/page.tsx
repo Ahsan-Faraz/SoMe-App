@@ -27,7 +27,7 @@ async function GroupInfoContent({ params }: PageProps<'/[community]/chats/[chatI
   if (!group) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.groupInfo.title} backHref={`/${community}/chats/${group.id}`} />
       <main className="mx-auto grid max-w-2xl gap-8 px-5 py-8 sm:px-8">
         <section className="grid justify-items-center gap-3 text-center">

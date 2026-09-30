@@ -23,7 +23,7 @@ async function ChatNotesContent({ params }: PageProps<'/[community]/chats/[chatI
   if (!chat) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}`} />
       <PrivateNotes storageKey={`some:notes:${community}:${viewer.userId}:chat:${chat.id}`} />
     </div>

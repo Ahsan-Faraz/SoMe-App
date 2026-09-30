@@ -23,7 +23,7 @@ async function LeaveContent({ params }: PageProps<'/[community]/chats/[chatId]/l
   if (!chat) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}`} />
       <LeaveChat community={community} chatId={chat.id} listHref={`/${community}/chats`} />
     </div>

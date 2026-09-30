@@ -32,7 +32,7 @@ async function EventContent({ params, searchParams }: PageProps<'/[community]/ch
   const today = new Date().toISOString().slice(0, 10)
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}/calendar`} />
       <p className="px-4 pt-5 text-center text-[15px] font-semibold text-muted sm:px-8">{t.calendar.title}</p>
       <EventForm storageKey={`some:calendar:${community}:${chat.id}`} seed={events} eventId={creating ? null : eventId} date={date || today} />

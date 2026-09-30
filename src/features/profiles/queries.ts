@@ -12,10 +12,13 @@ const ownProfile = {
   headline: 'New member',
   about: '',
   lastLogin: '23 Sep, 21:00',
+  score: 50,
+  reputation: 0,
+  photo: { src: '/community/hero.png', verified: true, date: '14 Sep 2026' },
 }
 
 export async function listProfiles(): Promise<ProfileCard[]> {
-  return mockProfiles.slice(0, PAGE_LIMIT).map(({ id, username, status, age, district, place, headline }) => ({
+  return mockProfiles.slice(0, PAGE_LIMIT).map(({ id, username, status, age, district, place, headline, photo }) => ({
     id,
     username,
     status,
@@ -23,6 +26,7 @@ export async function listProfiles(): Promise<ProfileCard[]> {
     district,
     place,
     headline,
+    photo,
   }))
 }
 
@@ -32,5 +36,5 @@ export async function getProfile(userId: string, viewerId: string, viewerName: s
   }
   const profile = mockProfiles.find((item) => item.id === userId)
   if (!profile) return null
-  return { ...profile, own: false }
+  return { ...profile, score: 50, reputation: 0, own: false }
 }

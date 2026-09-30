@@ -6,7 +6,7 @@ import { Icon } from './Icon'
 export function ScreenHeader({ title, backHref, leading, right }: { title: ReactNode; backHref?: string; leading?: ReactNode; right?: ReactNode }) {
   return (
     <header
-      className={`sticky top-0 z-10 grid h-14 items-center border-b border-line bg-canvas px-2 ${leading ? 'grid-cols-[6rem_minmax(0,1fr)_6rem]' : 'grid-cols-[3rem_minmax(0,1fr)_auto]'}`}
+      className={`sticky top-0 z-10 grid h-14 shrink-0 items-center border-b border-line bg-canvas px-2 ${leading ? 'grid-cols-[6rem_minmax(0,1fr)_6rem]' : 'grid-cols-[3rem_minmax(0,1fr)_auto]'}`}
     >
       <div className="flex items-center">
         {backHref ? (

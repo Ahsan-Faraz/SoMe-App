@@ -29,7 +29,7 @@ async function AlbumsContent({ params, searchParams }: PageProps<'/[community]/p
   if (!profile) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="flex h-app w-full flex-col bg-canvas">
       <ScreenHeader
         title={profile.username}
         backHref={`/${community}/profiles/${profile.id}`}

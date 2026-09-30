@@ -44,7 +44,7 @@ export function ChatIndex({
           </Link>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom))] rail:pb-0">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <ChatList community={community} chats={chats} now={now} />
       </div>
     </>

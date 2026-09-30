@@ -25,7 +25,7 @@ async function AddMembersContent({ params }: PageProps<'/[community]/groups/[gro
   if (!group) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={`${group.name} – ${t.groups.add}`} backHref={`/${community}/groups/${group.id}/members`} />
       <AddList community={community} people={people} />
     </div>

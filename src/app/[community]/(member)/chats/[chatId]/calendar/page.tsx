@@ -31,7 +31,7 @@ async function CalendarContent({ params }: PageProps<'/[community]/chats/[chatId
   const isAdmin = viewer.role === 'admin'
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader
         title={chat.name}
         backHref={`/${community}/chats/${chat.id}`}

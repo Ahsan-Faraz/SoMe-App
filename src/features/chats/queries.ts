@@ -77,7 +77,7 @@ export async function getChat(chatId: string, now: number): Promise<ChatThread |
       body: message.body,
       timeLabel: formatPostTime(new Date(now - message.minutesAgo * 60_000).toISOString()),
       reactions: (message.reactions ?? []).map((reaction) => ({ ...reaction, mine: false })),
-      comment: message.comment ?? null,
+      replyTo: message.replyTo ?? null,
       image: message.image ?? false,
       imageSrc: null,
       verified: message.image ?? false,

@@ -27,7 +27,7 @@ async function PendingContent({ params }: PageProps<'/[community]/pending'>) {
   const adminChatId = await getAdminChatId(slug)
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.pending.title} right={<ThemeToggle className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover" />} />
       <main className="grid w-full gap-8 px-5 pt-6 pb-12 sm:px-8 min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-16 min-[52rem]:px-12 min-[52rem]:pt-14">
         <div className="hidden min-[52rem]:block">

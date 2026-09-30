@@ -24,7 +24,7 @@ async function ProfileNotesContent({ params, searchParams }: PageProps<'/[commun
   if (!profile) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={profile.username} backHref={backFrom((await searchParams).back, community, `/${community}/profiles/${profile.id}`)} />
       <PrivateNotes storageKey={`some:notes:${community}:${viewer.userId}:profile:${profile.id}`} />
     </div>

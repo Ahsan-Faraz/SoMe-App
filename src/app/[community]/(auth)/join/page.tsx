@@ -22,7 +22,7 @@ async function JoinContent({ params }: PageProps<'/[community]/join'>) {
   if (!community) notFound()
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.join.title} backHref={`/${slug}`} right={<ThemeToggle className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover" />} />
       <AuthShell community={community} src={community.aboutSrc} alt="Two riders on a gravel path outside Stockholm" title={t.join.heading}>
         <JoinForm community={slug} communityName={community.name} />

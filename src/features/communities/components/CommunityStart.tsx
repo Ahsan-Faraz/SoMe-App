@@ -20,7 +20,7 @@ export function CommunityStart({ community }: { community: Community }) {
   const join = `/${community.slug}/join`
 
   return (
-    <main className="relative min-h-dvh w-full bg-canvas px-5 pt-8 pb-16 sm:px-8 min-[52rem]:pt-0 min-[52rem]:pb-0 lg:px-16 xl:px-24">
+    <main className="relative min-h-app w-full bg-canvas px-5 pt-8 pb-16 sm:px-8 min-[52rem]:pt-0 min-[52rem]:pb-0 lg:px-16 xl:px-24">
       <ThemeToggle className={`${toggle} absolute top-3 right-3 z-10 min-[52rem]:hidden`} />
       <header className="mx-auto hidden h-20 max-w-7xl items-center justify-between min-[52rem]:flex">
         <Link href={`/${community.slug}`} className="flex items-center gap-3">

@@ -26,7 +26,7 @@ async function AlbumContent({ params }: PageProps<'/[community]/profiles/[userId
   const album = albums.find((item) => item.id === albumId)
 
   return (
-    <div className="min-h-dvh w-full bg-canvas">
+    <div className="flex h-app w-full flex-col bg-canvas">
       <ScreenHeader title={album?.name ?? t.profiles.albums} backHref={`/${community}/profiles/${profile.id}/albums`} />
       <AlbumView community={community} userId={profile.id} albumId={albumId} own={profile.own} seed={albums} />
     </div>

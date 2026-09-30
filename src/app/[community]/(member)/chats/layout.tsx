@@ -10,7 +10,7 @@ export default function ChatsLayout({ children, params }: LayoutProps<'/[communi
       <Suspense fallback={null}>
         <DesktopChats params={params} />
       </Suspense>
-      <div className="min-h-dvh min-w-0 split:h-full split:overflow-y-auto">{children}</div>
+      <div className="min-h-app min-w-0 split:h-full split:overflow-y-auto">{children}</div>
     </div>
   )
 }

@@ -11,7 +11,8 @@ export type ChatMessage = {
   body: string
   timeLabel: string
   reactions: Reaction[]
-  comment: string | null
+  // A comment on another post: shown as a dimmed snippet of that post above the comment text.
+  replyTo: { author: string; body: string } | null
   image: boolean
   imageSrc: string | null
   verified: boolean

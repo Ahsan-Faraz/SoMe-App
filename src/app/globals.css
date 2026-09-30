@@ -71,6 +71,16 @@ html[data-theme='dark'] {
   }
 }
 
+/* Screen height minus the notch/status-bar padding the body adds (iPhone home-screen app).
+   100dvh alone would make every screen 1 safe-area taller than the phone, so the page itself
+   scrolls and iOS drags the fixed bottom bar along with it. */
+@utility h-app {
+  height: calc(100dvh - env(safe-area-inset-top));
+}
+@utility min-h-app {
+  min-height: calc(100dvh - env(safe-area-inset-top));
+}
+
 html {
   accent-color: var(--color-accent);
   -webkit-text-size-adjust: 100%;
