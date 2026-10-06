@@ -7,6 +7,7 @@ import { EventForm } from '@/features/calendar/components/EventForm'
 import { listEvents } from '@/features/calendar/queries'
 import { getChatSummary } from '@/features/chats/queries'
 import { getGroup } from '@/features/groups/queries'
+import { todayKey } from '@/lib/format'
 import { t } from '@/lib/i18n'
 
 export default function EventPage(props: PageProps<'/[community]/chats/[chatId]/calendar/[eventId]'>) {
@@ -29,7 +30,7 @@ async function EventContent({ params, searchParams }: PageProps<'/[community]/ch
   const creating = eventId === 'new'
   const requested = (await searchParams).date
   const date = Array.isArray(requested) ? requested[0] : requested
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayKey()
 
   return (
     <div className="min-h-app w-full bg-canvas">

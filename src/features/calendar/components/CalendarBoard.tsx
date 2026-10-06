@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
+import { todayKey } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { loadEvents, saveEvents, subscribe, type CalEvent } from '../storage'
 
@@ -18,15 +19,19 @@ export function CalendarBoard({
   seed,
   base,
   isAdmin,
+  dmHrefs,
 }: {
   storageKey: string
   seed: CalEvent[]
   base: string
   isAdmin: boolean
+  // Event creator → DM link. Missing for your own events.
+  dmHrefs: Record<string, string>
 }) {
-  const today = new Date()
-  const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() })
-  const [day, setDay] = useState(today.getDate())
+  // Today in the community's zone, so the server and the browser open on the same day.
+  const [todayYear = 0, todayMonth = 1, todayDay = 1] = todayKey().split('-').map(Number)
+  const [cursor, setCursor] = useState({ year: todayYear, month: todayMonth - 1 })
+  const [day, setDay] = useState(todayDay)
   const [events, setEvents] = useState(seed)
   const [ask, setAsk] = useState<string | null>(null)
 
@@ -63,17 +68,17 @@ export function CalendarBoard({
           const on = date === selected
           const has = marked.has(date)
           return (
-            <button
-              key={date}
-              type="button"
-              aria-pressed={on}
-              onClick={() => setDay(value)}
-              className={`mx-auto grid size-10 place-items-center rounded-full text-[15px] font-semibold ${
-                on ? 'bg-accent text-white' : has ? 'text-accent ring-2 ring-accent' : 'text-ink hover:bg-rail'
-              }`}
-            >
-              {value}
-            </button>
+              <button
+                key={date}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setDay(value)}
+                className={`mx-auto grid size-10 place-items-center rounded-full text-[15px] font-semibold ${
+                  on ? 'bg-accent text-white' : has ? 'text-accent ring-2 ring-accent' : 'text-ink hover:bg-rail'
+                }`}
+              >
+                {value}
+              </button>
           )
         })}
       </div>
@@ -81,38 +86,50 @@ export function CalendarBoard({
       {listed.length === 0 ? <p className="mt-3 text-[16px] text-muted">{t.calendar.empty}</p> : null}
       <ul className="mt-2 divide-y divide-line">
         {listed.map((event) => (
-          <li key={event.id} className="flex items-start gap-2 py-4">
+          <li key={event.id} className="flex items-start gap-3 py-4">
             <span className="min-w-0 flex-1">
               <EventBody event={event} />
             </span>
-            {isAdmin ? (
-              ask === event.id ? (
-                <span className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      saveEvents(storageKey, events.filter((item) => item.id !== event.id))
-                      setAsk(null)
-                    }}
-                    className="h-10 rounded-xl bg-danger px-3 text-[15px] font-semibold text-white"
-                  >
-                    {t.calendar.delete}
-                  </button>
-                  <button type="button" onClick={() => setAsk(null)} className="h-10 rounded-xl bg-soft px-3 text-[15px] font-semibold">
-                    {t.chats.cancel}
-                  </button>
-                </span>
-              ) : (
-                <span className="flex shrink-0">
-                  <Link href={`${base}/${event.id}`} aria-label={t.calendar.edit} title={t.calendar.edit} className="grid size-10 place-items-center rounded-full text-ink hover:bg-hover">
-                    <Icon name="pencil" className="size-5" />
-                  </Link>
-                  <button type="button" aria-label={t.calendar.delete} title={t.calendar.delete} onClick={() => setAsk(event.id)} className="grid size-10 place-items-center rounded-full text-ink hover:bg-danger/10 hover:text-danger">
-                    <Icon name="trash" className="size-5" />
-                  </button>
-                </span>
-              )
-            ) : null}
+            <span className="grid shrink-0 justify-items-end gap-1">
+              {event.createdBy && dmHrefs[event.createdBy] ? (
+                <Link
+                  href={dmHrefs[event.createdBy] ?? ''}
+                  aria-label={t.calendar.dmLabel(event.headline)}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-soft px-3 text-[15px] font-semibold hover:bg-soft-hover"
+                >
+                  <Icon name="chatSolid" className="size-4 text-accent" />
+                  {t.calendar.dm}
+                </Link>
+              ) : null}
+              {isAdmin ? (
+                ask === event.id ? (
+                  <span className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        saveEvents(storageKey, events.filter((item) => item.id !== event.id))
+                        setAsk(null)
+                      }}
+                      className="h-10 rounded-xl bg-danger px-3 text-[15px] font-semibold text-white"
+                    >
+                      {t.calendar.delete}
+                    </button>
+                    <button type="button" onClick={() => setAsk(null)} className="h-10 rounded-xl bg-soft px-3 text-[15px] font-semibold">
+                      {t.chats.cancel}
+                    </button>
+                  </span>
+                ) : (
+                  <span className="flex">
+                    <Link href={`${base}/${event.id}`} aria-label={t.calendar.edit} title={t.calendar.edit} className="grid size-10 place-items-center rounded-full text-ink hover:bg-hover">
+                      <Icon name="pencil" className="size-5" />
+                    </Link>
+                    <button type="button" aria-label={t.calendar.delete} title={t.calendar.delete} onClick={() => setAsk(event.id)} className="grid size-10 place-items-center rounded-full text-ink hover:bg-danger/10 hover:text-danger">
+                      <Icon name="trash" className="size-5" />
+                    </button>
+                  </span>
+                )
+              ) : null}
+            </span>
           </li>
         ))}
       </ul>

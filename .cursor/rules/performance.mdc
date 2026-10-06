@@ -32,7 +32,7 @@ Budgets (engineering targets, not spec text), mid-range phone on 4G: LCP < 2.5 s
 
 ## Realtime
 
-- At most two channels per client: one per-user channel (A1 bumps) and one for the open chat.
+- One channel per client: the open chat (`chat:{id}`, private Broadcast, authorized once at join). No per-user channel for A1: it would push once per member per message (O(members)). A1 refetches its one RPC on focus / visibilitychange / back. Revisit only after measuring, with a member cap.
 - Push new messages with **Broadcast** (sent on insert). Don't use `postgres_changes` for chat — it re-checks RLS for every subscriber and slows down big groups.
 
 ## Storage
@@ -41,7 +41,7 @@ Budgets (engineering targets, not spec text), mid-range phone on 4G: LCP < 2.5 s
 - Lists load thumbnails; the full image only on tap.
 - Immutable paths `{community}/{user}/{uuid}.webp` + long `cache-control`. Replace = new path.
 - Private bucket for chat images, albums, and verification photos. Sign in batch (`createSignedUrls`) and reuse each URL until it expires. Album URLs only after the server password check.
-- Server enforces type + max size. The limit is TBD — keep it in one constant.
+- Server enforces type + max size. One constant `MAX_IMAGE_BYTES`, default 5 MB.
 
 ## PWA
 

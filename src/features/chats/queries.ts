@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { formatPostTime, formatStamp } from '@/lib/format'
-import { mockChats, mockGroups, mockMessages, mockUsers } from '@/mocks/data'
+import { mockChats, mockGroups, mockMessages, mockProfiles } from '@/mocks/data'
 import type { ChatListItem, ChatThread, DirectoryEntry } from './types'
 
 const PAGE_LIMIT = 50
@@ -16,9 +16,9 @@ export const listChats = cache(async (_communitySlug: string): Promise<ChatListI
     .slice(0, PAGE_LIMIT)
 })
 
-// The DM between the viewer and the community admin (AD → A4). Real version finds or creates it.
-export async function getAdminChatId(_communitySlug: string): Promise<string> {
-  return 'dm-admin'
+// A25: the DM with the community admin, only once the admin has written first. Null until then.
+export async function getAdminChatId(_communitySlug: string): Promise<string | null> {
+  return (mockMessages['dm-admin'] ?? []).some((message) => !message.mine) ? 'dm-admin' : null
 }
 
 const userChats: Record<string, string> = {
@@ -38,21 +38,17 @@ export function dmPartnerId(chatId: string): string | null {
   return Object.keys(userChats).find((userId) => userChats[userId] === chatId) ?? null
 }
 
-export async function listDirectory(community: string): Promise<DirectoryEntry[]> {
-  const people = mockUsers.map((user) => ({
-    id: user.id,
-    kind: 'user' as const,
-    name: user.username,
-    detail: '',
-    href: `/${community}/chats/${userChats[user.id] ?? 'dm-admin'}`,
-  }))
-  const groups = mockGroups.map((group) => ({
-    id: group.id,
-    kind: 'group' as const,
-    name: group.name,
-    detail: group.headline,
-    href: group.directJoin ? `/${community}/chats/${group.id}` : `/${community}/chats/dm-admin`,
-  }))
+// A2 "Find new user/group": only people and groups the viewer is not connected to yet.
+// A user opens their profile; a group opens its join / apply screen (A24).
+export async function listDirectory(community: string, viewerId: string): Promise<DirectoryEntry[]> {
+  const inList = new Set(mockChats.map((chat) => chat.id))
+  const back = encodeURIComponent(`/${community}/chats/new`)
+  const people = mockProfiles
+    .filter((profile) => profile.id !== viewerId && !inList.has(userChats[profile.id] ?? ''))
+    .map((profile) => ({ id: profile.id, kind: 'user' as const, name: profile.username, detail: profile.headline, href: `/${community}/profiles/${profile.id}?back=${back}` }))
+  const groups = mockGroups
+    .filter((group) => !inList.has(group.id))
+    .map((group) => ({ id: group.id, kind: 'group' as const, name: group.name, detail: group.headline, href: `/${community}/groups/${group.id}/join` }))
   return [...people, ...groups]
 }
 
@@ -69,19 +65,23 @@ export async function getChat(chatId: string, now: number): Promise<ChatThread |
     id: chat.id,
     kind: chat.kind,
     name: chat.name,
-    messages: messages.map((message, index) => ({
-      id: `${chatId}-${index}`,
-      author: message.author,
-      authorId: message.mine ? null : mockUsers.find((user) => user.username === message.author)?.id ?? null,
-      mine: message.mine,
-      body: message.body,
-      timeLabel: formatPostTime(new Date(now - message.minutesAgo * 60_000).toISOString()),
-      reactions: (message.reactions ?? []).map((reaction) => ({ ...reaction, mine: false })),
-      replyTo: message.replyTo ?? null,
-      image: message.image ?? false,
-      imageSrc: null,
-      verified: message.image ?? false,
-      verifiedDate: message.image ? formatStamp(now - message.minutesAgo * 60_000) : null,
-    })),
+    messages: messages.map((message, index) => {
+      const profile = message.mine ? undefined : mockProfiles.find((item) => item.username === message.author)
+      return {
+        id: `${chatId}-${index}`,
+        author: message.author,
+        authorId: profile?.id ?? null,
+        authorStatus: chat.kind === 'group' ? (profile?.status ?? null) : null,
+        mine: message.mine,
+        body: message.body,
+        timeLabel: formatPostTime(new Date(now - message.minutesAgo * 60_000).toISOString()),
+        reactions: (message.reactions ?? []).map((reaction) => ({ ...reaction, mine: false })),
+        replyTo: message.replyTo ?? null,
+        image: message.image ?? false,
+        imageSrc: null,
+        verified: message.image ?? false,
+        verifiedDate: message.image ? formatStamp(now - message.minutesAgo * 60_000) : null,
+      }
+    }),
   }
 }

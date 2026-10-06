@@ -5,16 +5,20 @@ alwaysApply: false
 
 # Scope board
 
-Canonical detail: `docs/User-Stories-and-Requirements.tex`. After a TBD is **decided by the user**, update this file.
+Canonical detail: `docs/backend-design.md` (decisions + build order) and `docs/User-Stories-and-Requirements.tex`. After a TBD is **decided by the user**, update this file.
 
 ## V1 (only when asked)
 
-Auth + AD; community routing; A1; DM/groups; posts/images/camera tag; reactions/comments; admin delete; sticky + calendar; V1 settings; admin group create; F1/F2; dynamic field capability; form search; albums + lock; notes/stars; manual verify.
+Auth (email verify, username or email login); community routing; community + group applications and approval queues (A19–A25); admin records, member list / door list, statistics (A28–A33); A1; DM/groups; leave DM (keep+block / delete+block); blocks hide profile; posts/images/Real tag; reactions (one per person) + any-emoji picker; comments with snippet; admin delete; sticky + calendar (edit/delete, DM Admin); group settings incl. posting/commenting/reactions/visible in search/apply requirements; group create by admin or members with rights; F1/F2; profile builder (all field types, Status-driven fields, couples); profile score; linked profiles (max 3); profile visibility; form search + swipe browse (A27); find new user/group; albums + lock; notes/stars; Ads tab + filter.
 
 ## Later
 
-Video/audio; disappearing posts; notifications; user-created groups; co-admins; hide usernames; payments; reputation; profile score; monetized ads; AI verify; Google login; self-serve multi-community.
+Video/audio; disappearing posts; notifications; co-admins; hide usernames; payments; reputation; km distance; monetized ads; AI verify; Google login; self-serve multi-community; translations (structure ready now).
 
 ## TBD — do not guess
 
-Bottom nav 2 vs 3 · path vs subdomain · account per community vs platform · ads posts vs A6–D3 · first field list · levels 1–3 · 1 vs 3 main photos · A9 direct-join checkbox
+Levels 1–3 · Q1–Q8 in `docs/backend-design.md` §13 (District list, score rule, couples, search visibility, approve buttons, real-name visibility, link acceptance, same password), built with defaults.
+
+## Decided (Oct 2026)
+
+3 tabs Chats/Profiles/Ads · path `/{community}` · separate account per community · Ads tab kept · 3 main photos · direct join is a group setting · first fields built by the admin

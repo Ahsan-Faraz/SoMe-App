@@ -16,11 +16,14 @@ export function PrivateNotes({ storageKey }: { storageKey: string }) {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(storageKey)
-    if (!raw) return
-    const value = JSON.parse(raw) as Saved
-    setText(value.text)
-    setScore(value.score)
+    try {
+      const value = JSON.parse(window.localStorage.getItem(storageKey) ?? 'null') as Partial<Saved> | null
+      if (!value) return
+      setText(typeof value.text === 'string' ? value.text : '')
+      setScore(typeof value.score === 'number' ? value.score : 0)
+    } catch {
+      // Unreadable note: start empty rather than break the screen.
+    }
   }, [storageKey])
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {

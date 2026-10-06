@@ -16,9 +16,10 @@ export function readHidden(community: string): Hidden {
   }
 }
 
-export function leaveChat(community: string, chatId: string, block: boolean) {
+// remove: drop the chat from the list. block: nobody can write in it (DMs: the other person cannot reach you).
+export function leaveChat(community: string, chatId: string, { remove, block }: { remove: boolean; block: boolean }) {
   const current = readHidden(community)
-  const left = current.left.includes(chatId) ? current.left : [...current.left, chatId]
+  const left = remove && !current.left.includes(chatId) ? [...current.left, chatId] : current.left
   const blocked = block && !current.blocked.includes(chatId) ? [...current.blocked, chatId] : current.blocked
   localStorage.setItem(key(community), JSON.stringify({ left, blocked }))
   window.dispatchEvent(new Event('some-chats'))

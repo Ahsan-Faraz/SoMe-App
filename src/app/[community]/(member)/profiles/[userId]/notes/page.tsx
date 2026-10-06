@@ -4,6 +4,7 @@ import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { PrivateNotes } from '@/features/notes/components/PrivateNotes'
+import { profileNotesKey } from '@/features/notes/stars'
 import { backFrom } from '@/lib/back'
 import { getProfile } from '@/features/profiles/queries'
 
@@ -26,7 +27,7 @@ async function ProfileNotesContent({ params, searchParams }: PageProps<'/[commun
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={profile.username} backHref={backFrom((await searchParams).back, community, `/${community}/profiles/${profile.id}`)} />
-      <PrivateNotes storageKey={`some:notes:${community}:${viewer.userId}:profile:${profile.id}`} />
+      <PrivateNotes storageKey={profileNotesKey(community, viewer.userId, profile.id)} />
     </div>
   )
 }

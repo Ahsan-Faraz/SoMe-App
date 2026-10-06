@@ -8,6 +8,7 @@ import { AdsFilterButton } from '@/features/ads/components/AdFilterForm'
 import { AdList } from '@/features/ads/components/AdList'
 import { listAds } from '@/features/ads/queries'
 import { getViewer } from '@/features/auth/queries'
+import { listProfiles } from '@/features/profiles/queries'
 import { t } from '@/lib/i18n'
 import { RouteSkeleton } from '../../loading'
 
@@ -24,7 +25,8 @@ async function AdsContent({ params }: PageProps<'/[community]/ads'>) {
   const viewer = await getViewer()
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
-  const ads = await listAds()
+  const [ads, profiles] = await Promise.all([listAds(), listProfiles()])
+  const scores = Object.fromEntries(profiles.map((profile) => [profile.id, profile.score]))
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
@@ -39,7 +41,7 @@ async function AdsContent({ params }: PageProps<'/[community]/ads'>) {
             </span>
           }
         />
-        <AdList community={community} seed={ads} onlyUserId={null} />
+        <AdList community={community} seed={ads} onlyUserId={null} viewerId={viewer.userId} scores={scores} />
       </main>
       <BottomNav community={community} active="ads" />
     </div>

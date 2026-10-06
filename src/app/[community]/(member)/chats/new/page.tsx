@@ -21,12 +21,12 @@ async function NewChatContent({ params }: PageProps<'/[community]/chats/new'>) {
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const entries = await listDirectory(community)
+  const entries = await listDirectory(community, viewer.userId)
 
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.chats.joinTitle} backHref={`/${community}/chats`} />
-      <Directory community={community} entries={entries} />
+      <Directory entries={entries} />
     </div>
   )
 }

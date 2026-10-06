@@ -9,10 +9,11 @@ alwaysApply: false
 Few icons. Post + react are enough. Extra actions = long-press, full-width sheet (not a tiny menu). Layouts = mockup 260922; density = Wire screenshots.
 
 - A1: avatar → own profile; `+` → A2 full sheet; search = **existing chats only**.
-- Bottom nav is TBD (2 tabs vs Chats/Profiles/Ads). Do not add a fourth tab.
+- Bottom nav: Chats / Profiles / Ads (decided). Do not add a fourth tab.
 - Unread rows first, then by last activity. Badge on the row.
 - One Post row: avatar, name, date+time, body, reactions. Comments = dim snippet.
-- Fields and G1 filters come from schema types. Verified label = camera + date only.
+- Fields and G1/D1 filters come from schema types. The camera label is **"Real"** (never "Verified") = in-app camera + date only.
 - Admin actions render only if the role is true — no disabled clutter.
-- Mount composer and long-press sheet on demand. Persist G1 filters locally.
+- Mount composer and long-press sheet on demand. Filters apply on "Show", not live, and are remembered on the account.
+- Back arrow = go back to the previous screen, not a fixed screen.
 - No second design system; CSS transitions only, no animation library.

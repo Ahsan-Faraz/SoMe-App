@@ -1,11 +1,9 @@
-import Link from 'next/link'
-import { buttonClass } from '@/components/ui/Button'
-import { bottomBar } from '@/components/ui/Screen'
+import type { ReactNode } from 'react'
 import { ThemePicker } from '@/components/ThemePicker'
-import { Icon } from '@/components/ui/Icon'
 import { LogoutButton } from '@/features/auth/components/LogoutButton'
 import { t } from '@/lib/i18n'
 import type { Profile } from '../types'
+import { LinkedProfiles } from './LinkedProfiles'
 import { Photos } from './Photos'
 import { ProfileFields } from './ProfileFields'
 
@@ -13,27 +11,43 @@ export function ProfileView({
   community,
   profile,
   section,
+  linkBase = `/${community}/profiles`,
+  admin,
 }: {
   community: string
   profile: Profile
   section: string | null
+  // Where linked profiles open: the normal profile, or the same admin view (A21/A22) for that person.
+  linkBase?: string
+  // A21/A22: the scope's application and member data, under the usual profile.
+  admin?: ReactNode
 }) {
   return (
     <main className="mx-auto max-w-6xl px-5 pt-5 pb-12 sm:px-8 min-[52rem]:grid min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-x-14 min-[52rem]:px-12 min-[52rem]:pt-8">
-      <div>
-        <Photos main={profile.photo} community={community} userId={profile.id} own={profile.own} />
-        <p className="mt-4 text-[14px] text-muted">
-          {t.profiles.latestLogin}: <span className="font-semibold text-ink">{profile.lastLogin}</span>
-        </p>
-        <dl className="mt-3 grid text-[16px]">
-          <Row label={t.profiles.score} value={String(profile.score)} />
-          <Row label={t.profiles.reputation} value={String(profile.reputation)} />
-          <Row label={t.profiles.age} value={String(profile.age)} />
-          <Row label={t.profiles.district} value={profile.district} />
-          <Row label={t.profiles.place} value={profile.place} />
-        </dl>
-      </div>
-      <ProfileFields own={profile.own} about={profile.about} status={profile.status} headline={profile.headline} />
+      <ProfileFields
+        storageKey={`some:profile:${community}:${profile.id}`}
+        own={profile.own}
+        status={profile.status}
+        lookingFor={profile.lookingFor}
+        about={profile.about}
+        headline={profile.headline}
+        media={
+          <>
+            <Photos main={profile.photo} community={community} userId={profile.id} own={profile.own} />
+            <p className="mt-4 text-[14px] text-muted">
+              {t.profiles.latestLogin}: <span className="font-semibold text-ink">{profile.lastLogin}</span>
+            </p>
+            <dl className="mt-3 grid text-[16px]">
+              <Row label={t.profiles.score} value={String(profile.score)} />
+              <Row label={t.profiles.age} value={String(profile.age)} />
+              <Row label={t.profiles.district} value={profile.district} />
+              <Row label={t.profiles.place} value={profile.place} />
+            </dl>
+            <LinkedProfiles community={community} userId={profile.id} own={profile.own} linked={profile.linked} linkBase={linkBase} />
+          </>
+        }
+      />
+      {admin ? <div className="mt-8 min-[52rem]:col-span-2">{admin}</div> : null}
       {section || profile.own ? (
         <div className="mt-8 min-[52rem]:col-span-2">
           {section ? <p className="mb-4 rounded-xl bg-rail px-4 py-3 text-[16px] font-semibold">{section}</p> : null}
@@ -48,39 +62,6 @@ export function ProfileView({
         </div>
       ) : null}
     </main>
-  )
-}
-
-// A3/B1 bottom bar — fixed, not scrolling: DM (not on your own profile), then Albums · + · Ads.
-// "+" = add this person to groups, admins only.
-export function ProfileActions({ community, profile, chatId, isAdmin }: { community: string; profile: Profile; chatId: string | null; isAdmin: boolean }) {
-  const base = `/${community}/profiles/${profile.id}`
-  return (
-    <nav aria-label={profile.username} className={bottomBar}>
-      <div className="mx-auto grid max-w-xl gap-2">
-        {profile.own || !chatId ? null : (
-          <Link href={`/${community}/chats/${chatId}`} className={buttonClass('primary')}>
-            <Icon name="chatSolid" className="mr-2 size-5" />
-            {t.profiles.dm}
-          </Link>
-        )}
-        <div className="flex items-center gap-2">
-          <Link href={`${base}/albums`} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-rail text-[16px] font-semibold hover:bg-soft-hover">
-            <Icon name="image" className="size-5" />
-            {t.profiles.albums}
-          </Link>
-          {isAdmin && !profile.own ? (
-            <Link href={`${base}/groups`} aria-label={t.profiles.addToGroups} title={t.profiles.addToGroups} className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-white hover:bg-accent-hover">
-              <Icon name="plus" className="size-5" />
-            </Link>
-          ) : null}
-          <Link href={`${base}/ads`} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-rail text-[16px] font-semibold hover:bg-soft-hover">
-            <Icon name="megaphone" className="size-5" />
-            {t.profiles.ads}
-          </Link>
-        </div>
-      </div>
-    </nav>
   )
 }
 

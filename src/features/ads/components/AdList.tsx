@@ -2,23 +2,37 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
+import { readStars } from '@/features/notes/stars'
 import { t } from '@/lib/i18n'
 import { loadAds, matches, watchAdFilter } from '../storage'
 import { emptyAdFilter, type Ad, type AdFilter } from '../types'
+
+// Ads in the first screenful: their images load eagerly (they are the LCP); the rest stay lazy.
+const ABOVE_FOLD = 4
+
+// Stable default, so the effect below does not re-run every render.
+const noScores: Record<string, number> = {}
 
 export function AdList({
   community,
   seed,
   onlyUserId,
+  viewerId = '',
+  scores = noScores,
 }: {
   community: string
   seed: Ad[]
+  // Set on a profile's Ads: show that member's ads, unfiltered.
   onlyUserId: string | null
+  // For the D1 filter: whose stars to read, and each author's profile score.
+  viewerId?: string
+  scores?: Record<string, number>
 }) {
   const [ads, setAds] = useState(seed)
   const [filter, setFilter] = useState<AdFilter>(emptyAdFilter)
+  const [stars, setStars] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const read = () => setAds(loadAds(community, seed))
@@ -26,15 +40,23 @@ export function AdList({
     window.addEventListener('some-ads', read)
     return () => window.removeEventListener('some-ads', read)
   }, [community, seed])
-  useEffect(() => watchAdFilter(community, setFilter), [community])
+  useEffect(() => {
+    if (onlyUserId) return
+    const unwatch = watchAdFilter(community, setFilter)
+    setStars(readStars(community, viewerId, Object.keys(scores)))
+    return unwatch
+  }, [community, onlyUserId, viewerId, scores])
 
-  const visible = ads.filter((ad) => (onlyUserId ? ad.userId === onlyUserId : matches(ad, filter)))
+  const visible = useMemo(
+    () => ads.filter((ad) => (onlyUserId ? ad.userId === onlyUserId : matches(ad, filter, scores[ad.userId] ?? 0, stars[ad.userId] ?? 0))),
+    [ads, onlyUserId, filter, scores, stars],
+  )
 
   return (
     <>
       {visible.length === 0 ? <p className="px-6 py-10 text-center text-muted">{t.ads.empty}</p> : null}
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] p-2">
-        {visible.map((ad) => (
+        {visible.map((ad, index) => (
           <li key={ad.id} className="[contain-intrinsic-size:auto_170px] [content-visibility:auto]">
             <Link href={`/${community}/ads/${ad.id}`} className="m-2 flex gap-3 rounded-2xl border border-line p-4 hover:border-accent/40">
               <Avatar name={ad.username} seed={ad.userId} />
@@ -55,7 +77,7 @@ export function AdList({
                     <img src={ad.image} alt="" className="size-24 rounded-xl object-cover" />
                   ) : (
                     // Thumbnail only (96 px); the full image loads on the ad.
-                    <Image src={ad.image} alt="" width={96} height={96} sizes="96px" className="size-24 rounded-xl object-cover" />
+                    <Image src={ad.image} alt="" width={96} height={96} sizes="96px" loading={index < ABOVE_FOLD ? 'eager' : 'lazy'} className="size-24 rounded-xl object-cover" />
                   )
                 ) : null}
                 {ad.image && ad.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.verified}</span> : null}

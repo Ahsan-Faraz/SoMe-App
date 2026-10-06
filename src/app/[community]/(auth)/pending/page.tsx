@@ -2,13 +2,15 @@ import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { PendingSteps } from '@/features/auth/components/PendingSteps'
 import { getViewer } from '@/features/auth/queries'
 import { getAdminChatId } from '@/features/chats/queries'
-import { getCommunity } from '@/features/communities/queries'
+import { ApplicationForm } from '@/features/membership/components/ApplicationForm'
+import { getScope } from '@/features/membership/queries'
+import { getProfile } from '@/features/profiles/queries'
 import { t } from '@/lib/i18n'
 import { RouteSkeleton } from '../../loading'
 
+// A25: logged in but not approved yet — apply to the community.
 export default function PendingPage(props: PageProps<'/[community]/pending'>) {
   return (
     <Suspense fallback={<RouteSkeleton />}>
@@ -18,27 +20,28 @@ export default function PendingPage(props: PageProps<'/[community]/pending'>) {
 }
 
 async function PendingContent({ params }: PageProps<'/[community]/pending'>) {
-  const { community: slug } = await params
-  const [community, viewer] = await Promise.all([getCommunity(slug), getViewer()])
-  if (!community) notFound()
-  if (!viewer) redirect(`/${slug}/login`)
-  if (viewer.role !== 'pending') redirect(`/${slug}/chats`)
+  const { community } = await params
+  const viewer = await getViewer()
+  if (!viewer) redirect(`/${community}/login`)
+  if (viewer.role !== 'pending') redirect(`/${community}/chats`)
 
-  const adminChatId = await getAdminChatId(slug)
+  const [scope, profile, adminChatId] = await Promise.all([
+    getScope('community', community),
+    getProfile(viewer.userId, viewer.userId, viewer.username),
+    getAdminChatId(community),
+  ])
+  if (!scope || !profile) notFound()
 
   return (
-    <div className="min-h-app w-full bg-canvas">
-      <ScreenHeader title={t.pending.title} right={<ThemeToggle className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover" />} />
-      <main className="grid w-full gap-8 px-5 pt-6 pb-12 sm:px-8 min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-16 min-[52rem]:px-12 min-[52rem]:pt-14">
-        <div className="hidden min-[52rem]:block">
-          <h2 className="text-4xl font-medium tracking-tight">{community.name}</h2>
-          <p className="mt-3 max-w-md text-[15px] text-ink">{community.headline}</p>
-        </div>
-        <PendingSteps
-          profileHref={`/${slug}/profiles/${viewer.userId}`}
-          adminChatHref={`/${slug}/chats/${adminChatId}`}
-        />
-      </main>
+    <div className="flex h-app w-full flex-col bg-canvas">
+      <ScreenHeader title={t.apply.title(scope.name)} right={<ThemeToggle className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover" />} />
+      <ApplicationForm
+        community={community}
+        scope={{ kind: scope.kind, id: scope.id, applicationText: scope.applicationText, requires: scope.requires }}
+        applicant={{ userId: profile.id, username: profile.username, status: profile.status }}
+        profileHref={`/${community}/profiles/${viewer.userId}`}
+        chatHref={adminChatId ? `/${community}/chats/${adminChatId}` : null}
+      />
     </div>
   )
 }

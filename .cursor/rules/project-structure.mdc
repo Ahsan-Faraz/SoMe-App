@@ -59,9 +59,9 @@ Imports go one way: `app → features → components, lib`. A feature may import
 
 Names: folders kebab-case, components `PascalCase.tsx`, everything else camelCase. Route segments use the spec's words (chats, profiles, groups) — not screen IDs.
 
-## `[community]` + URL model (TBD)
+## `[community]` + URL model (decided: path)
 
-Path or subdomain is undecided. Both land in the same tree: with subdomains, `proxy.ts` rewrites `host` → `/[community]/…`. No tree change either way.
+Communities live at `domain/{community}` (spec + transcript). If subdomains are ever added, `proxy.ts` rewrites `host` → `/[community]/…`; the tree does not change.
 
 ## Use the platform instead of a package
 

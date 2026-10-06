@@ -47,7 +47,8 @@ export function EventForm({
         if (!ready || !headline.trim()) return
         const events = loadEvents(storageKey, seed)
         const id = eventId ?? `ev-${Date.now()}`
-        const next = { id, date: when, headline: headline.trim(), text: text.trim() }
+        const createdBy = events.find((item) => item.id === eventId)?.createdBy
+        const next = { id, date: when, headline: headline.trim(), text: text.trim(), ...(createdBy ? { createdBy } : {}) }
         write(eventId ? events.map((item) => (item.id === eventId ? next : item)) : [...events, next])
       }}
     >

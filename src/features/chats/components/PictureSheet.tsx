@@ -1,15 +1,14 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useRef, useState } from 'react'
-import { albumKey, loadAlbums, todayLabel } from '@/features/albums/storage'
-import type { Album, AlbumImage } from '@/features/albums/types'
+import { useRef, useState } from 'react'
+import { AlbumPhotos, type PickedPhoto } from '@/features/albums/components/AlbumPhotos'
+import { todayLabel } from '@/features/albums/storage'
+import type { Album } from '@/features/albums/types'
 import { t } from '@/lib/i18n'
 import { imageDataUrl } from '@/lib/image'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
-
-export type Shot = { src: string; verified: boolean; date: string }
 
 export function PictureSheet({
   community,
@@ -22,18 +21,11 @@ export function PictureSheet({
   viewerId: string
   albums: Album[]
   onClose: () => void
-  onPick: (shot: Shot) => void
+  onPick: (shot: PickedPhoto) => void
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [camera, setCamera] = useState(false)
   const [picking, setPicking] = useState(false)
-  const [photos, setPhotos] = useState<AlbumImage[]>([])
-
-  useEffect(() => {
-    if (!picking) return
-    const stored = loadAlbums(albumKey(community, viewerId), albums)
-    setPhotos(stored.flatMap((album) => album.images))
-  }, [picking, community, viewerId, albums])
 
   if (camera) {
     return <CameraCapture onClose={() => setCamera(false)} onCapture={(src) => onPick({ src, verified: true, date: todayLabel() })} />
@@ -44,22 +36,7 @@ export function PictureSheet({
       <div className="max-h-[80dvh] w-full overflow-y-auto rounded-t-3xl bg-canvas pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl lg:h-full lg:max-w-md lg:rounded-none lg:pb-6" onClick={(event) => event.stopPropagation()}>
         <span className="mx-auto mt-2 block h-1 w-10 rounded-full bg-line-strong lg:hidden" />
         {picking ? (
-          photos.length === 0 ? (
-            <p className="px-5 py-8 text-[16px] text-muted">{t.albums.noPhotos}</p>
-          ) : (
-            <ul className="grid grid-cols-2 gap-3 p-4">
-              {photos.map((photo) => (
-                <li key={photo.id}>
-                  <button type="button" onClick={() => onPick({ src: photo.src, verified: photo.verified, date: photo.date })} className="block w-full text-left">
-                    {/* Album covers may be a static path or a captured data URL. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.src} alt="" className="aspect-square w-full rounded-xl object-cover" />
-                    <span className="mt-1 block text-[13px] text-muted">{photo.verified ? `✓ ${t.chats.verified} · ${photo.date}` : photo.date}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )
+          <AlbumPhotos community={community} viewerId={viewerId} albums={albums} onPick={onPick} />
         ) : (
           <ul className="mt-2 divide-y divide-line">
             <li>

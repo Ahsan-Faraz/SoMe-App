@@ -7,7 +7,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { CalendarBoard } from '@/features/calendar/components/CalendarBoard'
 import { listEvents } from '@/features/calendar/queries'
-import { getChatSummary } from '@/features/chats/queries'
+import { chatIdForUser, getChatSummary } from '@/features/chats/queries'
 import { getGroup } from '@/features/groups/queries'
 import { t } from '@/lib/i18n'
 
@@ -29,6 +29,11 @@ async function CalendarContent({ params }: PageProps<'/[community]/chats/[chatId
 
   const base = `/${community}/chats/${chat.id}/calendar`
   const isAdmin = viewer.role === 'admin'
+  const dmHrefs: Record<string, string> = {}
+  for (const event of events) {
+    const dmId = event.createdBy && event.createdBy !== viewer.userId ? chatIdForUser(event.createdBy) : null
+    if (event.createdBy && dmId) dmHrefs[event.createdBy] = `/${community}/chats/${dmId}`
+  }
 
   return (
     <div className="min-h-app w-full bg-canvas">
@@ -43,7 +48,7 @@ async function CalendarContent({ params }: PageProps<'/[community]/chats/[chatId
           ) : undefined
         }
       />
-      <CalendarBoard storageKey={`some:calendar:${community}:${chat.id}`} seed={events} base={base} isAdmin={isAdmin} />
+      <CalendarBoard storageKey={`some:calendar:${community}:${chat.id}`} seed={events} base={base} isAdmin={isAdmin} dmHrefs={dmHrefs} />
     </div>
   )
 }

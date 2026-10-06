@@ -11,12 +11,15 @@ export function MultiSelect({
   value,
   onChange,
   placeholder,
+  showLabel = true,
 }: {
   label: string
-  options: string[]
+  options: readonly string[]
   value: string[]
   onChange: (value: string[]) => void
   placeholder: string
+  // false when a surrounding fieldset already names the field.
+  showLabel?: boolean
 }) {
   const ref = useRef<HTMLDetailsElement>(null)
 
@@ -32,7 +35,7 @@ export function MultiSelect({
 
   return (
     <div className="grid gap-1.5">
-      <span className="text-[14px] font-semibold text-ink">{label}</span>
+      {showLabel ? <span className="text-[14px] font-semibold text-ink">{label}</span> : null}
       <details ref={ref} className="group">
         <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] text-ink group-open:border-accent [&::-webkit-details-marker]:hidden">
           <span className={`min-w-0 flex-1 truncate ${value.length ? '' : 'text-muted'}`}>{value.length ? value.join(', ') : placeholder}</span>

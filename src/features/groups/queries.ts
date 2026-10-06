@@ -8,10 +8,19 @@ export async function listGroupNames(): Promise<{ id: string; name: string }[]> 
   return mockGroups.map(({ id, name }) => ({ id, name }))
 }
 
+// Settings the mock groups do not carry yet.
+const groupDefaults = {
+  applicationText: 'Tell us a little about your riding and why you want to join.',
+  stateLabels: ['Paid', 'Locker number', 'Attended'],
+  visibleInSearch: true,
+  applyImage: true,
+  applyText: true,
+  applyNames: false,
+}
+
 export async function getGroup(groupId: string): Promise<GroupForm | null> {
   const group = mockGroups.find((item) => item.id === groupId)
-  if (!group) return null
-  return { ...group, headline: group.headline }
+  return group ? { ...groupDefaults, ...group } : null
 }
 
 // A10: the three info posts, flattened as header, text, header, text… for the edit form.
@@ -53,8 +62,9 @@ function infoPostsFor(groupId: string) {
   return (mockInfoPosts[groupId] ?? mockInfoPosts.default ?? []).slice(0, INFO_POST_COUNT)
 }
 
-export async function listAssignments(userId: string): Promise<{ id: string; name: string; member: boolean }[]> {
-  return mockGroups.map((group) => ({
+// onlyGroupIds: a group admin sees only the groups they run; a community admin sees all (null).
+export async function listAssignments(userId: string, onlyGroupIds: string[] | null = null): Promise<{ id: string; name: string; member: boolean }[]> {
+  return mockGroups.filter((group) => !onlyGroupIds || onlyGroupIds.includes(group.id)).map((group) => ({
     id: group.id,
     name: group.name,
     member: (mockGroupMembers[group.id] ?? []).includes(userId),

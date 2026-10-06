@@ -22,14 +22,23 @@ function filterKey(community: string) {
   return `some:ads-filter:${community}`
 }
 
+const textKeys = ['text', 'minAge', 'maxAge', 'district', 'place', 'minScore', 'minStars', 'maxStars'] as const
+
+// Older saved filters had a single lookingFor string: carry it over, fill in newer fields.
 export function readAdFilter(community: string): AdFilter {
   try {
-    const parsed = JSON.parse(localStorage.getItem(filterKey(community)) ?? '') as AdFilter
-    if (!parsed || !Array.isArray(parsed.statuses)) return emptyAdFilter
-    return { ...emptyAdFilter, ...parsed, statuses: parsed.statuses }
+    const parsed = JSON.parse(localStorage.getItem(filterKey(community)) ?? '') as Record<string, unknown> | null
+    if (!parsed || typeof parsed !== 'object') return emptyAdFilter
+    const filter: AdFilter = { ...emptyAdFilter, statuses: strings(parsed.statuses), lookingFor: typeof parsed.lookingFor === 'string' && parsed.lookingFor ? [parsed.lookingFor] : strings(parsed.lookingFor) }
+    for (const name of textKeys) if (typeof parsed[name] === 'string') filter[name] = parsed[name]
+    return filter
   } catch {
     return emptyAdFilter
   }
+}
+
+function strings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 
 export function writeAdFilter(community: string, filter: AdFilter) {
@@ -45,29 +54,30 @@ export function watchAdFilter(community: string, onChange: (filter: AdFilter) =>
 }
 
 export function adFilterCount(filter: AdFilter) {
-  return (
-    filter.statuses.length +
-    (filter.minAge ? 1 : 0) +
-    (filter.maxAge ? 1 : 0) +
-    (filter.text.trim() ? 1 : 0) +
-    (filter.lookingFor ? 1 : 0) +
-    (filter.district ? 1 : 0) +
-    (filter.place.trim() ? 1 : 0)
-  )
+  return filter.statuses.length + filter.lookingFor.length + textKeys.filter((name) => filter[name].trim() !== '').length
 }
 
-export function matches(ad: Ad, filter: AdFilter) {
-  const min = filter.minAge === '' ? null : Number(filter.minAge)
-  const max = filter.maxAge === '' ? null : Number(filter.maxAge)
+function limit(value: string) {
+  return value === '' ? null : Number(value)
+}
+
+// score = the author's profile score; stars = my private-notes score for the author (0 = not rated).
+export function matches(ad: Ad, filter: AdFilter, score: number, stars: number) {
+  const minAge = limit(filter.minAge)
+  const maxAge = limit(filter.maxAge)
+  const minScore = limit(filter.minScore)
+  const minStars = limit(filter.minStars)
+  const maxStars = limit(filter.maxStars)
+  const place = filter.place.trim().toLowerCase()
+  const text = filter.text.trim().toLowerCase()
   if (filter.statuses.length > 0 && !filter.statuses.includes(ad.status)) return false
-  if (min !== null && ad.age < min) return false
-  if (max !== null && ad.age > max) return false
-  if (filter.lookingFor && ad.lookingFor !== filter.lookingFor) return false
+  if (minAge !== null && ad.age < minAge) return false
+  if (maxAge !== null && ad.age > maxAge) return false
+  if (filter.lookingFor.length > 0 && !filter.lookingFor.includes(ad.lookingFor)) return false
   if (filter.district && ad.district !== filter.district) return false
-  if (filter.place && !ad.place.toLowerCase().includes(filter.place.trim().toLowerCase())) return false
-  if (filter.text.trim()) {
-    const hay = `${ad.headline} ${ad.body} ${ad.username} ${ad.place}`.toLowerCase()
-    if (!hay.includes(filter.text.trim().toLowerCase())) return false
-  }
-  return true
+  if (place && !ad.place.toLowerCase().includes(place)) return false
+  if (minScore !== null && score < minScore) return false
+  if (minStars !== null && stars < minStars) return false
+  if (maxStars !== null && stars > maxStars) return false
+  return !text || `${ad.headline} ${ad.body} ${ad.username} ${ad.place}`.toLowerCase().includes(text)
 }

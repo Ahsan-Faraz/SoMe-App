@@ -29,3 +29,15 @@ export function formatPostTime(iso: string): string {
 export function formatStamp(iso: string | number): string {
   return stampFormat.format(new Date(iso))
 }
+
+// Today in the community's zone as "2026-10-06" — the same on the server and in the browser.
+export function todayKey(now: number = Date.now()): string {
+  return dayKeyFormat.format(now)
+}
+
+const dayFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIME_ZONE })
+
+// A date without time, e.g. "6 Oct 2026".
+export function formatDay(value: number | Date = Date.now()): string {
+  return dayFormat.format(value)
+}

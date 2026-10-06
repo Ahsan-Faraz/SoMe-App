@@ -7,6 +7,8 @@ export type ChatMessage = {
   id: string
   author: string
   authorId: string | null
+  // Group posts show the author's status, e.g. "Kitty553 (Woman)". Null in DMs and on your own posts.
+  authorStatus: string | null
   mine: boolean
   body: string
   timeLabel: string

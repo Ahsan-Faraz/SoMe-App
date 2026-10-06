@@ -9,14 +9,19 @@ export type ProfileCard = {
   district: string
   place: string
   headline: string
+  // Display only for now: how the score is calculated is not decided (spec lists it as Later).
+  score: number // 0–100
+  lookingFor: string[]
   photo: MainPhoto | null
 }
+
+export type BrowseProfile = ProfileCard & { about: string; lastLogin: string }
+
+export type LinkedProfile = { id: string; username: string }
 
 export type Profile = ProfileCard & {
   about: string
   lastLogin: string
-  // Display only for now: how score and reputation are calculated is not decided (spec lists both as Later).
-  score: number // 0–100
-  reputation: number // -10–10
+  linked: LinkedProfile[]
   own: boolean
 }

@@ -43,7 +43,7 @@ export function Photos({ main, community, userId, own }: { main: MainPhoto | nul
               // eslint-disable-next-line @next/next/no-img-element
               <img src={first.src} alt={t.profiles.photos} className="size-full object-cover" />
             ) : (
-              <Image src={slot === 0 && first ? first.src : item.src} alt={item.alt} fill sizes="(min-width: 52rem) 16rem, 30vw" className="object-cover" style={{ objectPosition: item.position }} />
+              <Image src={slot === 0 && first ? first.src : item.src} alt={item.alt} fill sizes="(min-width: 52rem) 16rem, 30vw" loading="eager" className="object-cover" style={{ objectPosition: item.position }} />
             )}
             {slot === 0 && caption ? (
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pt-6 pb-2 text-[11px] text-white">

@@ -3,16 +3,18 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { bottomBar, scrollArea } from '@/components/ui/Screen'
+import { ChipSelect, FilterSection, NumberInput, NumberRange, filterInput } from '@/components/ui/FilterFields'
 import { Icon } from '@/components/ui/Icon'
+import { MultiSelect } from '@/components/ui/MultiSelect'
+import { bottomBar, scrollArea } from '@/components/ui/Screen'
 import { t } from '@/lib/i18n'
 import { emptyFilter, readFilter, writeFilter, type ProfileFilter } from '../filter'
+import { DISTRICTS, MAX_SCORE, MAX_STARS, STATUSES } from '../options'
 
-const statuses = ['Man', 'Woman']
-
-export function ProfileFilterForm({ community }: { community: string }) {
+export function ProfileFilterForm({ community, returnHref }: { community: string; returnHref: string }) {
   const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
   const router = useRouter()
+  const set = <K extends keyof ProfileFilter>(name: K) => (value: ProfileFilter[K]) => setFilter((current) => ({ ...current, [name]: value }))
 
   // G1: edit freely here; the search runs once on Show (one query, not one per keystroke). Saved between sessions.
   useEffect(() => setFilter(readFilter(community)), [community])
@@ -23,55 +25,63 @@ export function ProfileFilterForm({ community }: { community: string }) {
       onSubmit={(event) => {
         event.preventDefault()
         writeFilter(community, filter)
-        router.push(`/${community}/profiles`)
+        router.push(returnHref)
       }}
     >
       <div className={scrollArea}>
         <div className="mx-auto grid max-w-lg gap-6 px-4 py-6 sm:px-8">
-          <label className="grid gap-2">
-            <span className="text-[13px] font-bold uppercase tracking-wide text-muted">{t.profiles.substring}</span>
+          <FilterSection label={t.profiles.substring}>
             <span className="flex h-11 items-center gap-2 rounded-xl border border-line bg-canvas px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
               <Icon name="search" className="size-5 text-muted" />
               <input
                 type="search"
                 value={filter.text}
-                onChange={(event) => setFilter({ ...filter, text: event.target.value })}
+                onChange={(event) => set('text')(event.target.value)}
                 placeholder={t.profiles.search}
                 aria-label={t.profiles.substring}
                 className="h-full min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted"
               />
             </span>
-          </label>
-          <fieldset>
-            <legend className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted">{t.profiles.status}</legend>
-            <div className="flex gap-2">
-              {statuses.map((status) => {
-                const on = filter.picked.includes(status)
-                return (
-                  <button
-                    key={status}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => setFilter({ ...filter, picked: on ? filter.picked.filter((item) => item !== status) : [...filter.picked, status] })}
-                    className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-[15px] font-semibold ${on ? 'border-accent bg-accent text-white' : 'border-line bg-canvas text-ink'}`}
-                  >
-                    {on ? <Icon name="check" className="size-4" /> : null}
-                    {status}
-                  </button>
-                )
-              })}
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted">{t.profiles.age}</legend>
-            <div className="flex items-center gap-2">
-              <AgeInput label={t.profiles.ageFrom} value={filter.minAge} onChange={(minAge) => setFilter({ ...filter, minAge })} />
-              <span aria-hidden className="text-muted">
-                –
-              </span>
-              <AgeInput label={t.profiles.ageTo} value={filter.maxAge} onChange={(maxAge) => setFilter({ ...filter, maxAge })} />
-            </div>
-          </fieldset>
+          </FilterSection>
+          <FilterSection label={t.profiles.status}>
+            <ChipSelect options={STATUSES} value={filter.picked} onChange={set('picked')} />
+          </FilterSection>
+          <FilterSection label={t.profiles.lookingFor}>
+            <ChipSelect options={STATUSES} value={filter.lookingFor} onChange={set('lookingFor')} />
+          </FilterSection>
+          <FilterSection label={t.profiles.age}>
+            <NumberRange
+              label={t.profiles.age}
+              from={filter.minAge}
+              to={filter.maxAge}
+              onFrom={set('minAge')}
+              onTo={set('maxAge')}
+              fromLabel={t.profiles.ageFrom}
+              toLabel={t.profiles.ageTo}
+              max={120}
+            />
+          </FilterSection>
+          <FilterSection label={t.profiles.district}>
+            <MultiSelect label={t.profiles.district} options={DISTRICTS} value={filter.districts} onChange={set('districts')} placeholder={t.profiles.choose} showLabel={false} />
+          </FilterSection>
+          <FilterSection label={t.profiles.place}>
+            <input value={filter.place} onChange={(event) => set('place')(event.target.value)} aria-label={t.profiles.place} className={filterInput} />
+          </FilterSection>
+          <FilterSection label={t.profiles.scoreMin}>
+            <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin} max={MAX_SCORE} />
+          </FilterSection>
+          <FilterSection label={t.profiles.stars}>
+            <NumberRange
+              label={t.profiles.stars}
+              from={filter.minStars}
+              to={filter.maxStars}
+              onFrom={set('minStars')}
+              onTo={set('maxStars')}
+              fromLabel={t.profiles.min}
+              toLabel={t.profiles.max}
+              max={MAX_STARS}
+            />
+          </FilterSection>
         </div>
       </div>
       <div className={bottomBar}>
@@ -85,19 +95,5 @@ export function ProfileFilterForm({ community }: { community: string }) {
         </div>
       </div>
     </form>
-  )
-}
-
-function AgeInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <input
-      inputMode="numeric"
-      maxLength={3}
-      value={value}
-      onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))}
-      placeholder={label}
-      aria-label={`${t.profiles.age} ${label.toLowerCase()}`}
-      className="h-11 w-24 rounded-xl border border-line bg-canvas px-3 text-center text-[16px] outline-none placeholder:text-muted focus:border-accent"
-    />
   )
 }

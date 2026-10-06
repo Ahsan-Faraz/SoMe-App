@@ -6,15 +6,17 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { buttonClass } from '@/components/ui/Button'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
+import type { Album } from '@/features/albums/types'
+import { DISTRICTS, STATUSES } from '@/features/profiles/options'
+import type { MainPhoto } from '@/features/profiles/types'
+import { formatDay } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { imageDataUrl } from '@/lib/image'
 import { loadAds, saveAds } from '../storage'
 import type { Ad } from '../types'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
-
-const looking = ['Man', 'Woman', 'Couple', 'Other']
-const districts = ['Stockholm', 'Södermalm', 'Nacka', 'Solna', 'Årsta']
+const AlbumPhotos = dynamic(() => import('@/features/albums/components/AlbumPhotos').then((mod) => mod.AlbumPhotos), { ssr: false })
 const input = 'h-11 w-full rounded-xl border border-line bg-canvas px-3 text-[16px] font-normal outline-none focus:border-accent disabled:bg-sunken'
 
 export function AdEditor({
@@ -25,6 +27,8 @@ export function AdEditor({
   profileHref,
   chatHref,
   author,
+  albums = [],
+  profilePhoto = null,
 }: {
   community: string
   seed: Ad[]
@@ -33,6 +37,9 @@ export function AdEditor({
   profileHref: string | null
   chatHref: string | null
   author: { userId: string; username: string; status: string; age: number }
+  // Own ads only: the sources for "From profile/album".
+  albums?: Album[]
+  profilePhoto?: MainPhoto | null
 }) {
   const router = useRouter()
   const seeded = adId ? (seed.find((item) => item.id === adId) ?? null) : null
@@ -40,10 +47,11 @@ export function AdEditor({
   // Render the known ad straight away (first paint from the server); only wait when it may exist on this device only.
   const [ready, setReady] = useState(!adId || seeded !== null)
   const [camera, setCamera] = useState(false)
+  const [picking, setPicking] = useState(false)
   const [headline, setHeadline] = useState(seeded?.headline ?? '')
   const [body, setBody] = useState(seeded?.body ?? '')
   const [lookingFor, setLookingFor] = useState(seeded?.lookingFor ?? 'Man')
-  const [district, setDistrict] = useState(seeded?.district ?? districts[0] ?? '')
+  const [district, setDistrict] = useState<string>(seeded?.district ?? DISTRICTS[0])
   const [place, setPlace] = useState(seeded?.place ?? '')
   const [image, setImage] = useState(seeded?.image ?? '')
   const [verified, setVerified] = useState(seeded?.verified ?? false)
@@ -81,7 +89,7 @@ export function AdEditor({
   const shown = ad ?? {
     status: author.status,
     age: author.age,
-    published: new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date()),
+    published: formatDay(),
   }
 
   return (
@@ -115,7 +123,7 @@ export function AdEditor({
           <label className="grid gap-1.5 text-[14px] font-semibold">
             {t.ads.lookingFor}
             <select disabled={locked} value={lookingFor} onChange={(event) => setLookingFor(event.target.value)} className={input}>
-              {looking.map((item) => (
+              {STATUSES.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
@@ -138,7 +146,7 @@ export function AdEditor({
           <label className="grid gap-1.5 text-[14px] font-semibold">
             {t.profiles.district}
             <select disabled={locked} value={district} onChange={(event) => setDistrict(event.target.value)} className={input}>
-              {districts.map((item) => (
+              {DISTRICTS.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
@@ -155,17 +163,17 @@ export function AdEditor({
             ) : null}
             {verified ? <p className="mt-1 text-[13px] font-semibold text-accent">✓ {t.chats.verified}</p> : null}
             {own ? (
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setCamera(true)} className="grid min-h-14 content-center rounded-xl bg-accent px-3 py-2 text-center text-white">
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => setCamera(true)} className="grid min-h-14 content-center rounded-xl bg-accent px-2 py-2 text-center text-white hover:bg-accent-hover">
                   <span className="text-[15px] font-semibold">{t.chats.camera}</span>
-                  <span className="text-[12px] text-white/85">{t.chats.cameraTag}</span>
+                  <span className="text-[12px] leading-tight text-white/85">{t.chats.cameraTag}</span>
                 </button>
-                <label className="grid min-h-14 cursor-pointer place-items-center rounded-xl bg-soft px-3 text-[15px] font-semibold">
+                <label className="grid min-h-14 cursor-pointer place-items-center rounded-xl bg-soft px-2 text-center text-[15px] leading-tight font-semibold hover:bg-soft-hover focus-within:outline-2 focus-within:outline-accent">
                   {t.chats.upload}
                   <input
                     type="file"
                     accept="image/*"
-                    className="hidden"
+                    className="sr-only"
                     onChange={async (event) => {
                       const file = event.target.files?.[0]
                       if (!file) return
@@ -174,6 +182,9 @@ export function AdEditor({
                     }}
                   />
                 </label>
+                <button type="button" onClick={() => setPicking(true)} className="grid min-h-14 place-items-center rounded-xl bg-soft px-2 text-center text-[15px] leading-tight font-semibold hover:bg-soft-hover">
+                  {t.chats.fromAlbum}
+                </button>
               </div>
             ) : null}
           </div>
@@ -232,6 +243,29 @@ export function AdEditor({
           )}
         </div>
       </div>
+      {picking ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 lg:items-stretch lg:justify-end" role="dialog" aria-modal="true" aria-label={t.chats.fromAlbum} onClick={() => setPicking(false)}>
+          <div className="max-h-[80dvh] w-full overflow-y-auto rounded-t-3xl bg-canvas pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none" onClick={(event) => event.stopPropagation()}>
+            <p className="px-5 pt-4 text-[17px] font-bold">{t.chats.fromAlbum}</p>
+            <AlbumPhotos
+              community={community}
+              viewerId={author.userId}
+              albums={albums}
+              profilePhoto={profilePhoto}
+              onPick={(photo) => {
+                setImage(photo.src)
+                setVerified(photo.verified)
+                setPicking(false)
+              }}
+            />
+            <div className="px-4">
+              <button type="button" onClick={() => setPicking(false)} className={buttonClass('secondary')}>
+                {t.chats.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </form>
   )
 }

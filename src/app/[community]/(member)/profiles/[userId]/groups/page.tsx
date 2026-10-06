@@ -19,6 +19,7 @@ async function AssignGroupsContent({ params }: PageProps<'/[community]/profiles/
   const { community, userId } = await params
   const viewer = await getViewer()
   if (!viewer) redirect(`/${community}/login`)
+  // Only community admins for now. Group admins (no role yet) will get listAssignments(userId, theirGroupIds) and settings off.
   if (viewer.role !== 'admin') redirect(`/${community}/profiles/${userId}`)
 
   const [profile, groups] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), listAssignments(userId)])
@@ -27,7 +28,7 @@ async function AssignGroupsContent({ params }: PageProps<'/[community]/profiles/
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={profile.username} backHref={`/${community}/profiles/${profile.id}`} />
-      <AssignGroups storageKey={`some:assign:${community}:${profile.id}`} admitted groups={groups} />
+      <AssignGroups storageKey={`some:assign:${community}:${profile.id}`} settings groups={groups} />
     </div>
   )
 }

@@ -1,4 +1,5 @@
-export type CalEvent = { id: string; date: string; headline: string; text: string }
+// createdBy: who to DM about the event (absent on events added on this device).
+export type CalEvent = { id: string; date: string; headline: string; text: string; createdBy?: string }
 
 export function loadEvents(key: string, seed: CalEvent[]): CalEvent[] {
   try {

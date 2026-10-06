@@ -6,7 +6,7 @@ alwaysApply: false
 
 # TypeScript standards
 
-Smallest diff. Split before ~250–300 LOC. One **Post** (DM + group). One **FieldRenderer** (schema-driven). Use the spec's names: community, group, post, sticky, verified.
+Smallest diff. Split before ~250–300 LOC. One **Post** (DM + group). One **FieldRenderer** (schema-driven). Use the spec's names: community, group, post, sticky, real (UI label "Real"; code `isReal`).
 
 ```ts
 // ❌ hardcoded community-1

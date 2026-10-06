@@ -4,6 +4,7 @@ import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { AdEditor } from '@/features/ads/components/AdEditor'
 import { listAds } from '@/features/ads/queries'
+import { listAlbums } from '@/features/albums/queries'
 import { getViewer } from '@/features/auth/queries'
 import { getProfile } from '@/features/profiles/queries'
 import { t } from '@/lib/i18n'
@@ -21,7 +22,7 @@ async function NewAdContent({ params }: PageProps<'/[community]/ads/new'>) {
   const viewer = await getViewer()
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
-  const [ads, profile] = await Promise.all([listAds(), getProfile(viewer.userId, viewer.userId, viewer.username)])
+  const [ads, profile, albums] = await Promise.all([listAds(), getProfile(viewer.userId, viewer.userId, viewer.username), listAlbums(viewer.userId)])
   if (!profile) redirect(`/${community}/ads`)
 
   return (
@@ -35,6 +36,8 @@ async function NewAdContent({ params }: PageProps<'/[community]/ads/new'>) {
         profileHref={null}
         chatHref={null}
         author={{ userId: profile.id, username: profile.username, status: profile.status, age: profile.age }}
+        albums={albums}
+        profilePhoto={profile.photo}
       />
     </div>
   )

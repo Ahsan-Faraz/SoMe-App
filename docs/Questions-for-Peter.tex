@@ -1,0 +1,137 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{accent}{HTML}{0772DE}
+\definecolor{muted}{HTML}{54585B}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0pt}{}
+\titlespacing*{\section}{0pt}{18pt}{4pt}
+
+% One answer checkbox
+\newcommand{\answerbox}{$\square$\ }
+
+% A question: number + title, then a grey context paragraph, then the answer options
+\newenvironment{question}[2]
+  {\par\medskip\textbf{#1.\ #2}\par\nopagebreak\color{muted}}
+  {\par}
+\newcommand{\options}[1]{\par\color{black}#1\par}
+
+\begin{document}
+
+{\LARGE\bfseries SoMe App -- Questions before we build the backend}\par
+\vspace{4pt}
+{\color{muted}15 quick questions \textbullet\ most are just ``pick one''}
+
+\vspace{12pt}
+Hi Peter,
+
+Before we start on the backend, we have 15 quick questions. Each one changes how we build the database, so it is much easier to decide now than to change later. Most are just ``pick one''. Short answers are perfect.
+
+% ---------------------------------------------------------------
+\section{Profiles}
+
+\begin{question}{1}{Which field types do you want to be able to add to a profile?}
+You will build the profile fields yourself in the admin area, instead of us coding ``bike type''. We will build each field type once, so we only want the ones you need.
+\options{\answerbox Short text \quad \answerbox Long text \quad \answerbox Yes/No \quad \answerbox Pick one \quad \answerbox Pick several \quad \answerbox Number \quad \answerbox Date \quad \answerbox Photo}
+\end{question}
+
+\begin{question}{2}{Should every profile field show up in Search, or only the fields you choose?}
+The search form is built from the profile fields. With every field it can get very long. If you pick, it stays short and fast.
+\options{\answerbox All fields \qquad \answerbox I choose which ones}
+\end{question}
+
+\begin{question}{3}{Is ``Man / Woman / Couple / Other'' the same in every community, or a field you set up yourself?}
+It is used in many places: profile cards, ads (``looking for'') and post filters. If it is the same everywhere, we build it in as a standard field.
+\options{\answerbox Same in every community \qquad \answerbox I set it up per community}
+\end{question}
+
+\begin{question}{4}{For age: should members enter their birth date, or just type their age?}
+A typed age goes out of date (someone stays ``34'' for years). A birth date updates itself, so age searches stay correct.
+\options{\answerbox Birth date \qquad \answerbox Type age}
+\end{question}
+
+\begin{question}{5}{For location: is a region from a list plus a typed town name OK, with no distance in km?}
+As you said in our call, km distance (like Tinder) is much more complex. Regions plus a town name is simple and fast to search.
+\options{\answerbox Yes, region + town \qquad \answerbox No, we need distance}
+\end{question}
+
+% ---------------------------------------------------------------
+\section{Groups}
+
+\begin{question}{6}{In the first version, who can create groups?}
+The spec says both ``users can make groups'' and ``only the community admin for now''.
+\options{\answerbox Only me \qquad \answerbox Group admins too}
+\end{question}
+
+\begin{question}{7}{Can a group have more than one admin in the first version?}
+Your spec lists co-admins as ``later''. We just want to confirm.
+\options{\answerbox One admin per group \qquad \answerbox Several admins now}
+\end{question}
+
+\begin{question}{8}{Who approves new members joining the community?}
+New members wait until someone checks their verification photo and lets them in.
+\options{\answerbox Only me \qquad \answerbox Group admins can help too}
+\end{question}
+
+% ---------------------------------------------------------------
+\section{Chats}
+
+\begin{question}{9}{When someone leaves a DM and chooses ``delete chat'', is it deleted for both people or only for them?}
+Deleting for both means the other person loses the messages too.
+\options{\answerbox Deleted for both \qquad \answerbox Only hidden for the person leaving}
+\end{question}
+
+\begin{question}{10}{If I block someone, should they also stop seeing my profile?}
+Blocking always stops messages. This is about whether they can still see you in profiles, search and member lists.
+\options{\answerbox Yes, hide my profile too \qquad \answerbox No, they just can't message me}
+\end{question}
+
+\begin{question}{11}{How long should we keep messages?}
+Messages are the largest part of the data. Keeping them shorter saves space and helps with GDPR.
+\options{\answerbox Forever \qquad \answerbox Delete after \underline{\hspace{1.5cm}} months}
+\end{question}
+
+% ---------------------------------------------------------------
+\section{Ads and menu}
+
+\begin{question}{12}{Ads: keep the separate Ads tab like now, or make ads normal posts in an ``Ads'' group?}
+The spec describes ads as posts in an ``Ads'' group with filters, but the app now has a separate Ads tab. They are two different designs, so we want to build the right one.
+\options{\answerbox Keep the Ads tab \qquad \answerbox Posts in an ``Ads'' group}
+\end{question}
+
+\begin{question}{13}{Bottom menu: keep Chats / Profiles / Ads, or only Chats + Search?}
+In our call you mentioned maybe only two icons. This is linked to question 12.
+\options{\answerbox Chats / Profiles / Ads \qquad \answerbox Chats + Search}
+\end{question}
+
+% ---------------------------------------------------------------
+\section{Photos}
+
+\begin{question}{14}{Can members use a gallery photo as their main profile picture?}
+Gallery photos never get the ``Verified'' label, only in-app camera photos do. The question is whether to allow them at all for the main picture.
+\options{\answerbox Yes, it just won't say ``Verified'' \qquad \answerbox No, camera only}
+\end{question}
+
+% ---------------------------------------------------------------
+\section{Accounts}
+
+\begin{question}{15}{Later, with more communities: one login for all of them, or a separate account per community?}
+With one login, a person has one account and a separate profile in each community. This is the hardest thing to change after launch, so we would like to decide now.
+\options{\answerbox One login, separate profile per community \qquad \answerbox Separate account per community}
+\end{question}
+
+\vspace{18pt}
+Thanks! Once we have your answers, we will write the full backend plan.
+
+\end{document}

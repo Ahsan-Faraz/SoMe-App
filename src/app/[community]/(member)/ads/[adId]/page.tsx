@@ -4,6 +4,7 @@ import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { AdEditor } from '@/features/ads/components/AdEditor'
 import { listAds } from '@/features/ads/queries'
+import { listAlbums } from '@/features/albums/queries'
 import { getViewer } from '@/features/auth/queries'
 import { chatIdForUser } from '@/features/chats/queries'
 import { getProfile } from '@/features/profiles/queries'
@@ -23,7 +24,7 @@ async function AdContent({ params }: PageProps<'/[community]/ads/[adId]'>) {
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const [ads, me] = await Promise.all([listAds(), getProfile(viewer.userId, viewer.userId, viewer.username)])
+  const [ads, me, albums] = await Promise.all([listAds(), getProfile(viewer.userId, viewer.userId, viewer.username), listAlbums(viewer.userId)])
   const ad = ads.find((item) => item.id === adId)
   const own = !ad || ad.userId === viewer.userId
   const chatId = ad && !own ? chatIdForUser(ad.userId) : null
@@ -40,6 +41,8 @@ async function AdContent({ params }: PageProps<'/[community]/ads/[adId]'>) {
         profileHref={ad && !own ? `/${community}/profiles/${ad.userId}` : null}
         chatHref={chatId ? `/${community}/chats/${chatId}` : null}
         author={{ userId: me.id, username: me.username, status: me.status, age: me.age }}
+        albums={own ? albums : []}
+        profilePhoto={me.photo}
       />
     </div>
   )

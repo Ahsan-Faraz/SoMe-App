@@ -25,7 +25,7 @@ async function LeaveContent({ params }: PageProps<'/[community]/chats/[chatId]/l
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}`} />
-      <LeaveChat community={community} chatId={chat.id} listHref={`/${community}/chats`} />
+      <LeaveChat community={community} chatId={chat.id} kind={chat.kind} chatHref={`/${community}/chats/${chat.id}`} listHref={`/${community}/chats`} />
     </div>
   )
 }

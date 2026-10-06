@@ -1,5 +1,7 @@
 # SoMe — Backend and Database Implementation Plan
 
+> **Superseded by [backend-design.md](backend-design.md) (2026-10-06).** This plan predates Peter's answers (accounts, approval process, Status-driven fields, admin records, ads). Kept for history; build from `backend-design.md`.
+
 Status: analysis, before implementation. Date: 2026-09-29.
 Sources cross-checked: spec v0.33 (via `docs/User-Stories-and-Requirements.tex`), meeting transcript notes captured in that doc, mockup `SoMe App 260922`, `.cursor/rules/*` (architecture, performance, scaling, project-structure, progress-tracker), and the built frontend in `src/`.
 

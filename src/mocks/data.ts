@@ -16,14 +16,6 @@ export const mockCommunities = [
   },
 ] as const
 
-export const mockUsers = [
-  { id: 'u-admin', username: 'Peter Admin' },
-  { id: 'u-anna', username: 'Anna Lind' },
-  { id: 'u-erik', username: 'Erik Berg' },
-  { id: 'u-sara', username: 'Sara Holm' },
-  { id: 'u-jonas', username: 'Jonas Ek' },
-] as const
-
 type MockChat = {
   id: string
   kind: 'dm' | 'group'
@@ -76,19 +68,96 @@ export const mockMessages: Record<
   ],
 }
 
-export const mockProfiles = [
-  { id: 'u-admin', username: 'Peter Admin', about: 'Community admin. Road and gravel.', place: 'Stockholm', status: 'Man', age: 46, district: 'Stockholm', headline: 'Rides and routes', lastLogin: '22 Sep, 18:10', photo: { src: '/community/hero.png', verified: true, date: '2 Sep 2026' } },
-  { id: 'u-anna', username: 'Anna Lind', about: 'Gravel on weekdays, long rides on Sunday.', place: 'Södermalm', status: 'Woman', age: 34, district: 'Södermalm', headline: 'Gravel, lights on', lastLogin: '23 Sep, 09:02', photo: { src: '/community/ride.png', verified: true, date: '23 Sep 2026' } },
-  { id: 'u-erik', username: 'Erik Berg', about: 'Mountain bike in Nacka. Happy to fix a puncture.', place: 'Nacka', status: 'Man', age: 29, district: 'Nacka', headline: 'Trails when they are dry', lastLogin: '21 Sep, 16:40', photo: { src: '/community/hero.png', verified: false, date: '11 Aug 2026' } },
-  { id: 'u-sara', username: 'Sara Holm', about: 'Road cycling. I post the Sunday route.', place: 'Solna', status: 'Woman', age: 38, district: 'Solna', headline: 'Sunday road ride', lastLogin: '23 Sep, 07:15', photo: { src: '/community/ride.png', verified: true, date: '19 Sep 2026' } },
-  { id: 'u-jonas', username: 'Jonas Ek', about: 'Workshop and spare parts.', place: 'Årsta', status: 'Man', age: 41, district: 'Årsta', headline: 'Chains and tyres', lastLogin: '20 Sep, 12:00', photo: null },
+// score = profile score 0–100 (display only; calculation is Later). linked = Linked profiles (max 3).
+type MockProfile = {
+  id: string
+  username: string
+  about: string
+  place: string
+  status: string
+  age: number
+  district: string
+  headline: string
+  lastLogin: string
+  score: number
+  lookingFor: string[]
+  linked: string[]
+  photo: { src: string; verified: boolean; date: string } | null
+}
+
+export const mockProfiles: MockProfile[] = [
+  { id: 'u-admin', username: 'Peter Admin', about: 'Community admin. Road and gravel.', place: 'Stockholm', status: 'Man', age: 46, district: 'Stockholm', headline: 'Rides and routes', lastLogin: '22 Sep, 18:10', score: 92, lookingFor: ['Man', 'Woman'], linked: [], photo: { src: '/community/hero.png', verified: true, date: '2 Sep 2026' } },
+  { id: 'u-anna', username: 'Anna Lind', about: 'Gravel on weekdays, long rides on Sunday.', place: 'Södermalm', status: 'Woman', age: 34, district: 'Södermalm', headline: 'Gravel, lights on', lastLogin: '23 Sep, 09:02', score: 78, lookingFor: ['Woman', 'Couple MF'], linked: ['u-sara'], photo: { src: '/community/ride.png', verified: true, date: '23 Sep 2026' } },
+  { id: 'u-erik', username: 'Erik Berg', about: 'Mountain bike in Nacka. Happy to fix a puncture.', place: 'Nacka', status: 'Man', age: 29, district: 'Nacka', headline: 'Trails when they are dry', lastLogin: '21 Sep, 16:40', score: 55, lookingFor: ['Man'], linked: [], photo: { src: '/community/hero.png', verified: false, date: '11 Aug 2026' } },
+  { id: 'u-sara', username: 'Sara Holm', about: 'Road cycling. I post the Sunday route.', place: 'Solna', status: 'Woman', age: 38, district: 'Solna', headline: 'Sunday road ride', lastLogin: '23 Sep, 07:15', score: 81, lookingFor: ['Woman', 'Man'], linked: ['u-anna'], photo: { src: '/community/ride.png', verified: true, date: '19 Sep 2026' } },
+  { id: 'u-jonas', username: 'Jonas Ek', about: 'Workshop and spare parts.', place: 'Årsta', status: 'Man', age: 41, district: 'Årsta', headline: 'Chains and tyres', lastLogin: '20 Sep, 12:00', score: 40, lookingFor: [], linked: [], photo: null },
+  { id: 'u-lina', username: 'Lina Ström', about: 'Winter commuter, studded tyres from November.', place: 'Hornstull', status: 'Woman', age: 27, district: 'Södermalm', headline: 'All-year commuting', lastLogin: '24 Sep, 08:05', score: 63, lookingFor: ['Woman'], linked: [], photo: { src: '/community/ride.png', verified: true, date: '20 Sep 2026' } },
+  { id: 'u-oskar', username: 'Oskar Nyberg', about: 'Lidingö loop on Saturdays.', place: 'Lidingö', status: 'Other', age: 35, district: 'Stockholm', headline: 'Saturday 09:00 at Ropsten', lastLogin: '19 Sep, 10:30', score: 47, lookingFor: ['Man', 'Other'], linked: [], photo: null },
+  { id: 'u-maja', username: 'Maja & Leo', about: 'We ride a tandem. Slow and happy.', place: 'Sundbyberg', status: 'Couple MF', age: 31, district: 'Solna', headline: 'Tandem weekends', lastLogin: '23 Sep, 19:45', score: 70, lookingFor: ['Couple MF', 'Couple FF'], linked: [], photo: { src: '/community/hero.png', verified: true, date: '15 Sep 2026' } },
 ]
+
+// Not members yet: they applied to the community (A20). Admins can open their profiles (A21).
+export const mockApplicants: MockProfile[] = [
+  { id: 'u-kitty', username: 'Kitty553', about: 'New to gravel, rode road for years.', place: 'Kungsholmen', status: 'Woman', age: 29, district: 'Stockholm', headline: 'Looking for a Tuesday group', lastLogin: '4 Oct, 20:12', score: 35, lookingFor: ['Woman', 'Man'], linked: [], photo: { src: '/community/ride.png', verified: true, date: '4 Oct 2026' } },
+  { id: 'u-bikecpl', username: 'BikeCpl42', about: 'We ride a tandem and two gravel bikes.', place: 'Bromma', status: 'Couple MF', age: 38, district: 'Stockholm', headline: 'Weekend rides together', lastLogin: '4 Oct, 18:40', score: 42, lookingFor: ['Couple MF'], linked: ['u-bikersx'], photo: { src: '/community/hero.png', verified: true, date: '3 Oct 2026' } },
+  { id: 'u-bikersx', username: 'BikersX99', about: 'Commuters who want longer weekend loops.', place: 'Täby', status: 'Couple MM', age: 33, district: 'Solna', headline: 'Long loops, slow coffee', lastLogin: '3 Oct, 09:15', score: 30, lookingFor: ['Couple MM', 'Man'], linked: ['u-bikecpl'], photo: null },
+]
+
+// Admin-only member data, kept separately per scope ('community' or a group id):
+// real names (from the application), the 3 profile-state numbers and the admin's notes.
+export const mockRealNames: Record<string, string[]> = {
+  'u-admin': ['Peter Ström'],
+  'u-anna': ['Anna Lind'],
+  'u-erik': ['Erik Berg'],
+  'u-sara': ['Sara Holm'],
+  'u-jonas': ['Jonas Ek'],
+  'u-maja': ['Maja Berg', 'Leo Berg'],
+  'u-kitty': ['Karin Ek'],
+  'u-bikecpl': ['John Doe', 'Anna Doe'],
+  'u-bikersx': ['Max Lund', 'Ola Lund'],
+}
+
+export const mockMemberState: Record<string, Record<string, { state: string[]; notes?: string }>> = {
+  community: {
+    'u-anna': { state: ['300', '12', '8'], notes: 'Helps new members.' },
+    'u-erik': { state: ['300', '7', '5'] },
+    'u-sara': { state: ['300', '3', '11'], notes: 'Posts the Sunday route.' },
+  },
+  'g-tuesday': {
+    'u-anna': { state: ['150', '4', '12'] },
+    'u-erik': { state: ['150', '9', '6'], notes: 'Brings spare tubes.' },
+    'u-sara': { state: ['0', '', '2'] },
+  },
+}
+
+// Open applications per scope (A20 community, A23 group).
+export const mockApplications: Record<string, { userId: string; message: string; image: { src: string; verified: boolean; date: string } | null }[]> = {
+  community: [
+    { userId: 'u-kitty', message: 'I ride every week and want to join the Tuesday gravel ride. A friend in the group told me about you.', image: { src: '/community/ride.png', verified: true, date: '4 Oct 2026' } },
+    { userId: 'u-bikecpl', message: 'We are a couple who ride together most weekends. Happy to help with routes in Bromma.', image: { src: '/community/hero.png', verified: false, date: '3 Oct 2026' } },
+    { userId: 'u-bikersx', message: 'Looking for longer loops on Saturdays.', image: null },
+  ],
+  'g-tuesday': [
+    { userId: 'u-jonas', message: 'Can I join on Tuesdays? I can bring tools.', image: { src: '/community/ride.png', verified: true, date: '2 Oct 2026' } },
+    { userId: 'u-maja', message: 'We would like to try the loop on our tandem.', image: null },
+  ],
+}
+
+// Community-level application settings (A25) and profile-state labels (A31/A33).
+export const mockCommunitySettings = {
+  applicationText: 'Tell us who you are and how you ride. An admin reads every application and replies in a chat.',
+  stateLabels: ['Paid', 'Locker number', 'Attended'],
+  requires: { image: true, text: true, names: true },
+}
 
 export const mockGroups = [
   { id: 'g-tuesday', name: 'Tuesday Gravel Ride', headline: 'Weekly gravel from Slussen', directJoin: false, calendar: true, history: true, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
   { id: 'g-mtb', name: 'MTB Nacka', headline: 'Trail conditions and meeting points', directJoin: true, calendar: true, history: false, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
   { id: 'g-road', name: 'Road Cycling Sundays', headline: 'The Sunday route', directJoin: false, calendar: false, history: true, memberList: false, editPosts: false, posting: true, commenting: true, reactions: true },
   { id: 'g-gear', name: 'Gear & Repairs', headline: 'Parts, tools, and workshop time', directJoin: true, calendar: false, history: true, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
+  // Not in the viewer's chat list: found with "Find new user/group".
+  { id: 'g-archipelago', name: 'Archipelago Tours', headline: 'Island hopping by bike and ferry', directJoin: false, calendar: true, history: true, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
+  { id: 'g-cx', name: 'Cyclocross Autumn', headline: 'Mud, barriers and coffee', directJoin: true, calendar: false, history: true, memberList: true, editPosts: true, posting: true, commenting: true, reactions: true },
 ]
 
 // Info 1–3 per group (headline + body). Groups without an entry use the default set.
@@ -114,11 +183,12 @@ export const mockInfoPosts: Record<string, { headline: string; body: string }[]>
   ],
 }
 
-export const mockEvents: { id: string; groupId: string; date: string; headline: string; text: string }[] = [
-  { id: 'ev-sep-8', groupId: 'g-tuesday', date: '2026-09-08', headline: 'Tuesday gravel', text: 'Meet at Slussen, 18:00. Lights on.' },
-  { id: 'ev-sep-8b', groupId: 'g-tuesday', date: '2026-09-08', headline: 'Coffee stop', text: 'Halfway in Nacka. The group waits.' },
-  { id: 'ev-sep-22', groupId: 'g-tuesday', date: '2026-09-22', headline: 'Tuesday gravel', text: '42 km loop. Shorter option splits at Hammarby.' },
-  { id: 'ev-jul-6', groupId: 'g-tuesday', date: '2026-07-06', headline: 'Tuesday gravel', text: 'Meet at Slussen, 18:00.' },
+// createdBy = who to DM about the event.
+export const mockEvents: { id: string; groupId: string; date: string; headline: string; text: string; createdBy: string }[] = [
+  { id: 'ev-sep-8', groupId: 'g-tuesday', date: '2026-09-08', headline: 'Tuesday gravel', text: 'Meet at Slussen, 18:00. Lights on.', createdBy: 'u-admin' },
+  { id: 'ev-sep-8b', groupId: 'g-tuesday', date: '2026-09-08', headline: 'Coffee stop', text: 'Halfway in Nacka. The group waits.', createdBy: 'u-admin' },
+  { id: 'ev-sep-22', groupId: 'g-tuesday', date: '2026-09-22', headline: 'Tuesday gravel', text: '42 km loop. Shorter option splits at Hammarby.', createdBy: 'u-admin' },
+  { id: 'ev-jul-6', groupId: 'g-tuesday', date: '2026-07-06', headline: 'Tuesday gravel', text: 'Meet at Slussen, 18:00.', createdBy: 'u-admin' },
 ]
 
 export const mockGroupMembers: Record<string, string[]> = {
@@ -126,4 +196,6 @@ export const mockGroupMembers: Record<string, string[]> = {
   'g-mtb': ['u-erik', 'u-jonas'],
   'g-road': ['u-sara', 'u-anna'],
   'g-gear': ['u-jonas', 'u-admin'],
+  'g-archipelago': ['u-lina', 'u-oskar'],
+  'g-cx': ['u-oskar', 'u-erik'],
 }

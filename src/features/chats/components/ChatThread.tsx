@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/Icon'
 import { scrollArea } from '@/components/ui/Screen'
 import { t } from '@/lib/i18n'
 import type { Album } from '@/features/albums/types'
+import { watchHidden } from '../hidden'
 import type { ChatMessage, ChatRules, Reaction } from '../types'
 
 const PostSheet = dynamic(() => import('./PostSheet').then((mod) => mod.PostSheet), { ssr: false })
@@ -41,9 +42,13 @@ export function ChatThread({
   const [picture, setPicture] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [replying, setReplying] = useState<ChatMessage | null>(null)
+  // "Keep chat, block writing": the chat stays readable, but nobody can post in it.
+  const [blocked, setBlocked] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
   const profileHref = (userId: string) => `/${community}/profiles/${userId}?back=${encodeURIComponent(backHref)}`
+
+  useEffect(() => watchHidden(community, (hidden) => setBlocked(hidden.blocked.includes(chatId))), [community, chatId])
 
   // Newest is lowest: open at the bottom, and follow new posts.
   useEffect(() => {
@@ -65,6 +70,7 @@ export function ChatThread({
         id: `local-${current.length}`,
         author: t.chats.you,
         authorId: null,
+        authorStatus: null,
         mine: true,
         body,
         timeLabel: t.chats.justNow,
@@ -85,9 +91,9 @@ export function ChatThread({
     input.current?.focus()
   }
 
-  // Optimistic: flips the viewer's own reaction; the real version also writes it browser → Supabase.
+  // Optimistic: one reaction per person per post; the real version also writes it browser → Supabase.
   function react(messageId: string, emoji: string) {
-    setItems((current) => current.map((message) => (message.id === messageId ? { ...message, reactions: toggle(message.reactions, emoji) } : message)))
+    setItems((current) => current.map((message) => (message.id === messageId ? { ...message, reactions: pickReaction(message.reactions, emoji) } : message)))
   }
 
   function press(message: ChatMessage, event: PointerEvent<HTMLElement>) {
@@ -128,6 +134,7 @@ export function ChatThread({
                   ) : (
                     <span className="font-bold">{message.author}</span>
                   )}
+                  {message.authorStatus ? <span className="ml-1 text-[14px] text-ink-soft">({message.authorStatus})</span> : null}
                   <span className="ml-2 text-[13px] text-muted">{message.timeLabel}</span>
                 </p>
                 {message.replyTo ? (
@@ -192,7 +199,9 @@ export function ChatThread({
         {notice ? <p className="px-4 pb-2 text-[14px] font-medium text-ink-soft sm:px-8">{notice}</p> : null}
       </div>
 
-      {rules.post ? (
+      {blocked ? (
+        <p className="shrink-0 border-t border-line bg-sunken px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-[15px] text-muted">{t.chats.writingBlocked}</p>
+      ) : rules.post ? (
         <form onSubmit={send} className="shrink-0 border-t border-line bg-canvas px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
           {replying ? (
             <p className="mb-2 flex items-center gap-2 rounded-xl bg-rail py-1.5 pr-1 pl-3 text-[14px]">
@@ -252,7 +261,7 @@ export function ChatThread({
           canDelete={selected.mine || isAdmin}
           onClose={() => setSelected(null)}
           onCopied={() => setNotice(t.chats.copied)}
-          onReply={rules.comment && rules.post ? () => startComment(selected) : null}
+          onReply={rules.comment && rules.post && !blocked ? () => startComment(selected) : null}
           onReact={rules.react ? (emoji) => react(selected.id, emoji) : null}
           onNotice={setNotice}
         />
@@ -271,6 +280,7 @@ export function ChatThread({
                 id: `local-${current.length}`,
                 author: t.chats.you,
                 authorId: null,
+                authorStatus: null,
                 mine: true,
                 body: '',
                 timeLabel: t.chats.justNow,
@@ -290,9 +300,11 @@ export function ChatThread({
   )
 }
 
-function toggle(reactions: Reaction[], emoji: string): Reaction[] {
-  const found = reactions.find((reaction) => reaction.emoji === emoji)
-  if (!found) return [...reactions, { emoji, count: 1, mine: true }]
-  const count = found.count + (found.mine ? -1 : 1)
-  return count === 0 ? reactions.filter((reaction) => reaction !== found) : reactions.map((reaction) => (reaction === found ? { ...reaction, count, mine: !found.mine } : reaction))
+// Tap the same emoji again to take it back; pick another to move your one reaction there.
+function pickReaction(reactions: Reaction[], emoji: string): Reaction[] {
+  const previous = reactions.find((reaction) => reaction.mine)
+  const without = reactions.flatMap((reaction) => (reaction.mine ? (reaction.count > 1 ? [{ ...reaction, count: reaction.count - 1, mine: false }] : []) : [reaction]))
+  if (previous?.emoji === emoji) return without
+  const target = without.find((reaction) => reaction.emoji === emoji)
+  return target ? without.map((reaction) => (reaction === target ? { ...reaction, count: reaction.count + 1, mine: true } : reaction)) : [...without, { emoji, count: 1, mine: true }]
 }
