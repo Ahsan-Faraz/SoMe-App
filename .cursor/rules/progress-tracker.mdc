@@ -9,7 +9,7 @@ Canonical detail: `docs/backend-design.md` (decisions + build order) and `docs/U
 
 ## V1 (only when asked)
 
-Auth (email verify, username or email login); community routing; community + group applications and approval queues (A19–A25); admin records, member list / door list, statistics (A28–A33); A1; DM/groups; leave DM (keep+block / delete+block); blocks hide profile; posts/images/Real tag; reactions (one per person) + any-emoji picker; comments with snippet; admin delete; sticky + calendar (edit/delete, DM Admin); group settings incl. posting/commenting/reactions/visible in search/apply requirements; group create by admin or members with rights; F1/F2; profile builder (all field types, Status-driven fields, couples); profile score; linked profiles (max 3); profile visibility; form search + swipe browse (A27); find new user/group; albums + lock; notes/stars; Ads tab + filter.
+Auth (email verify, username or email login); community routing; community + group applications and approval queues (A19–A25); admin records, member list / door list, statistics (A28–A33); A1; DM/groups; leave DM (keep+block / delete+block); blocks hide profile; posts/images/Taken in app tag; reactions (one per person) + any-emoji picker; comments with snippet; admin delete; sticky + calendar (edit/delete, DM Admin); group settings incl. posting/commenting/reactions/visible in search/apply requirements; group create by admin or members with rights; F1/F2; profile builder (all field types, Status-driven fields, couples); profile score; linked profiles (max 3); profile visibility; form search + swipe browse (A27); find new user/group; albums + lock; notes/stars; Ads tab + filter.
 
 ## Later
 

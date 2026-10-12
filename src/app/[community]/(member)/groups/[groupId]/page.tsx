@@ -17,7 +17,7 @@ export default function GroupPage(props: PageProps<'/[community]/groups/[groupId
 
 async function GroupContent({ params }: PageProps<'/[community]/groups/[groupId]'>) {
   const { community, groupId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role !== 'admin') redirect(`/${community}/chats`)
 

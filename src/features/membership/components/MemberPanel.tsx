@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { buttonClass } from '@/components/ui/Button'
 import { GrowingTextarea } from '@/components/ui/GrowingTextarea'
+import { useStatus, writeStatus } from '@/features/profiles/status'
 import { t } from '@/lib/i18n'
 import { editMember, rosterKey, useMember, wholeNumber } from '../storage'
 import { REAL_NAMES, type MemberRecord, type Scope } from '../types'
@@ -14,14 +15,40 @@ const label = 'grid min-w-0 gap-1.5 text-[14px] font-semibold text-ink'
 
 // A21 (community) / A22 (group): the application and this scope's member data, under the usual profile.
 // Saved separately per scope; each field is saved when it is left.
-export function MemberPanel({ community, scope, seed }: { community: string; scope: ScopeRef; seed: MemberRecord }) {
+export function MemberPanel({ community, scope, seed, statuses }: { community: string; scope: ScopeRef; seed: MemberRecord; statuses: readonly string[] }) {
   const record = useMember(community, scope, seed)
   if (!record) return null
   // Re-seed the inputs when this device's saved values arrive after first paint.
-  return <PanelFields key={`${record.realNames.join('|')}|${record.state.join('|')}|${record.notes}`} storageKey={rosterKey(community, scope)} record={record} labels={scope.stateLabels} />
+  return (
+    <PanelFields
+      key={`${record.realNames.join('|')}|${record.state.join('|')}|${record.notes}`}
+      storageKey={rosterKey(community, scope)}
+      record={record}
+      labels={scope.stateLabels}
+      // Status is locked for the member: only the community admin (not a group admin) can change it.
+      status={scope.kind === 'community' ? <StatusEditor community={community} userId={record.userId} initial={record.status} statuses={statuses} /> : null}
+    />
+  )
 }
 
-function PanelFields({ storageKey, record, labels }: { storageKey: string; record: MemberRecord; labels: string[] }) {
+// Changing it changes which fields the profile shows, right away on the profile above.
+function StatusEditor({ community, userId, initial, statuses }: { community: string; userId: string; initial: string; statuses: readonly string[] }) {
+  const { status } = useStatus(community, userId, initial)
+  return (
+    <label className={label}>
+      {t.profiles.statusAdmin}
+      <select value={status} onChange={(event) => writeStatus(community, userId, event.target.value)} className={field}>
+        {status ? null : <option value="">{t.profiles.choose}</option>}
+        {statuses.map((item) => (
+          <option key={item}>{item}</option>
+        ))}
+      </select>
+      <span className="text-[13px] font-normal text-muted">{t.profiles.statusAdminHint}</span>
+    </label>
+  )
+}
+
+function PanelFields({ storageKey, record, labels, status }: { storageKey: string; record: MemberRecord; labels: string[]; status: ReactNode }) {
   const [names, setNames] = useState(() => Array.from({ length: REAL_NAMES }, (_, i) => record.realNames[i] ?? ''))
   const [state, setState] = useState(record.state)
   const [notes, setNotes] = useState(record.notes)
@@ -37,7 +64,7 @@ function PanelFields({ storageKey, record, labels }: { storageKey: string; recor
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={record.image.src} alt={t.membership.applicationImage} loading="lazy" decoding="async" className="aspect-video w-full rounded-xl object-cover" />
             <figcaption className={`mt-1 text-[13px] ${record.image.verified ? 'font-semibold text-accent' : 'text-muted'}`}>
-              {record.image.verified ? `✓ ${t.chats.verified} · ${record.image.date}` : record.image.date}
+              {record.image.verified ? `✓ ${t.chats.takenInApp} · ${record.image.date}` : record.image.date}
             </figcaption>
           </figure>
         ) : (
@@ -47,6 +74,7 @@ function PanelFields({ storageKey, record, labels }: { storageKey: string; recor
         <p className="text-[16px] leading-relaxed whitespace-pre-wrap text-ink-soft">{record.message || '—'}</p>
       </div>
       <div className="grid content-start gap-4">
+        {status}
         <fieldset className="grid gap-2 sm:grid-cols-2">
           <legend className="mb-1.5 text-[14px] font-semibold">{t.membership.realNames}</legend>
           {names.map((name, index) => (

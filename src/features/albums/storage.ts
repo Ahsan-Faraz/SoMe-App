@@ -1,3 +1,4 @@
+import { dateLocale, locale } from '@/lib/i18n'
 import type { Album } from './types'
 
 export function loadAlbums(key: string, seed: Album[]): Album[] {
@@ -18,5 +19,5 @@ export function albumKey(community: string, userId: string) {
 }
 
 export function todayLabel() {
-  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date())
+  return new Intl.DateTimeFormat(dateLocale[locale], { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date())
 }

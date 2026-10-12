@@ -1,21 +1,5 @@
 // UI-phase fixtures. Delete each part when its feature's queries.ts is wired to Supabase.
 
-export const mockCommunities = [
-  {
-    slug: 'biking-stockholm',
-    name: 'Biking Stockholm',
-    headline: 'Rides, routes and people who love two wheels.',
-    about: [
-      'We are a community for everyone who rides in and around Stockholm — road, gravel and mountain bike.',
-      'Members meet for weekly rides, share routes and help each other with gear. Every member has a real, verified profile.',
-      'Join to see upcoming rides in the group calendars and get to know the people you ride with.',
-    ],
-    heroSrc: '/community/hero.png',
-    aboutSrc: '/community/ride.png',
-    adminUserId: 'u-admin',
-  },
-] as const
-
 type MockChat = {
   id: string
   kind: 'dm' | 'group'
@@ -68,7 +52,9 @@ export const mockMessages: Record<
   ],
 }
 
-// score = profile score 0–100 (display only; calculation is Later). linked = Linked profiles (max 3).
+// score = profile score 0–100 (display only; calculation is Later). linked = who this profile links to (max 3).
+// A link is confirmed (shown to others) only when both profiles link to each other: Anna ↔ Sara is,
+// Oskar → Lina is not (Lina has not linked back), so Oskar's profile shows no linked profiles.
 type MockProfile = {
   id: string
   username: string
@@ -92,9 +78,12 @@ export const mockProfiles: MockProfile[] = [
   { id: 'u-sara', username: 'Sara Holm', about: 'Road cycling. I post the Sunday route.', place: 'Solna', status: 'Woman', age: 38, district: 'Solna', headline: 'Sunday road ride', lastLogin: '23 Sep, 07:15', score: 81, lookingFor: ['Woman', 'Man'], linked: ['u-anna'], photo: { src: '/community/ride.png', verified: true, date: '19 Sep 2026' } },
   { id: 'u-jonas', username: 'Jonas Ek', about: 'Workshop and spare parts.', place: 'Årsta', status: 'Man', age: 41, district: 'Årsta', headline: 'Chains and tyres', lastLogin: '20 Sep, 12:00', score: 40, lookingFor: [], linked: [], photo: null },
   { id: 'u-lina', username: 'Lina Ström', about: 'Winter commuter, studded tyres from November.', place: 'Hornstull', status: 'Woman', age: 27, district: 'Södermalm', headline: 'All-year commuting', lastLogin: '24 Sep, 08:05', score: 63, lookingFor: ['Woman'], linked: [], photo: { src: '/community/ride.png', verified: true, date: '20 Sep 2026' } },
-  { id: 'u-oskar', username: 'Oskar Nyberg', about: 'Lidingö loop on Saturdays.', place: 'Lidingö', status: 'Other', age: 35, district: 'Stockholm', headline: 'Saturday 09:00 at Ropsten', lastLogin: '19 Sep, 10:30', score: 47, lookingFor: ['Man', 'Other'], linked: [], photo: null },
+  { id: 'u-oskar', username: 'Oskar Nyberg', about: 'Lidingö loop on Saturdays.', place: 'Lidingö', status: 'Other', age: 35, district: 'Stockholm', headline: 'Saturday 09:00 at Ropsten', lastLogin: '19 Sep, 10:30', score: 47, lookingFor: ['Man', 'Other'], linked: ['u-lina'], photo: null },
   { id: 'u-maja', username: 'Maja & Leo', about: 'We ride a tandem. Slow and happy.', place: 'Sundbyberg', status: 'Couple MF', age: 31, district: 'Solna', headline: 'Tandem weekends', lastLogin: '23 Sep, 19:45', score: 70, lookingFor: ['Couple MF', 'Couple FF'], linked: [], photo: { src: '/community/hero.png', verified: true, date: '15 Sep 2026' } },
 ]
+
+// People who have linked to the viewer's own profile. Link back to confirm (A32).
+export const mockLinksToViewer = ['u-erik']
 
 // Not members yet: they applied to the community (A20). Admins can open their profiles (A21).
 export const mockApplicants: MockProfile[] = [

@@ -150,14 +150,14 @@ export function ChatThread({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={message.imageSrc}
-                        alt={message.verified ? t.chats.verified : t.chats.addPicture}
+                        alt={message.verified ? t.chats.takenInApp : t.chats.addPicture}
                         draggable={false}
                         className="aspect-video w-full rounded-xl object-cover"
                       />
                     ) : (
                       <Image
                         src="/community/ride.png"
-                        alt={message.verified ? t.chats.verified : t.chats.addPicture}
+                        alt={message.verified ? t.chats.takenInApp : t.chats.addPicture}
                         width={640}
                         height={360}
                         sizes="(min-width: 640px) 28rem, 90vw"
@@ -167,7 +167,7 @@ export function ChatThread({
                     )}
                     {message.verified ? (
                       <figcaption className="mt-1 text-[13px] font-semibold text-accent">
-                        ✓ {t.chats.verified}
+                        ✓ {t.chats.takenInApp}
                         {message.verifiedDate ? ` · ${message.verifiedDate}` : ''}
                       </figcaption>
                     ) : message.imageSrc ? (

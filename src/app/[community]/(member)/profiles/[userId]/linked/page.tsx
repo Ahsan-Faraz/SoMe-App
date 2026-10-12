@@ -18,7 +18,7 @@ export default function LinkedPage(props: PageProps<'/[community]/profiles/[user
 
 async function LinkedContent({ params }: PageProps<'/[community]/profiles/[userId]/linked'>) {
   const { community, userId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   // Only your own links can be edited.
   if (userId !== viewer.userId) redirect(`/${community}/profiles/${userId}`)
@@ -29,7 +29,7 @@ async function LinkedContent({ params }: PageProps<'/[community]/profiles/[userI
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.linked.title} backHref={`/${community}/profiles/${userId}`} />
-      <LinkPicker community={community} userId={userId} linked={profile.linked} candidates={candidates} />
+      <LinkPicker community={community} userId={userId} linked={profile.linked} linkedYou={profile.linkedYou} candidates={candidates} />
     </div>
   )
 }

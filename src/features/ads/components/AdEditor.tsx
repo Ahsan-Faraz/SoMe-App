@@ -2,14 +2,15 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { buttonClass } from '@/components/ui/Button'
+import { MultiSelect } from '@/components/ui/MultiSelect'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
 import type { Album } from '@/features/albums/types'
-import { DISTRICTS, STATUSES } from '@/features/profiles/options'
+import { useStatus } from '@/features/profiles/status'
 import type { MainPhoto } from '@/features/profiles/types'
 import { formatDay } from '@/lib/format'
+import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
 import { imageDataUrl } from '@/lib/image'
 import { loadAds, saveAds } from '../storage'
@@ -17,7 +18,7 @@ import type { Ad } from '../types'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
 const AlbumPhotos = dynamic(() => import('@/features/albums/components/AlbumPhotos').then((mod) => mod.AlbumPhotos), { ssr: false })
-const input = 'h-11 w-full rounded-xl border border-line bg-canvas px-3 text-[16px] font-normal outline-none focus:border-accent disabled:bg-sunken'
+const input = 'h-11 w-full rounded-xl border border-line bg-canvas px-3 text-[16px] font-normal outline-none focus:border-accent'
 
 export function AdEditor({
   community,
@@ -29,6 +30,8 @@ export function AdEditor({
   author,
   albums = [],
   profilePhoto = null,
+  statuses,
+  districts,
 }: {
   community: string
   seed: Ad[]
@@ -40,8 +43,13 @@ export function AdEditor({
   // Own ads only: the sources for "From profile/album".
   albums?: Album[]
   profilePhoto?: MainPhoto | null
+  // The community's active lists (profile builder).
+  statuses: readonly string[]
+  districts: readonly string[]
 }) {
-  const router = useRouter()
+  const goBack = useGoBack(community)
+  // Your status as chosen on your profile (it may only be on this device so far).
+  const { status: authorStatus } = useStatus(community, author.userId, author.status)
   const seeded = adId ? (seed.find((item) => item.id === adId) ?? null) : null
   const [ad, setAd] = useState<Ad | null>(seeded)
   // Render the known ad straight away (first paint from the server); only wait when it may exist on this device only.
@@ -50,11 +58,12 @@ export function AdEditor({
   const [picking, setPicking] = useState(false)
   const [headline, setHeadline] = useState(seeded?.headline ?? '')
   const [body, setBody] = useState(seeded?.body ?? '')
-  const [lookingFor, setLookingFor] = useState(seeded?.lookingFor ?? 'Man')
-  const [district, setDistrict] = useState<string>(seeded?.district ?? DISTRICTS[0])
+  const [lookingFor, setLookingFor] = useState<string[]>(seeded?.lookingFor ?? [])
+  const [district, setDistrict] = useState<string>(seeded?.district ?? districts[0] ?? '')
   const [place, setPlace] = useState(seeded?.place ?? '')
   const [image, setImage] = useState(seeded?.image ?? '')
   const [verified, setVerified] = useState(seeded?.verified ?? false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const found = adId ? (loadAds(community, seed).find((item) => item.id === adId) ?? null) : null
@@ -87,7 +96,7 @@ export function AdEditor({
 
   const locked = !own
   const shown = ad ?? {
-    status: author.status,
+    status: authorStatus,
     age: author.age,
     published: formatDay(),
   }
@@ -98,12 +107,13 @@ export function AdEditor({
       onSubmit={(event) => {
         event.preventDefault()
         if (locked || !headline.trim()) return
+        if (lookingFor.length === 0) return setError(t.ads.lookingForMissing)
         const ads = loadAds(community, seed)
         const next: Ad = {
           id: ad?.id ?? `ad-${Date.now()}`,
           userId: ad?.userId ?? author.userId,
           username: ad?.username ?? author.username,
-          status: ad?.status ?? author.status,
+          status: ad?.status ?? authorStatus,
           age: ad?.age ?? author.age,
           district,
           place: place.trim(),
@@ -115,53 +125,67 @@ export function AdEditor({
           verified,
         }
         saveAds(community, ad ? ads.map((item) => (item.id === ad.id ? next : item)) : [next, ...ads])
-        router.push(own && ad ? `/${community}/profiles/${author.userId}/ads` : `/${community}/ads`)
+        goBack(own && ad ? `/${community}/profiles/${author.userId}/ads` : `/${community}/ads`)
       }}
     >
       <div className={scrollArea}>
         <div className="mx-auto grid max-w-lg gap-4 px-4 py-6 sm:px-8">
-          <label className="grid gap-1.5 text-[14px] font-semibold">
-            {t.ads.lookingFor}
-            <select disabled={locked} value={lookingFor} onChange={(event) => setLookingFor(event.target.value)} className={input}>
-              {STATUSES.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1.5 text-[14px] font-semibold">
-            {t.profiles.headline}
-            <input disabled={locked} required value={headline} onChange={(event) => setHeadline(event.target.value)} className={input} />
-          </label>
-          <label className="grid gap-1.5 text-[14px] font-semibold">
-            {t.ads.text}
-            <textarea
-              disabled={locked}
-              required
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              rows={5}
-              className="rounded-xl border border-line px-3 py-2 text-[16px] font-normal outline-none focus:border-accent disabled:bg-sunken"
-            />
-          </label>
-          <label className="grid gap-1.5 text-[14px] font-semibold">
-            {t.profiles.district}
-            <select disabled={locked} value={district} onChange={(event) => setDistrict(event.target.value)} className={input}>
-              {DISTRICTS.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1.5 text-[14px] font-semibold">
-            {t.profiles.place}
-            <input disabled={locked} value={place} onChange={(event) => setPlace(event.target.value)} className={input} />
-          </label>
+          {locked ? (
+            // Someone else's ad: plain text, no form controls (no drop-down arrows on fields you can't change).
+            <dl className="grid gap-4">
+              <Fact label={t.ads.lookingFor} value={lookingFor.join(', ')} />
+              <Fact label={t.profiles.headline} value={headline} />
+              <Fact label={t.ads.text} value={body} />
+              <Fact label={t.profiles.district} value={district} />
+              <Fact label={t.profiles.place} value={place} />
+            </dl>
+          ) : (
+            <>
+              <MultiSelect
+                label={t.ads.lookingFor}
+                options={statuses}
+                value={lookingFor}
+                onChange={(value) => {
+                  setLookingFor(value)
+                  setError('')
+                }}
+                placeholder={t.profiles.choose}
+              />
+              <label className="grid gap-1.5 text-[14px] font-semibold">
+                {t.profiles.headline}
+                <input required value={headline} onChange={(event) => setHeadline(event.target.value)} className={input} />
+              </label>
+              <label className="grid gap-1.5 text-[14px] font-semibold">
+                {t.ads.text}
+                <textarea
+                  required
+                  value={body}
+                  onChange={(event) => setBody(event.target.value)}
+                  rows={5}
+                  className="rounded-xl border border-line px-3 py-2 text-[16px] font-normal outline-none focus:border-accent"
+                />
+              </label>
+              <label className="grid gap-1.5 text-[14px] font-semibold">
+                {t.profiles.district}
+                <select value={district} onChange={(event) => setDistrict(event.target.value)} className={input}>
+                  {districts.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1.5 text-[14px] font-semibold">
+                {t.profiles.place}
+                <input value={place} onChange={(event) => setPlace(event.target.value)} className={input} />
+              </label>
+            </>
+          )}
           <div>
             <p className="text-[14px] font-semibold">{t.ads.image}</p>
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={image} alt="" className="mt-2 aspect-video w-full rounded-2xl object-cover" />
             ) : null}
-            {verified ? <p className="mt-1 text-[13px] font-semibold text-accent">✓ {t.chats.verified}</p> : null}
+            {verified ? <p className="mt-1 text-[13px] font-semibold text-accent">✓ {t.chats.takenInApp}</p> : null}
             {own ? (
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => setCamera(true)} className="grid min-h-14 content-center rounded-xl bg-accent px-2 py-2 text-center text-white hover:bg-accent-hover">
@@ -202,6 +226,11 @@ export function AdEditor({
               <dd className="font-semibold">{shown.published}</dd>
             </div>
           </dl>
+          {error ? (
+            <p role="alert" className="text-[15px] font-semibold text-danger">
+              {error}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className={bottomBar}>
@@ -220,7 +249,7 @@ export function AdEditor({
                       community,
                       loadAds(community, seed).filter((item) => item.id !== ad.id),
                     )
-                    router.push(`/${community}/ads`)
+                    goBack(`/${community}/ads`)
                   }}
                 >
                   {t.ads.delete}
@@ -267,5 +296,14 @@ export function AdEditor({
         </div>
       ) : null}
     </form>
+  )
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[14px] font-semibold text-ink">{label}</dt>
+      <dd className="mt-0.5 text-[16px] whitespace-pre-wrap text-ink-soft">{value || '—'}</dd>
+    </div>
   )
 }

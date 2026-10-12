@@ -1,23 +1,27 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
 import { loadEvents, saveEvents, type CalEvent } from '../storage'
 
 export function EventForm({
+  community,
+  backHref,
   storageKey,
   seed,
   eventId,
   date,
 }: {
+  community: string
+  backHref: string
   storageKey: string
   seed: CalEvent[]
   eventId: string | null
   date: string
 }) {
-  const router = useRouter()
+  const goBack = useGoBack(community)
   const [when, setWhen] = useState(date)
   const [headline, setHeadline] = useState('')
   const [text, setText] = useState('')
@@ -36,7 +40,7 @@ export function EventForm({
 
   function write(next: CalEvent[]) {
     saveEvents(storageKey, next)
-    router.back()
+    goBack(backHref)
   }
 
   return (

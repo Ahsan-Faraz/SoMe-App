@@ -5,6 +5,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type TouchEvent
 import { Icon } from '@/components/ui/Icon'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { readStars, writeStars } from '@/features/notes/stars'
+import type { FieldDef, StatusChoice } from '@/features/fields/types'
 import { t } from '@/lib/i18n'
 import { emptyFilter, filterCount, matchesProfile, watchFilter, type ProfileFilter } from '../filter'
 import { MAX_STARS } from '../options'
@@ -23,11 +24,16 @@ export function BrowseProfiles({
   viewerId,
   profiles,
   chatIds,
+  statuses,
+  fields,
 }: {
   community: string
   viewerId: string
   profiles: BrowseProfile[]
   chatIds: Record<string, string>
+  // The community's profile builder (active fields only).
+  statuses: readonly StatusChoice[]
+  fields: readonly FieldDef[]
 }) {
   const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
   // Stars as they were when the screen opened: they decide what the filter lets through, so rating
@@ -95,7 +101,7 @@ export function BrowseProfiles({
           {/* Keyed per profile: each one opens at the top. */}
           <main
             key={profile.id}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
             onTouchStart={(event) => {
               const point = event.touches[0]
               touch.current = point ? { x: point.clientX, y: point.clientY } : null
@@ -117,8 +123,12 @@ export function BrowseProfiles({
                 </Link>
               </div>
               <ProfileFields
+                community={community}
+                userId={profile.id}
                 storageKey=""
                 own={false}
+                statuses={statuses}
+                fields={fields}
                 status={profile.status}
                 lookingFor={profile.lookingFor}
                 about={profile.about}

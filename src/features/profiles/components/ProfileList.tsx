@@ -11,6 +11,7 @@ import { readStars } from '@/features/notes/stars'
 import { t } from '@/lib/i18n'
 import { emptyFilter, filterCount, matchesProfile, watchFilter, type ProfileFilter } from '../filter'
 import { MAX_STARS, whereLabel } from '../options'
+import { readStatus } from '../status'
 import type { ProfileCard } from '../types'
 
 // Cards in the first screenful: their photos load eagerly (they are the LCP); the rest stay lazy.
@@ -18,13 +19,21 @@ const ABOVE_FOLD = 4
 
 const headerButton = 'relative inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover'
 
-export function ProfileList({ community, viewerId, profiles }: { community: string; viewerId: string; profiles: ProfileCard[] }) {
+export function ProfileList({ community, viewerId, profiles: serverProfiles }: { community: string; viewerId: string; profiles: ProfileCard[] }) {
+  const [profiles, setProfiles] = useState(serverProfiles)
   const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
   const [stars, setStars] = useState<Record<string, number>>({})
   const query = useDeferredValue(filter.text.trim().toLowerCase())
 
   useEffect(() => watchFilter(community, setFilter), [community])
-  useEffect(() => setStars(readStars(community, viewerId, profiles.map((profile) => profile.id))), [community, viewerId, profiles])
+  // A status the community admin changed on this device (until the profile table exists).
+  // Only re-renders the list when such a change exists.
+  useEffect(() => {
+    const changed = serverProfiles.map((profile) => ({ ...profile, status: readStatus(community, profile.id) ?? profile.status }))
+    setProfiles(changed.some((profile, i) => profile.status !== serverProfiles[i]?.status) ? changed : serverProfiles)
+  }, [community, serverProfiles])
+  // Keyed on the server list (same ids), so the status read above does not read the stars a second time.
+  useEffect(() => setStars(readStars(community, viewerId, serverProfiles.map((profile) => profile.id))), [community, viewerId, serverProfiles])
 
   const visible = useMemo(() => profiles.filter((profile) => matchesProfile(profile, stars[profile.id] ?? 0, filter, query)), [profiles, stars, filter, query])
   const active = filterCount(filter)
@@ -97,7 +106,7 @@ function ProfileRow({ community, profile, stars, eager }: { community: string; p
             <Avatar name={profile.username} seed={profile.id} />
           </span>
         )}
-        {profile.photo?.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.verified}</span> : null}
+        {profile.photo?.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.takenInApp}</span> : null}
       </span>
     </Link>
   )

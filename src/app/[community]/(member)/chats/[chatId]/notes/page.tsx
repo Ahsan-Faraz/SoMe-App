@@ -16,8 +16,9 @@ export default function ChatNotesPage(props: PageProps<'/[community]/chats/[chat
 
 async function ChatNotesContent({ params }: PageProps<'/[community]/chats/[chatId]/notes'>) {
   const { community, chatId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
+  if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   const chat = await getChatSummary(chatId)
   if (!chat) notFound()

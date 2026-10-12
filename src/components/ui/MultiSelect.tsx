@@ -12,6 +12,7 @@ export function MultiSelect({
   onChange,
   placeholder,
   showLabel = true,
+  format = (option) => option,
 }: {
   label: string
   options: readonly string[]
@@ -20,6 +21,8 @@ export function MultiSelect({
   placeholder: string
   // false when a surrounding fieldset already names the field.
   showLabel?: boolean
+  // Text shown for an option, when the values are ids.
+  format?: (option: string) => string
 }) {
   const ref = useRef<HTMLDetailsElement>(null)
 
@@ -38,7 +41,7 @@ export function MultiSelect({
       {showLabel ? <span className="text-[14px] font-semibold text-ink">{label}</span> : null}
       <details ref={ref} className="group">
         <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] text-ink group-open:border-accent [&::-webkit-details-marker]:hidden">
-          <span className={`min-w-0 flex-1 truncate ${value.length ? '' : 'text-muted'}`}>{value.length ? value.join(', ') : placeholder}</span>
+          <span className={`min-w-0 flex-1 truncate ${value.length ? '' : 'text-muted'}`}>{value.length ? value.map(format).join(', ') : placeholder}</span>
           <Icon name="chevronRight" className="size-5 rotate-90 text-muted transition-transform group-open:-rotate-90" />
         </summary>
         <ul role="group" aria-label={label} className="mt-1 max-h-64 overflow-y-auto overscroll-contain rounded-xl border border-line bg-canvas py-1">
@@ -50,7 +53,7 @@ export function MultiSelect({
                   checked={value.includes(option)}
                   onChange={() => onChange(options.filter((item) => (item === option ? !value.includes(item) : value.includes(item))))}
                 />
-                {option}
+                {format(option)}
               </label>
             </li>
           ))}

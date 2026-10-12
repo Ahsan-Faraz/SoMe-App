@@ -4,10 +4,12 @@ export function adsKey(community: string) {
   return `some:ads:${community}`
 }
 
+// Ads saved on this device before Looking for became a multi select had a single string.
 export function loadAds(community: string, seed: Ad[]): Ad[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem(adsKey(community)) ?? '') as Ad[]
-    return Array.isArray(parsed) ? parsed : seed
+    const parsed = JSON.parse(localStorage.getItem(adsKey(community)) ?? '') as (Omit<Ad, 'lookingFor'> & { lookingFor: string | string[] })[]
+    if (!Array.isArray(parsed)) return seed
+    return parsed.map((ad) => ({ ...ad, lookingFor: typeof ad.lookingFor === 'string' ? [ad.lookingFor] : strings(ad.lookingFor) }))
   } catch {
     return seed
   }
@@ -73,7 +75,7 @@ export function matches(ad: Ad, filter: AdFilter, score: number, stars: number) 
   if (filter.statuses.length > 0 && !filter.statuses.includes(ad.status)) return false
   if (minAge !== null && ad.age < minAge) return false
   if (maxAge !== null && ad.age > maxAge) return false
-  if (filter.lookingFor.length > 0 && !filter.lookingFor.includes(ad.lookingFor)) return false
+  if (filter.lookingFor.length > 0 && !ad.lookingFor.some((item) => filter.lookingFor.includes(item))) return false
   if (filter.district && ad.district !== filter.district) return false
   if (place && !ad.place.toLowerCase().includes(place)) return false
   if (minScore !== null && score < minScore) return false

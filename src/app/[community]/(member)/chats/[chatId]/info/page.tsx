@@ -19,7 +19,7 @@ export default function GroupInfoPage(props: PageProps<'/[community]/chats/[chat
 
 async function GroupInfoContent({ params }: PageProps<'/[community]/chats/[chatId]/info'>) {
   const { community, chatId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 

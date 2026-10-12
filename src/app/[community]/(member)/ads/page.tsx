@@ -22,7 +22,7 @@ export default function AdsPage(props: PageProps<'/[community]/ads'>) {
 
 async function AdsContent({ params }: PageProps<'/[community]/ads'>) {
   const { community } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
   const [ads, profiles] = await Promise.all([listAds(), listProfiles()])
@@ -30,7 +30,7 @@ async function AdsContent({ params }: PageProps<'/[community]/ads'>) {
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <main className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <ScreenHeader
           title={t.ads.title}
           right={

@@ -16,8 +16,9 @@ export default function LeavePage(props: PageProps<'/[community]/chats/[chatId]/
 
 async function LeaveContent({ params }: PageProps<'/[community]/chats/[chatId]/leave'>) {
   const { community, chatId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
+  if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   const chat = await getChatSummary(chatId)
   if (!chat) notFound()

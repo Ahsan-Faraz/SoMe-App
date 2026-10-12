@@ -17,7 +17,7 @@ export default function AssignGroupsPage(props: PageProps<'/[community]/profiles
 
 async function AssignGroupsContent({ params }: PageProps<'/[community]/profiles/[userId]/groups'>) {
   const { community, userId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   // Only community admins for now. Group admins (no role yet) will get listAssignments(userId, theirGroupIds) and settings off.
   if (viewer.role !== 'admin') redirect(`/${community}/profiles/${userId}`)

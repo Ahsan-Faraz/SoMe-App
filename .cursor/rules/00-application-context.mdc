@@ -14,7 +14,7 @@ Read when the task needs it: `docs/backend-design.md` (decisions D1–D25 + sche
 - Scope every member/chat/search/schema query by **current `community_id`**.
 - Group ≠ community. Group = chat room inside one community.
 - Profile fields are **defs + values**, not hardcoded columns.
-- "Real" image (formerly "verified") = in-app camera + date. Gallery photos allowed everywhere, never Real. Do not claim it cannot be faked.
+- "Taken in app" image (formerly "verified", then "Real") = in-app camera + date. Gallery photos allowed everywhere, never Taken in app. Do not claim it cannot be faked.
 - Private notes/ratings: author-only in UI **and** API.
 - Group create = community admin, or members with group-create rights. One admin per group for now.
 - Status (per-community list) decides which profile fields a member sees.

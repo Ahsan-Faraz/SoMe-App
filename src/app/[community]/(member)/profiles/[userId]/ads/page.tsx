@@ -19,7 +19,7 @@ export default function ProfileAdsPage(props: PageProps<'/[community]/profiles/[
 
 async function ProfileAdsContent({ params }: PageProps<'/[community]/profiles/[userId]/ads'>) {
   const { community, userId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
   const [profile, ads] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), listAds()])

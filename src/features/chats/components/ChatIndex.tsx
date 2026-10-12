@@ -49,7 +49,7 @@ export function ChatIndex({
           </Link>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <ChatList community={community} chats={chats} now={now} />
       </div>
     </>

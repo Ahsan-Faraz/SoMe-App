@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { CalendarBoard } from '@/features/calendar/components/CalendarBoard'
 import { listEvents } from '@/features/calendar/queries'
+import { dmHref } from '@/features/chats/links'
 import { chatIdForUser, getChatSummary } from '@/features/chats/queries'
 import { getGroup } from '@/features/groups/queries'
 import { t } from '@/lib/i18n'
@@ -21,8 +22,9 @@ export default function CalendarPage(props: PageProps<'/[community]/chats/[chatI
 
 async function CalendarContent({ params }: PageProps<'/[community]/chats/[chatId]/calendar'>) {
   const { community, chatId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
+  if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   const [chat, group, events] = await Promise.all([getChatSummary(chatId), getGroup(chatId), listEvents(chatId)])
   if (!chat || chat.kind !== 'group' || !group?.calendar) notFound()
@@ -31,8 +33,7 @@ async function CalendarContent({ params }: PageProps<'/[community]/chats/[chatId
   const isAdmin = viewer.role === 'admin'
   const dmHrefs: Record<string, string> = {}
   for (const event of events) {
-    const dmId = event.createdBy && event.createdBy !== viewer.userId ? chatIdForUser(event.createdBy) : null
-    if (event.createdBy && dmId) dmHrefs[event.createdBy] = `/${community}/chats/${dmId}`
+    if (event.createdBy && event.createdBy !== viewer.userId) dmHrefs[event.createdBy] = dmHref(community, event.createdBy, chatIdForUser(event.createdBy))
   }
 
   return (

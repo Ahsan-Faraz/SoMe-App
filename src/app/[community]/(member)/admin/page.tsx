@@ -22,10 +22,11 @@ async function CommunityAdminContent({ params }: PageProps<'/[community]/admin'>
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.chats.communityAdmin} backHref={`/${community}/chats`} />
-      <nav aria-label={t.chats.communityAdmin} className="mx-auto grid max-w-xl gap-2 px-4 py-6 sm:px-8">
+      <nav aria-label={t.chats.communityAdmin} className="mx-auto grid max-w-xl grid-cols-1 gap-2 px-4 py-6 sm:px-8">
         <BigLink href={`${base}/applications`} icon="inbox" label={t.admin.applications} />
         <BigLink href={`${base}/members`} icon="users" label={t.admin.members} />
         <BigLink href={`${base}/stats`} icon="chart" label={t.admin.statistics} />
+        <BigLink href={`${base}/fields`} icon="pencil" label={t.admin.builder} />
         <p className="mt-2 px-1 text-[14px] text-muted">{t.admin.more}</p>
       </nav>
     </div>

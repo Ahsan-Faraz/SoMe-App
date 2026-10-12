@@ -18,7 +18,7 @@ export default function AlbumPage(props: PageProps<'/[community]/profiles/[userI
 
 async function AlbumContent({ params }: PageProps<'/[community]/profiles/[userId]/albums/[albumId]'>) {
   const { community, userId, albumId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
 
   const [profile, albums] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), listAlbums(userId)])

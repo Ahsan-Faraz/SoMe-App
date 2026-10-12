@@ -6,7 +6,7 @@ alwaysApply: false
 
 # TypeScript standards
 
-Smallest diff. Split before ~250–300 LOC. One **Post** (DM + group). One **FieldRenderer** (schema-driven). Use the spec's names: community, group, post, sticky, real (UI label "Real"; code `isReal`).
+Smallest diff. Split before ~250–300 LOC. One **Post** (DM + group). One **FieldRenderer** (schema-driven). Use the spec's names: community, group, post, sticky, taken in app (UI label "Taken in app"; DB column `taken_in_app`).
 
 ```ts
 // ❌ hardcoded community-1
@@ -17,6 +17,23 @@ type FieldDef = { id: string; type: 'text' | 'checkbox' | 'number' | 'select' | 
 ```
 
 - Strict TS. Validate payloads at the boundary; no `any` there.
+
+## Fresh after every action (no refresh needed)
+
+`cacheComponents` keeps visited pages alive (React `<Activity>`): coming back shows new props, but `useState` keeps its old value. So:
+
+- Server data is read from props, never copied into `useState`. Instant feedback = `useOptimistic(props)`: it shows the change at once and falls back to the server's data when the action ends (or fails).
+- Every Server Action that writes calls `updateTag(tag)` for each cached read it changes. The fresh page comes back in the same response: no `router.refresh()`, no polling, no extra fetch.
+- A form seeded from server data is a draft: give it `key={version of that data}` (e.g. `JSON.stringify` of a small record) so a newer save opens fresh, while unsaved typing survives navigation.
+- Other people's changes: chats via Realtime Broadcast; lists refetch on focus/visibility (performance.mdc). Never poll.
+
+```tsx
+// ❌ stale after save + back
+const [fields, setFields] = useState(props.fields)
+
+// ✅
+const [fields, setOptimistic] = useOptimistic(props.fields)
+```
 - Never trust a client `communityId` / `groupId` without a membership check. Hide **and** deny gated settings.
 
 ```ts

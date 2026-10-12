@@ -1,3 +1,5 @@
+import { dateLocale, locale } from '@/lib/i18n'
+
 export function photoKey(community: string, userId: string) {
   return `some:photo:${community}:${userId}`
 }
@@ -19,7 +21,7 @@ export function readPhoto(community: string, userId: string): StoredPhoto | null
 
 // verified = taken with the in-app camera (camera + date only; it can still be faked).
 export function writePhoto(community: string, userId: string, src: string, verified: boolean) {
-  const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date())
+  const date = new Intl.DateTimeFormat(dateLocale[locale], { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date())
   localStorage.setItem(photoKey(community, userId), JSON.stringify({ src, date, verified } satisfies StoredPhoto))
   window.dispatchEvent(new Event('some-photo'))
 }

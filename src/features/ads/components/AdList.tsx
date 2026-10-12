@@ -80,7 +80,7 @@ export function AdList({
                     <Image src={ad.image} alt="" width={96} height={96} sizes="96px" loading={index < ABOVE_FOLD ? 'eager' : 'lazy'} className="size-24 rounded-xl object-cover" />
                   )
                 ) : null}
-                {ad.image && ad.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.verified}</span> : null}
+                {ad.image && ad.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.takenInApp}</span> : null}
               </span>
             </Link>
           </li>

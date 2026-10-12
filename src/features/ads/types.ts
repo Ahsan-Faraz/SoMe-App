@@ -9,7 +9,8 @@ export type Ad = {
   headline: string
   body: string
   published: string
-  lookingFor: string
+  // One or more statuses (multi select).
+  lookingFor: string[]
   image: string
   verified: boolean
 }

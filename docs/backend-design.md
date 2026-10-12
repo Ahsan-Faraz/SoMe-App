@@ -52,7 +52,7 @@ Phone (PWA)
 | D1 | Profile field types | All: short text, long text, yes/no, pick one, pick several, number, date, photo |
 | D2 | Built-in fields (not in the builder) | **Status** and **District**. Their choices are set per community. |
 | D3 | Status choices (Biking Stockholm) | Man, Woman, Other, Couple MF, Couple MM, Couple FF |
-| D4 | Status drives the profile | Each field can be limited to some Statuses. Status sits at the top of the profile. |
+| D4 | Status drives the profile | Each field can be limited to some Statuses, so each Status can have a completely different set of fields. Status sits at the top of the profile. The member sets it **once**, when creating the profile; then it is locked and **only the community admin** can change it (client feedback, Oct 2026). |
 | D5 | Looking for | Multi-select of the same Status choices, on profiles and ads |
 | D6 | Search | Admin chooses which fields are searchable |
 | D7 | Age | From birth date |
@@ -64,14 +64,14 @@ Phone (PWA)
 | D13 | Blocking | Blocks messages **and** hides your profile from that person |
 | D14 | Messages | Kept forever for now |
 | D15 | Ads | Separate Ads tab stays. Bottom menu: Chats / Profiles / Ads. |
-| D16 | Photos | Any photo anywhere can be "Real" (in-app camera + date). Gallery photos allowed everywhere, never labelled Real. |
+| D16 | Photos | Any photo anywhere can be "Taken in app" (in-app camera + date). Gallery photos allowed everywhere, never labelled Taken in app. |
 | D17 | Accounts | Separate account per community (see D17 note below) |
-| D18 | Wording | "Verified" is called **"Real"** everywhere |
+| D18 | Wording | "Verified" (later "Real") is called **"Taken in app"** everywhere (client feedback, Oct 2026) |
 | D19 | Username | Set once at sign-up, not editable afterwards (it is the name shown in chats) |
 | D20 | Reactions | One reaction per person per post, changeable |
 | D21 | Profile score | Shown and filterable now. Reputation is later (removed from the profile for now). |
 | D22 | Visibility | "Profile visible in search Y/N" per member; "Group visible in search" per group |
-| D23 | Linked profiles | A member can link up to 3 other profiles to theirs |
+| D23 | Linked profiles | A member can link up to 3 other profiles to theirs. A link is confirmed when the other person links back. Until then the owner sees it dimmed and nobody else sees it. |
 | D24 | Admin data per member | Real name 1 and 2, three numbered "profile state" fields with labels set per group/community, notes. Saved separately per group and for the community. |
 | D25 | Translations | Later, but the design is ready now (§10) |
 
@@ -207,7 +207,7 @@ applications (
   community_id uuid not null,
   user_id uuid not null,
   chat_id uuid references chats on delete cascade,      -- null = joining the community, else a group
-  photo_id uuid references photos,                       -- application image ("Real" when taken in app)
+  photo_id uuid references photos,                       -- application image ("Taken in app" when from the camera)
   message text check (char_length(message) <= 4000),
   real_name_1 text check (char_length(real_name_1) <= 80),
   real_name_2 text check (char_length(real_name_2) <= 80),
@@ -299,10 +299,11 @@ profile_value_options (
 )
 index profile_value_options_opt on profile_value_options (option_id, user_id);
 
--- Linked profiles (A32), max 3, enforced by a trigger.
+-- Linked profiles (A32), max 3 per user_id, enforced by a trigger. No accept step: a link is
+-- confirmed when the reverse row (linked_user_id -> user_id) exists too (D23, Q7).
+-- Others only ever read confirmed pairs; the owner reads all of their own rows.
 profile_links (
   community_id uuid not null, user_id uuid not null, linked_user_id uuid not null,
-  state text not null default 'pending' check (state in ('pending','accepted')),  -- Q7 default: must accept
   created_at timestamptz,
   primary key (community_id, user_id, linked_user_id),
   check (user_id <> linked_user_id)
@@ -313,7 +314,7 @@ profile_links (
 
 - +10 for each long-text field with at least 200 characters (max +40)
 - +10 for having a main photo
-- +30 more if that main photo is Real
+- +30 more if that main photo is Taken in app
 - +20 if every required field is filled
 
 The rule lives in one function, `compute_score(community, user)`, so changing it is one migration.
@@ -323,7 +324,7 @@ The rule lives in one function, `compute_score(community, user)`, so changing it
 **In plain English:**
 
 - Every photo is a row in `photos`, wherever it's used: profile, album, chat, ad, application.
-- Each photo records whether it is **Real** (taken with the in-app camera) and when it was taken.
+- Each photo records whether it is **Taken in app** (taken with the in-app camera) and when it was taken.
 - Reusing a photo "From profile/album" in a chat or ad **copies the file**, so a locked album can never leak through a chat.
 
 ```sql
@@ -333,8 +334,8 @@ photos (
   bucket text not null check (bucket in ('profile','private')),
   path text not null, thumb_path text not null,        -- {community}/{owner}/{uuid}.webp and _t.webp
   width int, height int,
-  is_real boolean not null default false,              -- D16: in-app camera. A claim, not proof.
-  taken_at timestamptz,                                -- camera time for Real photos
+  taken_in_app boolean not null default false,         -- D16: in-app camera. A claim, not proof.
+  taken_at timestamptz,                                -- camera time for Taken in app photos
   purpose text not null check (purpose in ('profile','album','chat','ad','application')),
   created_at timestamptz,
   foreign key (community_id, owner_id) references members on delete cascade
@@ -547,7 +548,7 @@ Extra protections:
 - **Cross-community:** every policy checks `community_id` via `is_member()`.
 - **Album passwords:** `password_hash` is revoked from client roles. Only the server checks it and then signs URLs.
 - **Columns clients may not change** (role, state, score, username after sign-up) are protected with column grants and a trigger. Profile edits go through `save_profile`.
-- **"Real" photos:** the "Real" label is the app's claim that the in-app camera took the photo. We never claim it can't be faked.
+- **"Taken in app" photos:** the label is the app's claim that the in-app camera took the photo. We never claim it can't be faked.
 - **Re-encoding** every photo on the phone strips EXIF location data.
 - **Service-role key:** only in `src/lib/supabase/admin.ts` (server-only), used for the username→email login lookup, album URL signing and system DMs.
 
@@ -568,11 +569,11 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 ### 6.2 Community application and approval (Peter's process)
 
 1. **Applicant (state `profile`):** edits own profile only (A25 "Create/edit profile").
-2. **Application form (A25):** community `application_text` at the top, application image (camera = Real, or upload), message, real name 1/2. Which ones are required comes from `communities.require_app_*`.
+2. **Application form (A25):** community `application_text` at the top, application image (camera = Taken in app, or upload), message, real name 1/2. Which ones are required comes from `communities.require_app_*`.
 3. **Apply:** **B** insert into `applications` (`chat_id = null`) and set `members.state = 'applied'`. The Apply button is dimmed while an application is open (unique index).
-4. **"Chat with admin":** shown only if a DM with the admin already exists, i.e. the admin wrote first. Applicants can't open new DMs (`open_dm` refuses).
+4. **"Chat with admin":** shown only if there is an ongoing conversation: a DM with the admin that has messages, i.e. the admin wrote first. Otherwise there is no button at all, not even a dimmed one. Applicants can't open new DMs (`open_dm` refuses); the admin can always start one from the applicant's profile (DM button on A21).
 5. **Admin queue (A19 → A20):** list of `applications where chat_id is null and status in ('pending','later')`.
-6. **Admin view (A21):** profile + linked profiles + application image (Real + date) + message + real names + 3 profile states + notes (from `admin_records`, community scope).
+6. **Admin view (A21):** profile + DM button + linked profiles + application image (Taken in app + date) + Status (editable here, community admin only) + message + real names + 3 profile states + notes (from `admin_records`, community scope).
 7. **Decide:** **S** `decideApplication(id, 'approved' | 'later' | 'rejected')`. Q5 default: show Approve only; the others stay available in the database.
 8. **On approve:** `members.state = 'approved'`, the application's real names are copied into `admin_records` (community scope), the "Approve" button disappears, and an **approval email** is sent (§9). The member now has full access.
 
@@ -593,15 +594,15 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 ### 6.5 Profiles
 
 - **View (A3/B1):** one RPC `profile(community, user)` returns the built-ins, the answers, and the field definitions that apply to that Status. One trip.
-- **Status at the top:** changing it shows or hides fields (D4). Couples (`people = 2`) see per-person fields twice, and a second birth date.
+- **Status at the top:** decides which fields show (D4). A new profile picks it once ("Set status"); after that it is shown locked, as text. `save_profile` refuses a status change when one is set; only the community admin changes it (A21), and the profile then shows that Status's fields. Couples (`people = 2`) see per-person fields twice, and a second birth date.
 - **Username:** shown, not editable (D19).
 - **Edit:** **B** `save_profile(community, base, values)` checks each answer against its field type and choices, writes everything in one transaction, then recomputes `score`.
 - **Photos:**
-  - the icon next to Back: tap to take a photo (Real) or upload;
+  - the icon next to Back: tap to take a photo (Taken in app) or upload;
   - 3 main photos;
-  - each shows Real + date when it is Real.
+  - each shows Taken in app + date when it was taken in the app.
 - **Profile visible in search Y/N:** a toggle on your own profile.
-- **Linked profiles (A32):** add up to 3 (search, +, 🗑). Linked profiles are shown first. The other person accepts by default (Q7).
+- **Linked profiles (A32):** add up to 3 (search, +, 🗑). Linked profiles are shown first; people who linked to you come next, so you can link back. A link is confirmed when the other person links back to you: until then it is dimmed on your own profile and not shown to anyone else, not even dimmed (D23).
 - **Latest login, Profile score:** shown. Reputation is not shown for now.
 - **Bottom bar:** DM (others only), Albums · + (admins: "Add to groups") · Ads. The ⭐ in the header opens your private notes about this person.
 
@@ -609,7 +610,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 
 - **List (A5):** title "Profiles", a swipe icon, a filter icon. Compact cards:
   - Username · Age · Status
-  - District + Place, with the main photo thumbnail + Real
+  - District + Place, with the main photo thumbnail + Taken in app
   - Profile score · My stars
   - Looking for
 - **Filter (G1), applied on "Show profiles":**
@@ -644,7 +645,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 
 ### 6.8 Chat thread (A4)
 
-- **Load:** `list_messages(chat, before_seq, limit 30)` returns the newest 30, with author name **and Status** ("Kitty553 (woman)"), date + time, image thumbnail + Real, reply snippet, reaction counts and my reaction. Older messages load on scroll up (keyset).
+- **Load:** `list_messages(chat, before_seq, limit 30)` returns the newest 30, with author name **and Status** ("Kitty553 (woman)"), date + time, image thumbnail + Taken in app, reply snippet, reaction counts and my reaction. Older messages load on scroll up (keyset).
 - **Send:** **B** `send_message`:
   1. checks membership, blocks and the group's `allow_posting`;
   2. takes the next `seq` by updating `chats.last_seq` (a row lock keeps numbers in order per chat);
@@ -705,7 +706,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 ### 6.14 Albums
 
 - **List:** your albums (name, cover thumbnail, or a folder icon if locked).
-- **Inside (owner):** **+** menu with Camera (Real) / Upload image / Delete album, and 🗑 on each photo.
+- **Inside (owner):** **+** menu with Camera (Taken in app) / Upload image / Delete album, and 🗑 on each photo.
 - **Password:**
   - **S** `setAlbumPassword` stores a bcrypt hash;
   - **S** `openAlbum(album, password)` checks it on the server and returns signed URLs valid for 1 hour;
@@ -713,7 +714,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 
 ### 6.15 Ads
 
-- **Ads tab (A6):** `search_ads(community, filter, after, limit 30)`. Cards show the ad picture thumbnail + Real, the headline (2 lines), the author's name, age, status, district and place, and the date.
+- **Ads tab (A6):** `search_ads(community, filter, after, limit 30)`. Cards show the ad picture thumbnail + Taken in app, the headline (2 lines), the author's name, age, status, district and place, and the date.
 - **Filter (D1), applied on "Show ads":**
   - Text
   - Status (multi)
@@ -727,7 +728,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
   More "general" fields later. The same filter engine as profiles, applied to the ad's author plus the ad's own fields. Saved in `members.ad_filter`.
 - **Publish / edit (D2):**
   - Looking for (multi), Headline, Text, District, Place
-  - Image from Camera (Real), Upload, or **From profile/album** (copied)
+  - Image from Camera (Taken in app), Upload, or **From profile/album** (copied)
   - Age, Status and Published are shown from the profile, not editable
   - Publish, Delete
 - **View someone's ad (D3):** Profile, DM.
@@ -800,7 +801,7 @@ Revisit only above about 10,000 people online at once, or with users spread acro
 
 | Later feature | What is already in place |
 |---|---|
-| **Translations / language choice** | Screen text is in one dictionary (`src/lib/i18n/en.ts`); add `sv.ts`. Admin-typed labels are `jsonb {"en": …}`, so add `"sv"`. `members.locale` picks the language. |
+| **Translations / language choice** | Screen text is in one dictionary (`src/lib/i18n/en.ts`); add `sv.ts`. Admin-typed labels are `jsonb {"en": …}`, so add `"sv"`. `members.locale` picks the language. Plan: `docs/adr/0001-translations.md`. |
 | **Km distance** | Add a coordinates column + PostGIS index. District/Place keep working. |
 | **Reputation** | Add `members.reputation` + a ratings table. "Reputation min" plugs into the same filter engine. |
 | **Co-admins** | Drop the `chat_one_admin` unique index. Roles already sit on `chat_members`. |
@@ -853,7 +854,7 @@ Each slice ships: migration + indexes + RLS, database tests (pgTAP via `supabase
 | 5 | Chats core | Chats, members, messages, chat list, thread paging, send, mark-read, Realtime |
 | 6 | DMs + blocking | `open_dm`, leave options, blocks everywhere, admin "Add to groups" from a DM |
 | 7 | Groups | Create/edit with all settings, info posts, group info, group applications (A22/A23/A24), No-reply DM |
-| 8 | Post actions + images | Reactions (one per person), comments, edit/delete rules, chat images, Real flag |
+| 8 | Post actions + images | Reactions (one per person), comments, edit/delete rules, chat images, Taken in app flag |
 | 9 | Search | `search_profiles`, filter, swipe (A27), `find_new` |
 | 10 | Notes + stars | `notes`, DM ⭐ and profile ⭐ share one record, stars filter |
 | 11 | Member lists + statistics | A30/A31 editable rows, door list, A28/A33 |
@@ -876,7 +877,7 @@ The app stays usable after every slice.
 | Q4 | "Visible in search: No" also hides from "Find new user"? | Yes, hidden everywhere in search | One rule in `find_new` |
 | Q5 | Approve only, or Approve / Later / No? | UI shows Approve; database supports all | Show more buttons |
 | Q6 | Who sees real names? | Admins only | One policy |
-| Q7 | Linked profile must accept? | Yes (pending → accepted) | Start rows as accepted |
+| Q7 | Linked profile must accept? | **Answered:** yes, by linking back (both link each other) | — |
 | Q8 | Same email in two communities = same password? | Yes | — (Supabase allows one password per email) |
 
 Also to pick before launch (technical, not for Peter): the EU email provider, and `MAX_IMAGE_BYTES` (default 5 MB).
@@ -892,4 +893,4 @@ These rule files were updated to match Peter's decisions:
   - The "Undecided" list → account scope, Ads tab, 2 vs 3 tabs and path vs subdomain are now decided (D15, D17, path).
 - `.cursor/rules/00-application-context.mdc`: the same two changes.
 - `.cursor/rules/performance.mdc`: the per-user Realtime channel for the chat list → refresh on focus instead (§8).
-- `.cursor/rules/ui-context.mdc`: "Verified" → "Real".
+- `.cursor/rules/ui-context.mdc`: "Verified" → "Real" → "Taken in app" (Oct 2026).

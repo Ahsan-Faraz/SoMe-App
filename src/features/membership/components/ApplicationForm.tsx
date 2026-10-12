@@ -7,6 +7,7 @@ import { buttonClass } from '@/components/ui/Button'
 import { GrowingTextarea } from '@/components/ui/GrowingTextarea'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
 import { todayLabel } from '@/features/albums/storage'
+import { useStatus } from '@/features/profiles/status'
 import { t } from '@/lib/i18n'
 import { imageDataUrl } from '@/lib/image'
 import { applicationKey, readApplication, saveApplication } from '../storage'
@@ -41,6 +42,7 @@ export function ApplicationForm({
   const [applied, setApplied] = useState(false)
   const [error, setError] = useState('')
   const { requires } = scope
+  const { status } = useStatus(community, applicant.userId, applicant.status)
 
   useEffect(() => setApplied(readApplication(key) !== null), [key])
 
@@ -53,6 +55,7 @@ export function ApplicationForm({
     }
     saveApplication(key, {
       ...applicant,
+      status,
       realNames: names.map((name) => name.trim()),
       state: Array.from({ length: STATE_FIELDS }, () => ''),
       notes: '',
@@ -96,7 +99,7 @@ export function ApplicationForm({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={image.src} alt={t.apply.image} className="aspect-video w-full rounded-2xl object-cover" />
                   <figcaption className="mt-1 flex items-center justify-between gap-2 text-[13px]">
-                    <span className={image.verified ? 'font-semibold text-accent' : 'text-muted'}>{image.verified ? `✓ ${t.chats.verified} · ${image.date}` : image.date}</span>
+                    <span className={image.verified ? 'font-semibold text-accent' : 'text-muted'}>{image.verified ? `✓ ${t.chats.takenInApp} · ${image.date}` : image.date}</span>
                     {applied ? null : (
                       <button type="button" onClick={() => setImage(null)} className="rounded-lg px-2 py-1 font-semibold text-accent hover:bg-hover">
                         {t.apply.change}

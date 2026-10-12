@@ -1,19 +1,20 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ChipSelect, FilterSection, NumberInput, NumberRange, filterInput } from '@/components/ui/FilterFields'
 import { Icon } from '@/components/ui/Icon'
 import { MultiSelect } from '@/components/ui/MultiSelect'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
+import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
 import { emptyFilter, readFilter, writeFilter, type ProfileFilter } from '../filter'
-import { DISTRICTS, MAX_SCORE, MAX_STARS, STATUSES } from '../options'
+import { MAX_SCORE, MAX_STARS } from '../options'
 
-export function ProfileFilterForm({ community, returnHref }: { community: string; returnHref: string }) {
+// statuses / districts: the community's active lists (profile builder).
+export function ProfileFilterForm({ community, returnHref, statuses, districts }: { community: string; returnHref: string; statuses: readonly string[]; districts: readonly string[] }) {
   const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
-  const router = useRouter()
+  const goBack = useGoBack(community)
   const set = <K extends keyof ProfileFilter>(name: K) => (value: ProfileFilter[K]) => setFilter((current) => ({ ...current, [name]: value }))
 
   // G1: edit freely here; the search runs once on Show (one query, not one per keystroke). Saved between sessions.
@@ -25,7 +26,7 @@ export function ProfileFilterForm({ community, returnHref }: { community: string
       onSubmit={(event) => {
         event.preventDefault()
         writeFilter(community, filter)
-        router.push(returnHref)
+        goBack(returnHref)
       }}
     >
       <div className={scrollArea}>
@@ -44,10 +45,10 @@ export function ProfileFilterForm({ community, returnHref }: { community: string
             </span>
           </FilterSection>
           <FilterSection label={t.profiles.status}>
-            <ChipSelect options={STATUSES} value={filter.picked} onChange={set('picked')} />
+            <ChipSelect options={statuses} value={filter.picked} onChange={set('picked')} />
           </FilterSection>
           <FilterSection label={t.profiles.lookingFor}>
-            <ChipSelect options={STATUSES} value={filter.lookingFor} onChange={set('lookingFor')} />
+            <ChipSelect options={statuses} value={filter.lookingFor} onChange={set('lookingFor')} />
           </FilterSection>
           <FilterSection label={t.profiles.age}>
             <NumberRange
@@ -62,15 +63,15 @@ export function ProfileFilterForm({ community, returnHref }: { community: string
             />
           </FilterSection>
           <FilterSection label={t.profiles.district}>
-            <MultiSelect label={t.profiles.district} options={DISTRICTS} value={filter.districts} onChange={set('districts')} placeholder={t.profiles.choose} showLabel={false} />
+            <MultiSelect label={t.profiles.district} options={districts} value={filter.districts} onChange={set('districts')} placeholder={t.profiles.choose} showLabel={false} />
           </FilterSection>
           <FilterSection label={t.profiles.place}>
             <input value={filter.place} onChange={(event) => set('place')(event.target.value)} aria-label={t.profiles.place} className={filterInput} />
           </FilterSection>
-          <FilterSection label={t.profiles.scoreMin}>
-            <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin} max={MAX_SCORE} />
+          <FilterSection label={t.profiles.scoreMin(MAX_SCORE)}>
+            <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin(MAX_SCORE)} max={MAX_SCORE} />
           </FilterSection>
-          <FilterSection label={t.profiles.stars}>
+          <FilterSection label={t.profiles.starsRange(MAX_STARS)}>
             <NumberRange
               label={t.profiles.stars}
               from={filter.minStars}

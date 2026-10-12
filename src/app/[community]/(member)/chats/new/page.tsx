@@ -17,7 +17,7 @@ export default function NewChatPage(props: PageProps<'/[community]/chats/new'>) 
 
 async function NewChatContent({ params }: PageProps<'/[community]/chats/new'>) {
   const { community } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 

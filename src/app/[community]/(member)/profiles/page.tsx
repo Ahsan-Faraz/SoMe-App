@@ -16,7 +16,7 @@ export default function ProfilesPage(props: PageProps<'/[community]/profiles'>) 
 
 async function ProfilesContent({ params }: PageProps<'/[community]/profiles'>) {
   const { community } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
@@ -24,7 +24,7 @@ async function ProfilesContent({ params }: PageProps<'/[community]/profiles'>) {
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <main className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <ProfileList community={community} viewerId={viewer.userId} profiles={profiles} />
       </main>
       <BottomNav community={community} active="profiles" />

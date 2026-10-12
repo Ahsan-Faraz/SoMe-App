@@ -4,7 +4,7 @@ export type MainPhoto = { src: string; verified: boolean; date: string }
 export type ProfileCard = {
   id: string
   username: string
-  status: string
+  status: string // '' = not chosen yet (a new profile)
   age: number
   district: string
   place: string
@@ -22,6 +22,9 @@ export type LinkedProfile = { id: string; username: string }
 export type Profile = ProfileCard & {
   about: string
   lastLogin: string
+  // Own profile: every link you made. Someone else's: only confirmed links (both have linked).
   linked: LinkedProfile[]
+  // Own profile only: who has linked to you. Your link to them is confirmed when they are in here.
+  linkedYou: string[]
   own: boolean
 }

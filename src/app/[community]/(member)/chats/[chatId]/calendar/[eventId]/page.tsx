@@ -20,7 +20,7 @@ export default function EventPage(props: PageProps<'/[community]/chats/[chatId]/
 
 async function EventContent({ params, searchParams }: PageProps<'/[community]/chats/[chatId]/calendar/[eventId]'>) {
   const { community, chatId, eventId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role !== 'admin') redirect(`/${community}/chats/${chatId}/calendar`)
 
@@ -36,7 +36,7 @@ async function EventContent({ params, searchParams }: PageProps<'/[community]/ch
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}/calendar`} />
       <p className="px-4 pt-5 text-center text-[15px] font-semibold text-muted sm:px-8">{t.calendar.title}</p>
-      <EventForm storageKey={`some:calendar:${community}:${chat.id}`} seed={events} eventId={creating ? null : eventId} date={date || today} />
+      <EventForm community={community} backHref={`/${community}/chats/${chat.id}/calendar`} storageKey={`some:calendar:${community}:${chat.id}`} seed={events} eventId={creating ? null : eventId} date={date || today} />
     </div>
   )
 }

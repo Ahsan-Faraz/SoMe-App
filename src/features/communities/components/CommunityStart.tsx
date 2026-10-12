@@ -18,6 +18,7 @@ export function CommunityStart({ community }: { community: Community }) {
   const [firstParagraph, ...rest] = community.about
   const login = `/${community.slug}/login`
   const join = `/${community.slug}/join`
+  const privacy = `/${community.slug}/privacy`
 
   return (
     <main className="relative min-h-app w-full bg-canvas px-5 pt-8 pb-16 sm:px-8 min-[52rem]:pt-0 min-[52rem]:pb-0 lg:px-16 xl:px-24">
@@ -41,7 +42,7 @@ export function CommunityStart({ community }: { community: Community }) {
       <section className="relative mx-auto flex max-w-7xl flex-col min-[52rem]:h-[min(40rem,calc(100dvh-7rem))] min-[52rem]:min-h-[28rem] min-[52rem]:justify-end min-[52rem]:overflow-hidden min-[52rem]:rounded-3xl min-[52rem]:p-12 lg:p-16">
         <Image
           src={community.heroSrc}
-          alt={`${community.name} riders by the water`}
+          alt={t.start.heroAlt(community.name)}
           width={1280}
           height={720}
           priority
@@ -76,7 +77,7 @@ export function CommunityStart({ community }: { community: Community }) {
         {firstParagraph ? <p>{firstParagraph}</p> : null}
         <Image
           src={community.aboutSrc}
-          alt="Two riders on a gravel path outside Stockholm"
+          alt={t.start.aboutAlt}
           width={1280}
           height={720}
           sizes="100vw"
@@ -85,6 +86,11 @@ export function CommunityStart({ community }: { community: Community }) {
         {rest.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
+        <p className="border-t border-line pt-5 text-center text-[14px]">
+          <Link href={privacy} className="font-semibold text-accent hover:underline">
+            {t.start.privacy}
+          </Link>
+        </p>
       </section>
 
       <div className="mx-auto hidden max-w-7xl min-[52rem]:block">
@@ -115,7 +121,7 @@ export function CommunityStart({ community }: { community: Community }) {
           <div className="relative min-w-0">
             <Image
               src={community.aboutSrc}
-              alt="Two riders on a gravel path outside Stockholm"
+              alt={t.start.aboutAlt}
               width={1280}
               height={720}
               sizes="45vw"
@@ -168,7 +174,12 @@ export function CommunityStart({ community }: { community: Community }) {
             <Image src="/icons/logo.png" alt="" width={24} height={24} className="size-6" />
             {community.name}
           </span>
-          <span>{t.start.footer}</span>
+          <span className="flex items-center gap-6">
+            <Link href={privacy} className="font-semibold text-accent hover:underline">
+              {t.start.privacy}
+            </Link>
+            {t.start.footer}
+          </span>
         </footer>
       </div>
     </main>

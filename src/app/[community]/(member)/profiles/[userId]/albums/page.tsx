@@ -22,7 +22,7 @@ async function AlbumsContent({ params, searchParams }: PageProps<'/[community]/p
   const { community, userId } = await params
   const requested = (await searchParams).add
   const adding = requested === '1' || (Array.isArray(requested) && requested[0] === '1')
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
 
   const [profile, albums] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), listAlbums(userId)])

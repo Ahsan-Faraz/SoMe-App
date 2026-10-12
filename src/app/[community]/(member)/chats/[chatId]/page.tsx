@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { ChatThread } from '@/features/chats/components/ChatThread'
-import { dmPartnerId, getChat } from '@/features/chats/queries'
+import { dmPartnerId, getAdminChatId, getChat } from '@/features/chats/queries'
 import { listAlbums } from '@/features/albums/queries'
 import { getGroup, getInfoPost } from '@/features/groups/queries'
 import { t } from '@/lib/i18n'
@@ -23,8 +23,10 @@ export default function ChatPage(props: PageProps<'/[community]/chats/[chatId]'>
 
 async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>) {
   const { community, chatId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
+  // An applicant may only open their conversation with the admin ("Chat with admin" on A25).
+  if (viewer.role === 'pending' && chatId !== (await getAdminChatId(community, viewer.userId))) redirect(`/${community}/pending`)
 
   const now = Date.now()
   const [chat, group, info, albums] = await Promise.all([getChat(chatId, now), getGroup(chatId), getInfoPost(chatId, 1), listAlbums(viewer.userId)])

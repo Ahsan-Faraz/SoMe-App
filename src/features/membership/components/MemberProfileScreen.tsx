@@ -3,9 +3,12 @@ import { Screen } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import type { Viewer } from '@/features/auth/types'
 import { chatIdForUser } from '@/features/chats/queries'
+import { getCommunity } from '@/features/communities/queries'
+import { getProfileSchema } from '@/features/fields/queries'
 import { ProfileActions } from '@/features/profiles/components/ProfileActions'
 import { ProfileView } from '@/features/profiles/components/ProfileView'
 import { getProfile } from '@/features/profiles/queries'
+import { activeLabels } from '@/features/fields/schema'
 import { getMemberRecord } from '../queries'
 import type { Scope } from '../types'
 import { ApproveButton, MemberPanel } from './MemberPanel'
@@ -28,7 +31,13 @@ export async function MemberProfileScreen({
   base: string // this screen's path without the user id
   backHref: string
 }) {
-  const [profile, record] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), getMemberRecord(scope, userId)])
+  const info = await getCommunity(community)
+  if (!info) notFound()
+  const [profile, record, schema] = await Promise.all([
+    getProfile(userId, viewer.userId, viewer.username),
+    getMemberRecord(scope, userId),
+    getProfileSchema(info.id),
+  ])
   if (!profile) notFound()
 
   const scopeRef = { kind: scope.kind, id: scope.id, stateLabels: scope.stateLabels }
@@ -50,9 +59,10 @@ export async function MemberProfileScreen({
       <ProfileView
         community={community}
         profile={profile}
+        schema={schema}
         section={null}
         linkBase={base}
-        admin={record ? <MemberPanel community={community} scope={scopeRef} seed={record} /> : null}
+        admin={record ? <MemberPanel community={community} scope={scopeRef} seed={record} statuses={activeLabels(schema.statuses)} /> : null}
       />
     </Screen>
   )

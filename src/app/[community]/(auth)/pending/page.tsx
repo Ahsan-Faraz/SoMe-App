@@ -21,14 +21,14 @@ export default function PendingPage(props: PageProps<'/[community]/pending'>) {
 
 async function PendingContent({ params }: PageProps<'/[community]/pending'>) {
   const { community } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role !== 'pending') redirect(`/${community}/chats`)
 
   const [scope, profile, adminChatId] = await Promise.all([
     getScope('community', community),
     getProfile(viewer.userId, viewer.userId, viewer.username),
-    getAdminChatId(community),
+    getAdminChatId(community, viewer.userId),
   ])
   if (!scope || !profile) notFound()
 

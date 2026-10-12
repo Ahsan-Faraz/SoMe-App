@@ -24,7 +24,7 @@ export default function JoinGroupPage(props: PageProps<'/[community]/groups/[gro
 
 async function JoinGroupContent({ params }: PageProps<'/[community]/groups/[groupId]/join'>) {
   const { community, groupId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 

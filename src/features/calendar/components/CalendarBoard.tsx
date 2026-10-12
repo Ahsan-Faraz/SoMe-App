@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { todayKey } from '@/lib/format'
-import { t } from '@/lib/i18n'
+import { dateLocale, locale, t } from '@/lib/i18n'
 import { loadEvents, saveEvents, subscribe, type CalEvent } from '../storage'
 
-const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long' })
-const dayHeading = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+const monthName = new Intl.DateTimeFormat(dateLocale[locale], { month: 'long' })
+const dayHeading = new Intl.DateTimeFormat(dateLocale[locale], { day: 'numeric', month: 'long', year: 'numeric' })
 
 function iso(year: number, month: number, day: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`

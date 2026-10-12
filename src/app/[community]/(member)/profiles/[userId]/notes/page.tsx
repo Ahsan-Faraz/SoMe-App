@@ -18,7 +18,7 @@ export default function ProfileNotesPage(props: PageProps<'/[community]/profiles
 
 async function ProfileNotesContent({ params, searchParams }: PageProps<'/[community]/profiles/[userId]/notes'>) {
   const { community, userId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
 
   const profile = await getProfile(userId, viewer.userId, viewer.username)

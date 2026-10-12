@@ -1,49 +1,28 @@
+import type { FieldDef } from '@/features/fields/types'
 import { t } from '@/lib/i18n'
 
-// Dynamic profile fields: each status (profile type) has its own set. Later this comes from the
-// community's field settings table; the renderer only depends on FieldDef.
-export type FieldDef =
-  | { id: string; label: string; type: 'text' | 'textarea' | 'checkbox' | 'number' }
-  | { id: string; label: string; type: 'select' | 'multiselect'; options: readonly string[] }
-
+// Profile answers. The fields come from the community's profile builder (features/fields); the
+// answers are drafts on this device until profile_values exists (step 3).
+// Text, number and date are strings, yes/no is a boolean, pick one/several are choice ids.
 export type FieldValue = string | boolean | string[]
 
-const bikeType = { id: 'bikeType', label: t.profiles.select, type: 'select', options: ['Gravel', 'Road', 'MTB'] } as const
-const days = { id: 'days', label: t.profiles.multi, type: 'multiselect', options: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] } as const
-const area = { id: 'area', label: t.profiles.area, type: 'textarea' } as const
-const headline = { id: 'headline', label: t.profiles.headline, type: 'text' } as const
+// Couples answer per-person fields twice: person 1 under the field id, person 2 under `${id}:2`.
+export const valueKey = (fieldId: string, person: 1 | 2): string => (person === 1 ? fieldId : `${fieldId}:2`)
 
-const single: FieldDef[] = [
-  { id: 'about', label: t.profiles.text, type: 'textarea' },
-  { id: 'bike', label: t.profiles.checkbox, type: 'checkbox' },
-  bikeType,
-  { id: 'years', label: t.profiles.number, type: 'number' },
-  days,
-  area,
-  headline,
-]
-
-const couple: FieldDef[] = [
-  { id: 'about', label: t.profiles.aboutUs, type: 'textarea' },
-  { id: 'partnerAge', label: t.profiles.partnerAge, type: 'number' },
-  { id: 'together', label: t.profiles.rideTogether, type: 'checkbox' },
-  bikeType,
-  days,
-  area,
-  headline,
-]
-
-export function fieldsFor(status: string): FieldDef[] {
-  return status.startsWith('Couple') ? couple : single
+// Mock answers until profile_values exists: only the mock profiles' about and headline texts.
+export function seedValues(fields: readonly FieldDef[], about: string, headline: string): Record<string, FieldValue> {
+  const values: Record<string, FieldValue> = {}
+  for (const field of fields) {
+    if (field.key === 'about' || field.key === 'about_us') values[field.id] = about
+    if (field.key === 'headline') values[field.id] = headline
+  }
+  return values
 }
 
-// Mock answers until profile_field_values exists.
-export function seedValues(about: string, headline: string): Record<string, FieldValue> {
-  return { about, headline, bike: true, bikeType: 'Gravel', years: '4', days: ['Tue'], area: 'South of the city', partnerAge: '', together: true }
-}
-
-export function displayValue(value: FieldValue | undefined): string {
-  if (Array.isArray(value)) return value.join(', ') || '—'
+export function displayValue(field: FieldDef, value: FieldValue | undefined): string {
+  const choice = (id: string) => field.choices.find((item) => item.id === id)?.label ?? ''
+  if (Array.isArray(value)) return value.map(choice).filter(Boolean).join(', ') || '—'
   if (typeof value === 'boolean') return value ? t.profiles.yes : '—'
+  if (field.kind === 'pick_one') return (value && choice(value)) || '—'
   return value?.trim() || '—'
 }

@@ -1,13 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ChipSelect, FilterSection, NumberInput, NumberRange, filterInput } from '@/components/ui/FilterFields'
 import { Icon } from '@/components/ui/Icon'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
-import { DISTRICTS, MAX_SCORE, MAX_STARS, STATUSES } from '@/features/profiles/options'
+import { MAX_SCORE, MAX_STARS } from '@/features/profiles/options'
+import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
 import { adFilterCount, readAdFilter, watchAdFilter, writeAdFilter } from '../storage'
 import { emptyAdFilter, type AdFilter } from '../types'
@@ -25,9 +25,10 @@ export function AdsFilterButton({ community }: { community: string }) {
   )
 }
 
-export function AdFilterForm({ community }: { community: string }) {
+// statuses / districts: the community's active lists (profile builder).
+export function AdFilterForm({ community, statuses, districts }: { community: string; statuses: readonly string[]; districts: readonly string[] }) {
   const [filter, setFilter] = useState<AdFilter>(emptyAdFilter)
-  const router = useRouter()
+  const goBack = useGoBack(community)
   const set = <K extends keyof AdFilter>(name: K) => (value: AdFilter[K]) => setFilter((current) => ({ ...current, [name]: value }))
 
   // D1: edit freely here; the search runs once on Show. Saved between sessions.
@@ -39,7 +40,7 @@ export function AdFilterForm({ community }: { community: string }) {
       onSubmit={(event) => {
         event.preventDefault()
         writeAdFilter(community, filter)
-        router.push(`/${community}/ads`)
+        goBack(`/${community}/ads`)
       }}
     >
       <div className={scrollArea}>
@@ -48,7 +49,7 @@ export function AdFilterForm({ community }: { community: string }) {
             <input value={filter.text} onChange={(event) => set('text')(event.target.value)} aria-label={t.profiles.substring} className={filterInput} />
           </FilterSection>
           <FilterSection label={t.profiles.status}>
-            <ChipSelect options={STATUSES} value={filter.statuses} onChange={set('statuses')} />
+            <ChipSelect options={statuses} value={filter.statuses} onChange={set('statuses')} />
           </FilterSection>
           <FilterSection label={t.profiles.age}>
             <NumberRange
@@ -63,12 +64,12 @@ export function AdFilterForm({ community }: { community: string }) {
             />
           </FilterSection>
           <FilterSection label={t.ads.lookingFor}>
-            <ChipSelect options={STATUSES} value={filter.lookingFor} onChange={set('lookingFor')} />
+            <ChipSelect options={statuses} value={filter.lookingFor} onChange={set('lookingFor')} />
           </FilterSection>
           <FilterSection label={t.profiles.district}>
             <select value={filter.district} onChange={(event) => set('district')(event.target.value)} aria-label={t.profiles.district} className={filterInput}>
               <option value=""> </option>
-              {DISTRICTS.map((item) => (
+              {districts.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
@@ -76,10 +77,10 @@ export function AdFilterForm({ community }: { community: string }) {
           <FilterSection label={t.profiles.place}>
             <input value={filter.place} onChange={(event) => set('place')(event.target.value)} aria-label={t.profiles.place} className={filterInput} />
           </FilterSection>
-          <FilterSection label={t.profiles.scoreMin}>
-            <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin} max={MAX_SCORE} />
+          <FilterSection label={t.profiles.scoreMin(MAX_SCORE)}>
+            <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin(MAX_SCORE)} max={MAX_SCORE} />
           </FilterSection>
-          <FilterSection label={t.profiles.stars}>
+          <FilterSection label={t.profiles.starsRange(MAX_STARS)}>
             <NumberRange
               label={t.profiles.stars}
               from={filter.minStars}

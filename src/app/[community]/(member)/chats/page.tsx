@@ -20,7 +20,7 @@ export default function ChatsPage(props: PageProps<'/[community]/chats'>) {
 
 async function ChatsContent({ params }: PageProps<'/[community]/chats'>) {
   const { community } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 

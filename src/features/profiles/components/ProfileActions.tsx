@@ -3,10 +3,12 @@ import type { ReactNode } from 'react'
 import { buttonClass } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { bottomBar } from '@/components/ui/Screen'
+import { dmHref } from '@/features/chats/links'
 import { t } from '@/lib/i18n'
 import type { Profile } from '../types'
 
 // A3/B1 bottom bar — fixed, not scrolling: DM (not on your own profile), then Albums · + · Ads.
+// DM opens the existing DM, or starts one (so an admin can always write to an applicant).
 // "+" = add this person to groups, admins only.
 export function ProfileActions({
   community,
@@ -27,8 +29,8 @@ export function ProfileActions({
     <nav aria-label={profile.username} className={bottomBar}>
       <div className="mx-auto grid max-w-xl gap-2">
         {top}
-        {profile.own || !chatId ? null : (
-          <Link href={`/${community}/chats/${chatId}`} className={buttonClass('primary')}>
+        {profile.own ? null : (
+          <Link href={dmHref(community, profile.id, chatId)} className={buttonClass('primary')}>
             <Icon name="chatSolid" className="mr-2 size-5" />
             {t.profiles.dm}
           </Link>

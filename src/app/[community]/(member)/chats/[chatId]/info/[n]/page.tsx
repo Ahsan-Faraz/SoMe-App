@@ -17,7 +17,7 @@ export default function InfoPostPage(props: PageProps<'/[community]/chats/[chatI
 
 async function InfoPostContent({ params }: PageProps<'/[community]/chats/[chatId]/info/[n]'>) {
   const { community, chatId, n } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 

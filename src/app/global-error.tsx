@@ -1,13 +1,15 @@
 'use client'
 
+import { htmlLang, locale, t } from '@/lib/i18n'
+
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <html lang="en">
+    <html lang={htmlLang[locale]}>
       <body>
         <main style={{ padding: 24, textAlign: 'center' }}>
-          <p>Something went wrong.</p>
+          <p>{t.common.error}</p>
           <button type="button" onClick={reset}>
-            Try again
+            {t.common.tryAgain}
           </button>
         </main>
       </body>

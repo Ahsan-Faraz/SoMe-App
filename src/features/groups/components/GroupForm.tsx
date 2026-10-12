@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useGoBack } from '@/lib/history'
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { BigLink } from '@/components/ui/BigLink'
@@ -53,6 +54,7 @@ const heading = 'col-span-full mt-2 text-[13px] font-bold tracking-wide text-mut
 
 export function GroupForm({ community, group, infos: seedInfos }: { community: string; group: GroupValues | null; infos: string[] }) {
   const router = useRouter()
+  const goBack = useGoBack(community)
   const editing = group !== null
   const [values, setValues] = useState(group ?? blank)
   const [infos, setInfos] = useState(() => Array.from({ length: 6 }, (_, i) => seedInfos[i] ?? ''))
@@ -64,7 +66,7 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
       className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4 px-4 py-4 pb-10 sm:px-8 min-[64rem]:px-12"
       onSubmit={(event) => {
         event.preventDefault()
-        router.push(editing ? `/${community}/chats/${group.id}/info` : `/${community}/chats`)
+        goBack(editing ? `/${community}/chats/${group.id}/info` : `/${community}/chats`)
       }}
     >
       <label className={`col-span-full ${label}`}>
@@ -150,7 +152,7 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
       <div className="col-span-full mt-2 grid max-w-sm gap-2">
         <Button type="submit">{editing ? t.groups.update : t.groups.save}</Button>
         {editing ? (
-          <Button variant="ghost" className="text-danger!" onClick={() => router.push(`/${community}/chats`)}>
+          <Button variant="ghost" className="text-danger!" onClick={() => router.replace(`/${community}/chats`)}>
             {t.groups.delete}
           </Button>
         ) : null}

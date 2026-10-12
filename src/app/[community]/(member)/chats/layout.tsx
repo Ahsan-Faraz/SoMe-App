@@ -10,16 +10,17 @@ export default function ChatsLayout({ children, params }: LayoutProps<'/[communi
       <Suspense fallback={null}>
         <DesktopChats params={params} />
       </Suspense>
-      <div className="min-h-app min-w-0 split:h-full split:overflow-y-auto">{children}</div>
+      <div className="relative min-h-app min-w-0 split:h-full split:overflow-y-auto">{children}</div>
     </div>
   )
 }
 
 async function DesktopChats({ params }: { params: LayoutProps<'/[community]/chats'>['params'] }) {
   const { community } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
-  if (viewer.role === 'pending') redirect(`/${community}/pending`)
+  // Applicants have no chat list; they can only open their chat with the admin (see the chat page).
+  if (viewer.role === 'pending') return null
 
   const chats = await listChats(community)
 

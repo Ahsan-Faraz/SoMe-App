@@ -12,7 +12,7 @@ Few icons. Post + react are enough. Extra actions = long-press, full-width sheet
 - Bottom nav: Chats / Profiles / Ads (decided). Do not add a fourth tab.
 - Unread rows first, then by last activity. Badge on the row.
 - One Post row: avatar, name, date+time, body, reactions. Comments = dim snippet.
-- Fields and G1/D1 filters come from schema types. The camera label is **"Real"** (never "Verified") = in-app camera + date only.
+- Fields and G1/D1 filters come from schema types. The camera label is **"Taken in app"** (never "Verified" or "Real") = in-app camera + date only.
 - Admin actions render only if the role is true — no disabled clutter.
 - Mount composer and long-press sheet on demand. Filters apply on "Show", not live, and are remembered on the account.
 - Back arrow = go back to the previous screen, not a fixed screen.

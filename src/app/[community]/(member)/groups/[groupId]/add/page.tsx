@@ -17,7 +17,7 @@ export default function AddMembersPage(props: PageProps<'/[community]/groups/[gr
 
 async function AddMembersContent({ params }: PageProps<'/[community]/groups/[groupId]/add'>) {
   const { community, groupId } = await params
-  const viewer = await getViewer()
+  const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role !== 'admin') redirect(`/${community}/chats`)
 

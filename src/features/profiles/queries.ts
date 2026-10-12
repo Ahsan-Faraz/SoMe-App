@@ -1,11 +1,12 @@
 import 'server-only'
-import { mockApplicants, mockProfiles } from '@/mocks/data'
+import { mockApplicants, mockLinksToViewer, mockProfiles } from '@/mocks/data'
 import type { BrowseProfile, LinkedProfile, Profile, ProfileCard } from './types'
 
 const PAGE_LIMIT = 50
 
+// Your own profile starts new: no status yet. You pick it once on your profile (then it is locked).
 const ownProfile = {
-  status: 'Man',
+  status: '',
   age: 32,
   district: 'Stockholm',
   place: 'Stockholm',
@@ -46,11 +47,18 @@ function linkedNames(ids: string[]): LinkedProfile[] {
   })
 }
 
+// What others see: only confirmed links, where the other profile has linked back.
+// An unconfirmed link is not shown at all, not even dimmed.
+function confirmedLinks(profile: (typeof everyone)[number]): LinkedProfile[] {
+  return linkedNames(profile.linked.filter((id) => everyone.find((item) => item.id === id)?.linked.includes(profile.id)))
+}
+
 export async function getProfile(userId: string, viewerId: string, viewerName: string): Promise<Profile | null> {
   if (userId === viewerId) {
-    return { id: viewerId, username: viewerName, ...ownProfile, linked: linkedNames(ownProfile.linked), own: true }
+    // Your own: every link you made (dimmed until confirmed) and who has linked to you.
+    return { id: viewerId, username: viewerName, ...ownProfile, linked: linkedNames(ownProfile.linked), linkedYou: mockLinksToViewer, own: true }
   }
   const profile = everyone.find((item) => item.id === userId)
   if (!profile) return null
-  return { ...toCard(profile), about: profile.about, lastLogin: profile.lastLogin, linked: linkedNames(profile.linked), own: false }
+  return { ...toCard(profile), about: profile.about, lastLogin: profile.lastLogin, linked: confirmedLinks(profile), linkedYou: [], own: false }
 }

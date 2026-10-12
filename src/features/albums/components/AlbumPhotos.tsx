@@ -43,7 +43,7 @@ export function AlbumPhotos({
             {/* A static path or a captured data URL. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photo.src} alt="" loading="lazy" decoding="async" className="aspect-square w-full rounded-xl object-cover" />
-            <span className="mt-1 block text-[13px] text-muted">{photo.verified ? `✓ ${t.chats.verified} · ${photo.date}` : photo.date}</span>
+            <span className="mt-1 block text-[13px] text-muted">{photo.verified ? `✓ ${t.chats.takenInApp} · ${photo.date}` : photo.date}</span>
           </button>
         </li>
       ))}

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ThemePicker } from '@/components/ThemePicker'
 import { LogoutButton } from '@/features/auth/components/LogoutButton'
+import type { ProfileSchema } from '@/features/fields/types'
 import { t } from '@/lib/i18n'
 import type { Profile } from '../types'
 import { LinkedProfiles } from './LinkedProfiles'
@@ -10,12 +11,14 @@ import { ProfileFields } from './ProfileFields'
 export function ProfileView({
   community,
   profile,
+  schema,
   section,
   linkBase = `/${community}/profiles`,
   admin,
 }: {
   community: string
   profile: Profile
+  schema: ProfileSchema // the community's Status list and fields
   section: string | null
   // Where linked profiles open: the normal profile, or the same admin view (A21/A22) for that person.
   linkBase?: string
@@ -25,8 +28,13 @@ export function ProfileView({
   return (
     <main className="mx-auto max-w-6xl px-5 pt-5 pb-12 sm:px-8 min-[52rem]:grid min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-x-14 min-[52rem]:px-12 min-[52rem]:pt-8">
       <ProfileFields
+        community={community}
+        userId={profile.id}
         storageKey={`some:profile:${community}:${profile.id}`}
         own={profile.own}
+        statuses={schema.statuses}
+        // Retired fields stay out of profiles; their answers are kept in the database.
+        fields={schema.fields.filter((field) => field.active)}
         status={profile.status}
         lookingFor={profile.lookingFor}
         about={profile.about}
@@ -43,7 +51,7 @@ export function ProfileView({
               <Row label={t.profiles.district} value={profile.district} />
               <Row label={t.profiles.place} value={profile.place} />
             </dl>
-            <LinkedProfiles community={community} userId={profile.id} own={profile.own} linked={profile.linked} linkBase={linkBase} />
+            <LinkedProfiles community={community} userId={profile.id} own={profile.own} linked={profile.linked} linkedYou={profile.linkedYou} linkBase={linkBase} />
           </>
         }
       />

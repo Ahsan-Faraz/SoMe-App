@@ -16,9 +16,14 @@ export const listChats = cache(async (_communitySlug: string): Promise<ChatListI
     .slice(0, PAGE_LIMIT)
 })
 
-// A25: the DM with the community admin, only once the admin has written first. Null until then.
-export async function getAdminChatId(_communitySlug: string): Promise<string | null> {
-  return (mockMessages['dm-admin'] ?? []).some((message) => !message.mine) ? 'dm-admin' : null
+// A25: the applicant's DM with the community admin, only once there is a conversation (the admin
+// has written to them). Null until then: no "Chat with admin" button at all, not even a dimmed one.
+// Mock: no applicant has one yet (step 4 reads the applicant's DM with the admin and its messages).
+const applicantAdminChats: Record<string, string> = {}
+
+export async function getAdminChatId(_communitySlug: string, applicantId: string): Promise<string | null> {
+  const chatId = applicantAdminChats[applicantId]
+  return chatId && (mockMessages[chatId] ?? []).some((message) => !message.mine) ? chatId : null
 }
 
 const userChats: Record<string, string> = {

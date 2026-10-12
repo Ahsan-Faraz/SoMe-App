@@ -138,7 +138,7 @@ export function AlbumView({ community, userId, albumId, own, seed }: { community
                 </button>
               ) : null}
             </span>
-            <p className="mt-1 text-[14px] text-muted">{image.verified ? `✓ ${t.chats.verified} · ${image.date}` : image.date}</p>
+            <p className="mt-1 text-[14px] text-muted">{image.verified ? `✓ ${t.chats.takenInApp} · ${image.date}` : image.date}</p>
           </li>
         ))}
       </ul>

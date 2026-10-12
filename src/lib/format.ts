@@ -1,9 +1,11 @@
+import { dateLocale, locale } from '@/lib/i18n'
+
 // Fixed zone so server and browser render the same text (no hydration mismatch).
 const TIME_ZONE = 'Europe/Stockholm'
 
-const timeFormat = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
-const weekdayFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: TIME_ZONE })
-const dateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
+const timeFormat = new Intl.DateTimeFormat(dateLocale[locale], { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+const weekdayFormat = new Intl.DateTimeFormat(dateLocale[locale], { weekday: 'short', timeZone: TIME_ZONE })
+const dateFormat = new Intl.DateTimeFormat(dateLocale[locale], { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
 const dayKeyFormat = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE })
 
 const DAY_MS = 86_400_000
@@ -15,9 +17,9 @@ export function formatChatTime(iso: string, now: number): string {
   return dateFormat.format(date)
 }
 
-const stampFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
+const stampFormat = new Intl.DateTimeFormat(dateLocale[locale], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE })
 
-const postDateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
+const postDateFormat = new Intl.DateTimeFormat(dateLocale[locale], { day: 'numeric', month: 'short', timeZone: TIME_ZONE })
 
 // A post's published date + time: "28 Sept, 21:09".
 export function formatPostTime(iso: string): string {
@@ -35,7 +37,7 @@ export function todayKey(now: number = Date.now()): string {
   return dayKeyFormat.format(now)
 }
 
-const dayFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIME_ZONE })
+const dayFormat = new Intl.DateTimeFormat(dateLocale[locale], { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIME_ZONE })
 
 // A date without time, e.g. "6 Oct 2026".
 export function formatDay(value: number | Date = Date.now()): string {

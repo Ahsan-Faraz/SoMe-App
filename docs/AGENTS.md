@@ -9,7 +9,7 @@ The Next.js version in this repo differs from older training data. Before writin
 - Scope every member, chat, search, and schema query by the current `community_id`.
 - A group is a chat room inside one community. A group is not a community.
 - Profile fields are definitions plus values, not hardcoded columns.
-- A "Real" image (formerly "verified") is an in-app camera photo with a date. Gallery photos are allowed everywhere but are never Real. Do not claim Real cannot be faked.
+- A "Taken in app" image (formerly "verified", then "Real") is an in-app camera photo with a date. Gallery photos are allowed everywhere but are never Taken in app. Do not claim it cannot be faked.
 - Private notes and ratings are visible only to the author, in the UI and in the API. Until the backend exists they live in `localStorage` on that device.
 - Groups are created by the community admin or by members given group-create rights. One admin per group for now.
 
@@ -56,5 +56,7 @@ Database and Realtime detail is in `.cursor/rules/performance.mdc`.
 - Clients, env, and auth helpers go in `src/lib/`.
 
 Page pattern: a sync default export wraps an async content function in `<Suspense>` with the route skeleton. `cacheComponents` is on, so cookies, params, and database reads stay inside that Suspense boundary.
+
+Every action shows its result right away, without a page refresh. `cacheComponents` keeps visited pages alive, and `useState` survives new props, so: read server data from props (never copy it into `useState`), use `useOptimistic` for instant feedback, call `updateTag` in every Server Action that writes cached data, and key forms seeded from server data by that data. Detail: `.cursor/rules/code-standards.mdc`.
 
 Check types with `npm run typecheck` on the files you touch.

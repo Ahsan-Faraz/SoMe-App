@@ -7,9 +7,9 @@ import { readPhoto, type StoredPhoto } from '../photo'
 import type { MainPhoto } from '../types'
 
 const shots = [
-  { src: '/community/hero.png', alt: 'Riders by the water in Stockholm', position: 'center' },
-  { src: '/community/ride.png', alt: 'Two riders on a gravel path', position: 'center' },
-  { src: '/community/hero.png', alt: 'The city behind the ride', position: '15% center' },
+  { src: '/community/hero.png', alt: t.profiles.photoAlts[0] ?? '', position: 'center' },
+  { src: '/community/ride.png', alt: t.profiles.photoAlts[1] ?? '', position: 'center' },
+  { src: '/community/hero.png', alt: t.profiles.photoAlts[2] ?? '', position: '15% center' },
 ] as const
 
 export function Photos({ main, community, userId, own }: { main: MainPhoto | null; community: string; userId: string; own: boolean }) {
@@ -17,7 +17,7 @@ export function Photos({ main, community, userId, own }: { main: MainPhoto | nul
   const [mine, setMine] = useState<StoredPhoto | null>(null)
   // Image nr 1: your own new picture (this device), else the profile's main photo.
   const first = mine ?? main
-  const caption = first ? (first.verified ? `${t.chats.verified} · ${first.date}` : first.date) : ''
+  const caption = first ? (first.verified ? `${t.chats.takenInApp} · ${first.date}` : first.date) : ''
   const shot = open === null ? null : open === 0 && first ? { src: first.src, alt: t.profiles.photos, position: 'center' } : shots[open]
 
   useEffect(() => {

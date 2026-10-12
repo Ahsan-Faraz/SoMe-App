@@ -9,14 +9,14 @@ export default function MemberLayout({ children, params }: LayoutProps<'/[commun
       <Suspense fallback={<div className="hidden rail:block" />}>
         <MemberNav params={params} />
       </Suspense>
-      <div className="min-h-app min-w-0 rail:h-app rail:overflow-y-auto">{children}</div>
+      <div className="relative min-h-app min-w-0 rail:h-app rail:overflow-y-auto">{children}</div>
     </div>
   )
 }
 
 async function MemberNav({ params }: { params: LayoutProps<'/[community]'>['params'] }) {
   const { community } = await params
-  const [viewer, info] = await Promise.all([getViewer(), getCommunity(community)])
+  const [viewer, info] = await Promise.all([getViewer(community), getCommunity(community)])
   return (
     <TabRail
       community={community}

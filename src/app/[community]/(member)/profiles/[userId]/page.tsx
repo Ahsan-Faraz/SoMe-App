@@ -4,6 +4,8 @@ import { Screen } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { chatIdForUser } from '@/features/chats/queries'
+import { getCommunity } from '@/features/communities/queries'
+import { getProfileSchema } from '@/features/fields/queries'
 import Link from 'next/link'
 import { Icon } from '@/components/ui/Icon'
 import { ProfileIcon } from '@/features/profiles/components/ProfileIcon'
@@ -24,10 +26,10 @@ export default function ProfilePage(props: PageProps<'/[community]/profiles/[use
 
 async function ProfileContent({ params, searchParams }: PageProps<'/[community]/profiles/[userId]'>) {
   const { community, userId } = await params
-  const viewer = await getViewer()
-  if (!viewer) redirect(`/${community}/login`)
+  const [viewer, info] = await Promise.all([getViewer(community), getCommunity(community)])
+  if (!viewer || !info) redirect(`/${community}/login`)
 
-  const profile = await getProfile(userId, viewer.userId, viewer.username)
+  const [profile, schema] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), getProfileSchema(info.id)])
   if (!profile) notFound()
 
   const query = await searchParams
@@ -60,7 +62,7 @@ async function ProfileContent({ params, searchParams }: PageProps<'/[community]/
       }
       footer={<ProfileActions community={community} profile={profile} chatId={chatId} isAdmin={viewer.role === 'admin'} />}
     >
-      <ProfileView community={community} profile={profile} section={section} />
+      <ProfileView community={community} profile={profile} schema={schema} section={section} />
     </Screen>
   )
 }
