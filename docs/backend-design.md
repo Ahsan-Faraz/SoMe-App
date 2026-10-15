@@ -51,12 +51,12 @@ Phone (PWA)
 |---|---|---|
 | D1 | Profile field types | All: short text, long text, yes/no, pick one, pick several, number, date, photo |
 | D2 | Built-in fields (not in the builder) | **Status** and **District**. Their choices are set per community. |
-| D3 | Status choices (Biking Stockholm) | Man, Woman, Other, Couple MF, Couple MM, Couple FF |
+| D3 | Status choices (Biking Stockholm) | Man, Woman, Other, Couple MF, Couple MM, Couple FF. Each Status lists its people as **substatuses** with a count (Couple MF = 1 × The Man + 1 × The Woman; singles have one). Any number of people per Status (client feedback 261013). |
 | D4 | Status drives the profile | Each field can be limited to some Statuses, so each Status can have a completely different set of fields. Status sits at the top of the profile. The member sets it **once**, when creating the profile; then it is locked and **only the community admin** can change it (client feedback, Oct 2026). |
 | D5 | Looking for | Multi-select of the same Status choices, on profiles and ads |
 | D6 | Search | Admin chooses which fields are searchable |
 | D7 | Age | From birth date |
-| D8 | Location | District (from a list) + Place (free text). Km distance maybe later. |
+| D8 | Location | Country (list) → District (list per country) + Place (free text). City per district later. Km distance maybe later. |
 | D9 | Groups | Community admin, and members given "group create/admin rights", can create groups |
 | D10 | Group admins | One per group for now. Built so more can be allowed later. |
 | D11 | Approval | Community admin approves new members (application queue). Group admins approve group applications. |
@@ -64,7 +64,7 @@ Phone (PWA)
 | D13 | Blocking | Blocks messages **and** hides your profile from that person |
 | D14 | Messages | Kept forever for now |
 | D15 | Ads | Separate Ads tab stays. Bottom menu: Chats / Profiles / Ads. |
-| D16 | Photos | Any photo anywhere can be "Taken in app" (in-app camera + date). Gallery photos allowed everywhere, never labelled Taken in app. |
+| D16 | Photos | Any photo anywhere can be "Taken in app" (in-app camera + date). Gallery photos allowed everywhere, never labelled Taken in app. A profile has **one profile image** (the icon and the search card photo); more photos are photo fields (261013). |
 | D17 | Accounts | Separate account per community (see D17 note below) |
 | D18 | Wording | "Verified" (later "Real") is called **"Taken in app"** everywhere (client feedback, Oct 2026) |
 | D19 | Username | Set once at sign-up, not editable afterwards (it is the name shown in chats) |
@@ -74,6 +74,10 @@ Phone (PWA)
 | D23 | Linked profiles | A member can link up to 3 other profiles to theirs. A link is confirmed when the other person links back. Until then the owner sees it dimmed and nobody else sees it. |
 | D24 | Admin data per member | Real name 1 and 2, three numbered "profile state" fields with labels set per group/community, notes. Saved separately per group and for the community. |
 | D25 | Translations | Later, but the design is ready now (§10) |
+| D26 | Profile sections | A field shows in the main section, or in the section of each person whose substatus it is set for ("Show in section for"). Replaces "2 people" and per-person fields (261013). |
+| D27 | Basic fields | The community admin switches basic fields on/off: Looking for, Visible in search, Profile image, Score, Age, Country, District, Place, Linked profiles. Status is always on (261013). |
+| D29 | Profile order | Basic fields and fields are one ordered list ("Profile order" in the builder); profiles show one column in that order, photos full width at their place. Status stays at the top; Age shows in each person's section (261013 p.s.). |
+| D28 | Account creation date | Stored (`members.created_at`), shown to the member and the community admin ("Member since"), for future discounts (261013). |
 
 **D17 note (separate accounts).** Supabase Auth allows one password per email. So each email has **one login**, and each community gets its own **member account**: its own username, profile, photos, chats, blocks and admin data. Communities never see each other. Default: the same email uses the same password in every community it joins (open question Q8).
 
@@ -154,7 +158,7 @@ community_options (
   community_id uuid not null references communities on delete cascade,
   list text not null check (list in ('status','district')),
   label jsonb not null,                       -- {"en": "Couple MF"}
-  people smallint not null default 1 check (people in (1,2)),  -- status only: couples = 2 (drives per-person fields)
+  parent_id uuid,                             -- a district's country (lists: status, substatus, country, district)
   position smallint not null,
   active boolean not null default true        -- retire a choice without breaking old profiles
 )
@@ -184,10 +188,10 @@ members (
   looking_for uuid[] not null default '{}',                               -- status option ids (D5)
   district_id uuid references community_options,
   place text check (char_length(place) <= 80),
-  birth_date date, birth_date_2 date,                                     -- _2 used when status.people = 2
+  country_id uuid references community_options,                          -- D8; birth dates per person: profile_people
   visible_in_search boolean not null default true,                        -- D22
   score smallint not null default 0 check (score between 0 and 100),     -- D21, recomputed on save
-  icon_photo_id uuid, main_photo_ids uuid[] not null default '{}' check (cardinality(main_photo_ids) <= 3),
+  photo_id uuid,                                                          -- the profile image: icon + search card (D16)
   search_filter jsonb, ad_filter jsonb,                                   -- filters remembered on the account
   locale text,                                                            -- null = community default
   last_login_at timestamptz, created_at timestamptz,
@@ -237,6 +241,8 @@ admin_records (
 
 ### 4.5 Profile builder and answers
 
+> **Updated 261013 (D3, D26):** "2 people" and `per_person` are replaced by substatuses: `status_slots (status_id, substatus_id, count, position)` lists each Status's people, `profile_fields.for_substatuses` puts a field in their sections, and answers are keyed by `(field_id, user_id, substatus_id, n)` (no substatus = main section). Birth dates live in `profile_people (substatus_id, n, birth_date)`. See `supabase/migrations/20261014120000_profile_sections.sql`.
+
 **In plain English:**
 
 - The admin creates **fields** (e.g. "Bike type: pick one: Gravel / Road / MTB").
@@ -255,7 +261,7 @@ profile_fields (
   required boolean not null default false,             -- must be filled before applying
   searchable boolean not null default false,           -- D6: shown in the filter form
   on_card boolean not null default false,              -- shown on the Profiles list card
-  per_person boolean not null default false,           -- couples answer twice (Q3 default)
+  for_substatuses uuid[],                              -- null = main section; else each person of these substatuses (D26)
   for_statuses uuid[],                                 -- null = every status (D4)
   max_length int check (max_length between 1 and 32000),
   position smallint not null,
@@ -873,7 +879,7 @@ The app stays usable after every slice.
 |---|---|---|---|
 | Q1 | District list? | Sweden's 21 regions (län) as seed data | Edit the rows |
 | Q2 | Profile score rule? | The rule in §4.5 | Change one function |
-| Q3 | Couples: two answers per field? | Yes, per field (`per_person`); two birth dates | Untick per field |
+| Q3 | Couples: two answers per field? | **Answered (261013):** substatuses; a field is shown in each chosen substatus's section; a birth date per person | — |
 | Q4 | "Visible in search: No" also hides from "Find new user"? | Yes, hidden everywhere in search | One rule in `find_new` |
 | Q5 | Approve only, or Approve / Later / No? | UI shows Approve; database supports all | Show more buttons |
 | Q6 | Who sees real names? | Admins only | One policy |

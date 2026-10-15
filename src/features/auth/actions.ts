@@ -60,11 +60,17 @@ export async function signInAction(_: AuthState, form: FormData): Promise<AuthSt
     return { error: member ? t.login.failed : t.login.noAccountHere(community.name) }
   }
 
-  after(async () => {
-    // A trigger stamps the database's now(); the value sent here is ignored.
-    await supabase.from('members').update({ last_login_at: new Date().toISOString() }).eq('community_id', community.id).eq('user_id', auth.user.id)
-  })
+  recordLogin(supabase, community.id, auth.user.id)
   redirect(member.state === 'approved' ? `/${slug}/chats` : `/${slug}/pending`)
+}
+
+// "Latest login" on the profile, for every way of signing in (password, email code, joining with an
+// existing login, a new password). After the response; a trigger stamps the database's now(), so
+// the value sent here is ignored.
+function recordLogin(supabase: Awaited<ReturnType<typeof createClient>>, communityId: string, userId: string) {
+  after(async () => {
+    await supabase.from('members').update({ last_login_at: new Date().toISOString() }).eq('community_id', communityId).eq('user_id', userId)
+  })
 }
 
 // Join (AC). A new email signs up and gets a code. An email that already has a login
@@ -116,6 +122,7 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
     if (joinError.message.includes('members_pkey')) return { error: t.join.alreadyMember }
     return { error: joinError.code === '23505' ? t.join.usernameTaken : t.join.failed }
   }
+  recordLogin(supabase, community.id, auth.user.id)
   redirect(`/${slug}/pending`)
 }
 
@@ -127,8 +134,10 @@ export async function verifyEmailAction(_: AuthState, form: FormData): Promise<A
   if (!OTP_PATTERN.test(token)) return { verifyEmail: email, error: t.verify.badCode }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
   if (error) return { verifyEmail: email, error: t.verify.badCode }
+  const community = await getCommunity(slug)
+  if (community && data.user) recordLogin(supabase, community.id, data.user.id)
   redirect(`/${slug}/pending`)
 }
 
@@ -173,8 +182,9 @@ export async function resetPasswordAction(_: AuthState, form: FormData): Promise
   const { error } = await supabase.auth.verifyOtp({ email, token, type: 'recovery' })
   if (error) return { resetFor: login, error: t.verify.badCode }
 
-  const { error: updateError } = await supabase.auth.updateUser({ password })
+  const { data, error: updateError } = await supabase.auth.updateUser({ password })
   if (updateError) return { resetFor: login, error: updateError.code === 'same_password' ? t.reset.samePassword : t.join.failed }
+  if (community) recordLogin(supabase, community.id, data.user.id)
   redirect(`/${slug}/chats`)
 }
 

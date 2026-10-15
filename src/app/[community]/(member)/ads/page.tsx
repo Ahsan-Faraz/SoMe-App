@@ -25,7 +25,7 @@ async function AdsContent({ params }: PageProps<'/[community]/ads'>) {
   const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
-  const [ads, profiles] = await Promise.all([listAds(), listProfiles()])
+  const [ads, profiles] = await Promise.all([listAds(), listProfiles(community)])
   const scores = Object.fromEntries(profiles.map((profile) => [profile.id, profile.score]))
 
   return (

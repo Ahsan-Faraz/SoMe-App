@@ -8,7 +8,6 @@ import { getProfileSchema } from '@/features/fields/queries'
 import { ProfileActions } from '@/features/profiles/components/ProfileActions'
 import { ProfileView } from '@/features/profiles/components/ProfileView'
 import { getProfile } from '@/features/profiles/queries'
-import { activeLabels } from '@/features/fields/schema'
 import { getMemberRecord } from '../queries'
 import type { Scope } from '../types'
 import { ApproveButton, MemberPanel } from './MemberPanel'
@@ -34,8 +33,8 @@ export async function MemberProfileScreen({
   const info = await getCommunity(community)
   if (!info) notFound()
   const [profile, record, schema] = await Promise.all([
-    getProfile(userId, viewer.userId, viewer.username),
-    getMemberRecord(scope, userId),
+    getProfile(community, userId),
+    getMemberRecord(community, scope, userId),
     getProfileSchema(info.id),
   ])
   if (!profile) notFound()
@@ -58,11 +57,12 @@ export async function MemberProfileScreen({
     >
       <ProfileView
         community={community}
+        communityId={info.id}
         profile={profile}
         schema={schema}
         section={null}
         linkBase={base}
-        admin={record ? <MemberPanel community={community} scope={scopeRef} seed={record} statuses={activeLabels(schema.statuses)} /> : null}
+        admin={record ? <MemberPanel community={community} scope={scopeRef} seed={record} statusId={profile.statusId} statuses={schema.statuses} /> : null}
       />
     </Screen>
   )

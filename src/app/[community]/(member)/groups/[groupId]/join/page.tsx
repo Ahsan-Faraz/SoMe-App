@@ -33,7 +33,7 @@ async function JoinGroupContent({ params }: PageProps<'/[community]/groups/[grou
   const backHref = `/${community}/chats/new`
 
   if (!group.directJoin) {
-    const [scope, profile] = await Promise.all([getScope('group', community, groupId), getProfile(viewer.userId, viewer.userId, viewer.username)])
+    const [scope, profile] = await Promise.all([getScope('group', community, groupId), getProfile(community, viewer.userId)])
     if (!scope || !profile) notFound()
     return (
       <div className="flex h-app w-full flex-col bg-canvas">

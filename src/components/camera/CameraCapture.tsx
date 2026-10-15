@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { t } from '@/lib/i18n'
-import { imageDataUrl } from '@/lib/image'
+import { blobDataUrl, resizeImage, type ResizedImage } from '@/lib/image'
+import { IMAGE_FULL_PX } from '@/lib/limits'
 
-export function CameraCapture({ onCapture, onClose }: { onCapture: (src: string) => void; onClose: () => void }) {
+// onCapture gets the photo as a data URL (for screens that keep it in memory) and as the resized file (to upload).
+export function CameraCapture({ onCapture, onClose }: { onCapture: (src: string, image: ResizedImage) => void; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -55,7 +57,8 @@ export function CameraCapture({ onCapture, onClose }: { onCapture: (src: string)
             canvas.getContext('2d')?.drawImage(video, 0, 0)
             canvas.toBlob(async (blob) => {
               if (!blob) return
-              onCapture(await imageDataUrl(blob, 1600))
+              const image = await resizeImage(blob, IMAGE_FULL_PX)
+              onCapture(await blobDataUrl(image.blob), image)
             }, 'image/jpeg', 0.8)
           }}
           className="size-16 rounded-full border-4 border-white bg-white/30 disabled:opacity-40"

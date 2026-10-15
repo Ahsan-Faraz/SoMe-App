@@ -15,6 +15,7 @@ export const GROUP_HEADLINE_MAX = 200
 export const MESSAGE_MAX = 8000
 export const LONG_TEXT_MAX = 4000 // application text and message, admin notes, ad and event bodies
 export const FIELD_TEXT_MAX = 32000 // profile answers, info post bodies, private notes
+export const SHORT_TEXT_MAX = 200 // a short text answer when its field sets no limit (save_profile)
 
 // Profile builder
 export const LIST_LABEL_MAX = 40 // a Status or District name

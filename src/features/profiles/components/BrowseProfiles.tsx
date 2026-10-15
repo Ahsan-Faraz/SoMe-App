@@ -5,14 +5,15 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type TouchEvent
 import { Icon } from '@/components/ui/Icon'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { readStars, writeStars } from '@/features/notes/stars'
-import type { FieldDef, StatusChoice } from '@/features/fields/types'
+import { peopleOf, profileLayout, statusByLabel } from '@/features/fields/schema'
+import type { Builtins, Choice, FieldDef, LayoutItem, StatusChoice } from '@/features/fields/types'
 import { t } from '@/lib/i18n'
 import { emptyFilter, filterCount, matchesProfile, watchFilter, type ProfileFilter } from '../filter'
 import { MAX_STARS } from '../options'
 import type { BrowseProfile } from '../types'
-import { Photos } from './Photos'
 import { ProfileActions } from './ProfileActions'
-import { ProfileFields } from './ProfileFields'
+import { Fact, ProfileAnswers } from './ProfileAnswers'
+import { ProfileImage } from './ProfileImage'
 
 const SWIPE_PX = 60
 const headerButton = 'relative inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover'
@@ -25,6 +26,9 @@ export function BrowseProfiles({
   profiles,
   chatIds,
   statuses,
+  substatuses,
+  builtins,
+  layout,
   fields,
 }: {
   community: string
@@ -33,6 +37,9 @@ export function BrowseProfiles({
   chatIds: Record<string, string>
   // The community's profile builder (active fields only).
   statuses: readonly StatusChoice[]
+  substatuses: readonly Choice[]
+  builtins: Builtins
+  layout: readonly LayoutItem[]
   fields: readonly FieldDef[]
 }) {
   const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
@@ -83,6 +90,8 @@ export function BrowseProfiles({
 
   const active = filterCount(filter)
   const current = profile ? (rated[profile.id] ?? stars[profile.id] ?? 0) : 0
+  // Mock profiles name their Status (backend step 9 brings real ones with ids).
+  const status = profile ? statusByLabel({ statuses }, profile.status) : undefined
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
@@ -108,10 +117,10 @@ export function BrowseProfiles({
             }}
             onTouchEnd={onTouchEnd}
           >
-            <div className="mx-auto max-w-6xl px-5 pt-4 pb-8 sm:px-8 min-[52rem]:grid min-[52rem]:grid-cols-2 min-[52rem]:items-start min-[52rem]:gap-x-14 min-[52rem]:px-12">
-              <div className="mb-4 flex items-center gap-2 min-[52rem]:col-span-2">
+            <div className="mx-auto w-full max-w-2xl px-5 pt-4 pb-8 sm:px-8">
+              <div className="mb-4 flex items-center gap-2">
                 <h2 className="min-w-0 truncate text-[20px] font-bold">{profile.username}</h2>
-                <span className="shrink-0 text-[17px]">{profile.age}</span>
+                <span className="shrink-0 text-[17px]">{profile.ages.join(' / ')}</span>
                 <span className="flex-1 text-right text-[13px] text-muted tabular-nums">{t.browse.position(position + 1, visible.length)}</span>
                 <Link
                   href={`/${community}/profiles/${profile.id}/notes?back=${encodeURIComponent(self)}`}
@@ -122,27 +131,23 @@ export function BrowseProfiles({
                   <Icon name="star" className="size-6" />
                 </Link>
               </div>
-              <ProfileFields
-                community={community}
-                userId={profile.id}
-                storageKey=""
-                own={false}
-                statuses={statuses}
-                fields={fields}
-                status={profile.status}
-                lookingFor={profile.lookingFor}
-                about={profile.about}
-                headline={profile.headline}
-                media={
-                  <>
-                    <Photos main={profile.photo} community={community} userId={profile.id} own={false} />
-                    <dl className="mt-3 grid text-[16px]">
-                      <Fact label={t.profiles.score} value={profile.score} />
-                      <Fact label={t.profiles.district} value={profile.district} />
-                      <Fact label={t.profiles.place} value={profile.place} />
-                    </dl>
-                  </>
+              <ProfileAnswers
+                top={
+                  <div className="mb-6 rounded-2xl bg-sunken p-4">
+                    <Fact label={t.profiles.status} value={profile.status || '—'} />
+                  </div>
                 }
+                layout={profileLayout({ layout, fields, builtins, substatuses }, status)}
+                nodes={{
+                  photo: <ProfileImage photo={profile.photo ? { ...profile.photo, id: profile.id, thumb: profile.photo.src } : null} owner={null} eager />,
+                  lookingFor: <Fact label={t.profiles.lookingFor} value={profile.lookingFor.join(', ') || '—'} />,
+                  district: <Fact label={t.profiles.district} value={profile.district || '—'} />,
+                  place: <Fact label={t.profiles.place} value={profile.place || '—'} />,
+                  score: <Fact label={t.profiles.score} value={String(profile.score)} />,
+                }}
+                // A mock profile has one age: the first person's.
+                ages={Object.fromEntries(peopleOf(status, substatuses).map((person, index) => [person.key, profile.ages[index] ?? null]))}
+                values={profile.values}
               />
             </div>
           </main>
@@ -166,15 +171,6 @@ export function BrowseProfiles({
       ) : (
         <p className="px-6 py-10 text-center text-muted">{t.profiles.empty}</p>
       )}
-    </div>
-  )
-}
-
-function Fact({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex justify-between gap-4 border-b border-line py-3">
-      <dt className="text-muted">{label}</dt>
-      <dd className="truncate font-semibold">{value}</dd>
     </div>
   )
 }

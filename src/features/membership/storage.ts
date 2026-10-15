@@ -59,13 +59,16 @@ export function mergeRoster(seed: Roster, edits: Record<string, RosterEdit>, min
   return { members: all.filter((item) => !item.applied), applications: all.filter((item) => item.applied) }
 }
 
-// Server seed on first paint, then this device's edits.
+// A group's roster: the server seed on first paint, then this device's edits (until backend step 7).
+// The community's is the database's: the seed itself, fresh after every saved change.
 export function useRoster(community: string, scope: Pick<Scope, 'kind' | 'id'>, seed: Roster): Roster {
   const [roster, setRoster] = useState(seed)
   const key = rosterKey(community, scope)
   const mineKey = applicationKey(community, scope)
+  const local = scope.kind !== 'community'
 
   useEffect(() => {
+    if (!local) return
     const refresh = () => setRoster(mergeRoster(seed, readEdits(key), readApplication(mineKey)))
     refresh()
     window.addEventListener(EVENT, refresh)
@@ -74,9 +77,9 @@ export function useRoster(community: string, scope: Pick<Scope, 'kind' | 'id'>, 
       window.removeEventListener(EVENT, refresh)
       window.removeEventListener('storage', refresh)
     }
-  }, [seed, key, mineKey])
+  }, [local, seed, key, mineKey])
 
-  return roster
+  return local ? roster : seed
 }
 
 // Whole numbers only, as the profile-state fields are summed in the statistics.

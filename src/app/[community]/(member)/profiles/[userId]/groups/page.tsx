@@ -22,7 +22,7 @@ async function AssignGroupsContent({ params }: PageProps<'/[community]/profiles/
   // Only community admins for now. Group admins (no role yet) will get listAssignments(userId, theirGroupIds) and settings off.
   if (viewer.role !== 'admin') redirect(`/${community}/profiles/${userId}`)
 
-  const [profile, groups] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), listAssignments(userId)])
+  const [profile, groups] = await Promise.all([getProfile(community, userId), listAssignments(userId)])
   if (!profile || profile.own) notFound()
 
   return (

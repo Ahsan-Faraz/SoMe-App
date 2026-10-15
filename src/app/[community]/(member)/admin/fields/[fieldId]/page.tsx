@@ -28,7 +28,7 @@ async function Content({ params }: PageProps<'/[community]/admin/fields/[fieldId
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.builder.editField} backHref={`/${community}/admin/fields`} />
       {/* The form is a draft of the saved field: a newer save (from any screen) opens a fresh form. */}
-      <FieldEditor key={JSON.stringify(field)} community={community} field={field} statuses={schema.statuses} />
+      <FieldEditor key={JSON.stringify(field)} community={community} field={field} statuses={schema.statuses} substatuses={schema.substatuses} />
     </div>
   )
 }

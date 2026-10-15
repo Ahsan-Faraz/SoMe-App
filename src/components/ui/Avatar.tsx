@@ -15,19 +15,27 @@ function initials(name: string): string {
 }
 
 // Groups are rounded squares and people are circles, as in Wire.
+// src = a profile icon thumbnail; without one, the initials on a color from the seed.
 export function Avatar({
   name,
   seed = name,
   shape = 'circle',
   size = 'md',
+  src = null,
 }: {
   name: string
   seed?: string
   shape?: 'circle' | 'square'
   size?: 'sm' | 'md' | 'lg'
+  src?: string | null
 }) {
   const sizes = { sm: 'size-8 text-xs', md: 'size-10 text-sm', lg: 'size-20 text-2xl' }
   const radius = shape === 'circle' ? 'rounded-full' : 'rounded-lg'
+  if (src) {
+    // A Storage thumbnail, already small: no image optimizer round trip.
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" loading="lazy" decoding="async" className={`shrink-0 object-cover ${sizes[size]} ${radius}`} />
+  }
   return (
     <span
       style={{ backgroundColor: colorFor(seed) }}

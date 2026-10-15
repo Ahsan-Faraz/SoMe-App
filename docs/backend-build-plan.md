@@ -85,45 +85,73 @@ Built with: writes through three admin RPCs (`save_profile_field`, `save_communi
 
 ## Step 3 — Profiles
 
-- [ ] `profile_values`, `profile_value_options`, `photos` (profile bucket), `profile_links`
-- [ ] View profile in **one** database call (built-ins + answers + fields for that Status)
-- [ ] Edit profile: Status at the top decides the fields shown; the member sets it once (then locked), only the community admin can change it (A21); couples answer per-person fields twice and enter 2 birth dates
-- [ ] Save checks each answer against its field type and choices
-- [ ] Username shown, not editable
-- [ ] Profile icon + 3 main photos: camera = **Taken in app** + date, upload = not Taken in app; resized on the phone (WebP + thumbnail)
-- [ ] Profile score computed on save (default rule)
-- [ ] "Profile visible in search" toggle
-- [ ] Linked profiles: add up to 3, confirmed when the other person links back, remove; unconfirmed links only visible (dimmed) to the owner
-- [ ] Latest login shown; Reputation not shown
+- [x] `profile_values`, `profile_value_options`, `photos` (profile bucket), `profile_links`, `profile_people` (a birth date per person)
+- [x] View profile in **one** database call (built-ins + answers + fields for that Status)
+- [x] Edit profile: Status at the top decides the fields shown; the member sets it once (then locked), only the community admin can change it (A21)
+- [x] Substatuses (client feedback 261013): each Status lists its people (Couple MF = The Man × 1 + The Woman × 1); a field shows in the main section or in each person's section; each person has a birth date and age
+- [x] Country → District (per country) → Place; City per district later
+- [x] Save checks each answer against its field type, choices and section
+- [x] Username shown, not editable
+- [x] One profile image (icon + search card): camera = **Taken in app** + date, upload = not Taken in app; resized on the phone (WebP + thumbnail). More photos are photo fields
+- [x] Profile score computed on save (default rule)
+- [x] "Profile visible in search" toggle
+- [x] Basic fields the community admin switches on/off (Status always on), and moves among the fields ("Profile order")
+- [x] Profiles show one column in that order; every photo (profile image, photo fields) full width at its place
+- [x] Linked profiles: add up to 3, confirmed when the other person links back, remove; unconfirmed links only visible (dimmed) to the owner
+- [x] Latest login and "Member since" (account creation date) shown; Reputation not shown
 
-**Test it:**
-- Fill in every field type → save → reload → all values are back.
-- Changing Status from Man to Couple MF shows the second birth date and the per-person fields.
-- A 4th linked profile is refused.
-- A camera photo shows "Taken in app · date"; an uploaded one doesn't.
-- A member can't change their Status once set (the database refuses); the community admin can.
-- A one-way link doesn't appear on the profile for other members; once both have linked, it does.
-- Score goes up after adding a Taken in app main photo.
-- Another member can't change your profile (the database refuses).
+Built with: every write goes through a security definer RPC that checks the caller and validates each answer against its field and section (`save_profile`, `add_profile_photo`, `remove_profile_photo`, `set_profile_link`; admin `set_member_status`, `save_profile_builtins`, `save_community_options` with Status people and per-country districts). Clients have no direct grants on `photos`, `profile_values`, `profile_value_options`, `profile_people`, `profile_links`. Reads: `profile()` (one call per profile) and `profile_cards()` (the A5 list's first page, best score first, until `search_profiles` in step 9). Photos upload straight from the phone to the public `profile` bucket (own folder only, never overwritten); a replaced photo's row is deleted in the same transaction and its files after the response. A27 swipe stays on mock profiles until step 9. Migrations: `20261013120000_profiles.sql`, then `20261014120000_profile_sections.sql` (feedback 261013), then `20261015120000_profile_layout.sql` (basic fields in the profile order). Speed (5,000 couples): `profile()` 1.7 ms, `profile_cards()` 2.4–4.2 ms, `member_names()` 1.2 ms, `save_profile()` 3.3 ms.
+
+**Test it** (two test accounts, phone size; one is the community admin):
+
+*Profile builder (admin → Profile builder)*
+1. Substatus list: add "The Kid". Status list: add "Family" with The Woman × 2 and The Kid × 3; save; reopen: the people are kept.
+2. Country list: add "Norway". "Districts in Norway": add "Oslo". Sweden's 21 districts are unchanged.
+3. Add a field "Male competition level" (short text), "Shown in section for" = The Man only.
+4. Basic fields: switch off Profile score → the score disappears from profiles, the list and the filter. Switch it back on.
+4b. Profile order: move "Profile image" below "About us" and a photo field to the top → open a profile: the order matches, and both photos are full width at those places. Basic fields switched off show "Hidden" in the order list.
+
+*Own profile (member)*
+5. New profile: pick Status Couple MF ("Set status") → it locks; the form shows the main section, then **The Man** and **The Woman**, each with a birth date.
+6. Fill in every field type (text, long text, yes/no, pick one, pick several, number, date, photo) → Save → reload → all values are back, in the right sections. "Male competition level" shows only under The Man.
+7. A single Status (e.g. Man) shows no section headings, just the fields and one birth date.
+8. Country = Sweden (preselected) → District list shows Sweden's districts only.
+9. Profile image: take it with the camera → "Taken in app · date", score goes up (+40). Replace it with an upload → no "Taken in app", score goes down (−30). The header icon is the same image.
+10. "Profile visible in search" off → you're gone from the other account's Profiles list; back on → you're back.
+
+*Other account / admin*
+11. A member can't change their Status once set; the admin can (A21 → Status), and the profile then shows that Status's sections.
+12. Linked profiles: link 3 → a 4th is refused. A one-way link isn't shown to others; once both link, it is.
+13. The other member sees ages per person, no birth dates, no "Member since"; the admin does see "Member since".
+14. Admin → Applications → open a new applicant's profile: it opens (no 404). (Real application records come in step 4.)
 
 ---
 
 ## Step 4 — Community application and approval
 
-- [ ] `applications`, `admin_records`
-- [ ] Application form (A25): community application text, image (camera = Real, or upload), message, real name 1/2; required ones from community settings
-- [ ] Apply → state `applied`, Apply button dimmed
-- [ ] "Chat with admin" only once there is an ongoing conversation (the admin has written first); otherwise no button at all, not even dimmed
-- [ ] Admin: icon in the Chats header (admin only) → A19 → Applications list (A20) → admin profile view (A21)
-- [ ] Approve: member gets full access, real names copied to admin records, approval email sent
-- [ ] Admin records at community level: real names, 3 numbered states (labels from community settings), notes
+- [x] `applications`, `admin_records` (+ the private `private` bucket for application images, signed URLs only)
+- [x] Application form (A25): community application text, image (camera = Taken in app, or upload), message, real name 1/2; required ones from community settings; the profile's required fields must be filled first
+- [x] Apply → state `applied`, Apply button dimmed
+- [x] "Chat with admin" only once there is an ongoing conversation (the admin has written first); otherwise no button at all, not even dimmed — no chats exist until step 5, so no button yet
+- [x] Admin: icon in the Chats header (admin only) → A19 → Applications list (A20) → admin profile view (A21)
+- [x] Approve: member gets full access, real names copied to admin records, approval email sent
+- [x] Admin records at community level: real names, 3 numbered states (labels from community settings), notes
 
-**Test it:**
-- Applicant applies → appears in the admin queue.
-- Applying twice isn't possible.
-- The applicant can't open chats or profiles before approval.
-- Approve → email arrives → full access.
-- Another member can't read the application or the real names.
+Built with: RPCs `submit_application`, `decide_application` (approve now; `later`/`rejected` ready, Q5), `admin_roster` (A20 queue / A31 members), `admin_member` (A21), `save_admin_record`, `remove_member`. Applications are readable by the applicant (own) and the community admin; admin records only by the community admin (Q6). Application images upload to `private/{community}/{user}/…` and are signed by the server (1 hour) for the admin after the database confirms the role. The approval email goes out after the response through Brevo's API: set `BREVO_API_KEY` and `EMAIL_FROM` (a sender verified in Brevo) in `.env.local` and on Vercel; without them approval still works and the server logs "Email not sent". Group applications (A22–A24) and group records stay on device until step 7; the A31 member list and A33 statistics read the real community data. Migration `20261016120000_applications.sql`. Speed (5,000 members, 500 open applications): queue 5 ms, members list (2,000 rows) 18 ms, A21 0.5 ms.
+
+**Test it** (two accounts: a new applicant and the community admin; phone size):
+1. New account → Welcome/apply screen (A25) shows the community's application text, image, text and real names.
+2. Apply before filling in the profile → "Fill in your profile first". Fill in Status + required fields, come back.
+3. Apply without an image (or text, or name 1) → "Fill in everything that is asked for".
+4. Take the image with the camera → "✓ Taken in app · date"; fill in the rest → Apply → the button turns to "Applied — an admin will review it" and stays dimmed after a reload.
+5. As the applicant, try Chats or Profiles in the address bar → you're sent back to the apply screen.
+6. Admin: Chats header → admin icon → Applications: the applicant is listed with message and real names.
+7. Open them (A21): the profile, then the application image (Taken in app + date), text, real names, Status (changeable), profile states and notes.
+8. Fill in a profile state and a note, leave the field, reload → kept. Type letters in a profile state → refused.
+9. Approve → "Approved. The member gets an email." → the applicant is gone from Applications and listed under Members, with the real names filled in. With the email keys set, the email arrives.
+10. The applicant reloads → full access (Chats, Profiles).
+11. A normal member can't see the Applications list or anyone's real names (the admin icon isn't there; the database refuses too).
+12. Members list: remove someone → they lose access (their next page load sends them to log in).
 
 ---
 

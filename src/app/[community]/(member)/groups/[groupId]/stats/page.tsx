@@ -22,7 +22,7 @@ async function Content({ params }: PageProps<'/[community]/groups/[groupId]/stat
   await requireAdmin(community)
   const scope = await getScope('group', community, groupId)
   if (!scope) notFound()
-  const seed = await listRoster(scope)
+  const seed = await listRoster(community, scope)
 
   return (
     <div className="min-h-app w-full bg-canvas">

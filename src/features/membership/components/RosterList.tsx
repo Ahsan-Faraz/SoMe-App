@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { memo, useDeferredValue, useState } from 'react'
+import { memo, useDeferredValue, useState, useTransition } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
-import { editMember, rosterKey, useRoster, wholeNumber } from '../storage'
-import type { MemberRecord, Roster, Scope } from '../types'
+import { saveMember } from '../save'
+import { useRoster, wholeNumber } from '../storage'
+import type { MemberRecord, Roster, RosterEdit, Scope } from '../types'
 
 const cell = 'h-10 w-full min-w-0 rounded-lg border border-line bg-canvas px-2.5 text-[15px] text-ink outline-none focus:border-accent'
 
@@ -29,8 +30,14 @@ export function RosterList({
   // The profile's Back returns to this list (members or applications).
   const back = `?back=${encodeURIComponent(usePathname())}`
   const [query, setQuery] = useState('')
+  const [error, setError] = useState('')
+  const [, startTransition] = useTransition()
   const deferred = useDeferredValue(query.trim().toLowerCase())
-  const key = rosterKey(community, scope)
+  // Saved when a field is left (or on Remove); the community's in the database, a group's on this device.
+  const save = (row: MemberRecord, edit: RosterEdit) => {
+    setError('')
+    startTransition(async () => setError((await saveMember(community, scope, row, edit)) ?? ''))
+  }
   const rows = roster[mode]
   const visible = deferred ? rows.filter((row) => `${row.username} ${row.realNames.join(' ')}`.toLowerCase().includes(deferred)) : rows
 
@@ -49,6 +56,11 @@ export function RosterList({
           />
         </label>
       </div>
+      {error ? (
+        <p role="alert" className="mx-auto max-w-3xl px-4 pt-3 text-[15px] text-danger sm:px-6">
+          {error}
+        </p>
+      ) : null}
       {visible.length === 0 ? (
         <p className="px-6 py-10 text-center text-muted">{mode === 'applications' ? t.membership.emptyApplications : t.membership.empty}</p>
       ) : (
@@ -56,7 +68,7 @@ export function RosterList({
           {visible.map((row) => (
             <li key={row.userId} className="[contain-intrinsic-size:auto_220px] [content-visibility:auto]">
               {/* Keyed by the saved values: a row re-seeds when this device's saved data arrives after first paint. */}
-              <RosterRow key={`${row.state.join('|')}|${row.notes}`} storageKey={key} row={row} labels={scope.stateLabels} href={`${profileBase}/${row.userId}${back}`} />
+              <RosterRow key={`${row.state.join('|')}|${row.notes}`} row={row} labels={scope.stateLabels} href={`${profileBase}/${row.userId}${back}`} onSave={save} />
             </li>
           ))}
         </ul>
@@ -66,7 +78,17 @@ export function RosterList({
 }
 
 // One row keeps its own input state, so typing re-renders just that row. Saved when a field is left.
-const RosterRow = memo(function RosterRow({ storageKey, row, labels, href }: { storageKey: string; row: MemberRecord; labels: string[]; href: string }) {
+const RosterRow = memo(function RosterRow({
+  row,
+  labels,
+  href,
+  onSave,
+}: {
+  row: MemberRecord
+  labels: string[]
+  href: string
+  onSave: (row: MemberRecord, edit: RosterEdit) => void
+}) {
   const [state, setState] = useState(row.state)
   const [notes, setNotes] = useState(row.notes)
   const [asking, setAsking] = useState(false)
@@ -78,7 +100,7 @@ const RosterRow = memo(function RosterRow({ storageKey, row, labels, href }: { s
         <Link href={href} className="min-w-0 flex-1 rounded-lg hover:underline">
           <span className="flex items-center gap-2">
             <span className="truncate text-[16px] font-bold">{row.username}</span>
-            <span className="shrink-0 rounded-full bg-rail px-2 py-0.5 text-[12px] font-semibold">{row.status}</span>
+            {row.status ? <span className="shrink-0 rounded-full bg-rail px-2 py-0.5 text-[12px] font-semibold">{row.status}</span> : null}
           </span>
           {names.length > 0 ? <span className="mt-0.5 block truncate text-[14px] text-ink-soft">{names.join(' · ')}</span> : null}
           {row.applied && row.message ? <span className="mt-0.5 block truncate text-[14px] text-muted">{row.message}</span> : null}
@@ -86,7 +108,7 @@ const RosterRow = memo(function RosterRow({ storageKey, row, labels, href }: { s
         {asking ? (
           <button
             type="button"
-            onClick={() => editMember(storageKey, row.userId, { removed: true })}
+            onClick={() => onSave(row, { removed: true })}
             onBlur={() => setAsking(false)}
             autoFocus
             className="h-9 shrink-0 rounded-lg bg-danger px-3 text-[14px] font-semibold text-white"
@@ -115,7 +137,7 @@ const RosterRow = memo(function RosterRow({ storageKey, row, labels, href }: { s
                 value={state[index] ?? ''}
                 onChange={(event) => setState((current) => current.map((item, i) => (i === index ? wholeNumber(event.target.value) : item)))}
                 onBlur={() => {
-                  if (state.join('|') !== row.state.join('|')) editMember(storageKey, row.userId, { state })
+                  if (state.join('|') !== row.state.join('|')) onSave(row, { state })
                 }}
                 className={cell}
               />
@@ -125,7 +147,7 @@ const RosterRow = memo(function RosterRow({ storageKey, row, labels, href }: { s
       </div>
       <label className="mt-2 grid gap-1 text-[12px] font-semibold text-muted">
         {t.membership.notes}
-        <input value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => notes !== row.notes && editMember(storageKey, row.userId, { notes })} className={cell} />
+        <input value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => notes !== row.notes && onSave(row, { notes })} className={cell} />
       </label>
     </article>
   )

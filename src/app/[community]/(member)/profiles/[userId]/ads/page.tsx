@@ -22,7 +22,7 @@ async function ProfileAdsContent({ params }: PageProps<'/[community]/profiles/[u
   const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
-  const [profile, ads] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), listAds()])
+  const [profile, ads] = await Promise.all([getProfile(community, userId), listAds()])
   if (!profile) notFound()
 
   return (

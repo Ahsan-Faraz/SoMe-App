@@ -31,7 +31,7 @@ export async function RosterScreen({
   profileBase: string
   addHref?: string
 }) {
-  const seed = await listRoster(scope)
+  const seed = await listRoster(community, scope)
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader

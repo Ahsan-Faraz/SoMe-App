@@ -2,14 +2,16 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react'
 import { buttonClass } from '@/components/ui/Button'
 import { GrowingTextarea } from '@/components/ui/GrowingTextarea'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
 import { todayLabel } from '@/features/albums/storage'
-import { useStatus } from '@/features/profiles/status'
 import { t } from '@/lib/i18n'
-import { imageDataUrl } from '@/lib/image'
+import { blobDataUrl, resizeImage, type ResizedImage } from '@/lib/image'
+import { IMAGE_FULL_PX } from '@/lib/limits'
+import type { UploadedPhoto } from '@/features/profiles/photo'
+import { submitApplicationAction } from '../actions'
 import { applicationKey, readApplication, saveApplication } from '../storage'
 import { REAL_NAMES, STATE_FIELDS, type ApplicationImage, type Scope } from '../types'
 
@@ -17,40 +19,81 @@ const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').
 
 const field = 'w-full min-w-0 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] text-ink outline-none focus:border-accent'
 
+// The chosen image: a preview, the resized file to upload when the community application is sent,
+// and the upload once done (a refused try keeps it, so the next try doesn't upload it again).
+type PickedImage = ApplicationImage & { file: ResizedImage | null; uploaded?: UploadedPhoto }
+
 // A24 (apply to a group that is not "direct join") and A25 (apply to the community, before approval).
 // Image, text and names show only when the group/community asks for them. Apply adds it to the
 // admin's application list; the button dims once you have applied.
+// Community (A25): saved in the database; the image goes to the private bucket first, and `applied`
+// comes from the server. Groups (A24): on this device until backend step 7.
 export function ApplicationForm({
   community,
+  communityId = null,
   scope,
   applicant,
+  applied: appliedOnServer = false,
   profileHref = null,
   chatHref = null,
 }: {
   community: string
+  communityId?: string | null // the community application: where the image is uploaded
   scope: Pick<Scope, 'kind' | 'id' | 'applicationText' | 'requires'>
   applicant: { userId: string; username: string; status: string }
+  applied?: boolean // community: already applied (members.state)
   profileHref?: string | null // A25: Create / edit profile
   chatHref?: string | null // A25: only once the admin has written to you
 }) {
   const key = applicationKey(community, scope)
+  const toCommunity = scope.kind === 'community'
   const fileRef = useRef<HTMLInputElement>(null)
   const [camera, setCamera] = useState(false)
-  const [image, setImage] = useState<ApplicationImage | null>(null)
+  const [image, setImage] = useState<PickedImage | null>(null)
   const [message, setMessage] = useState('')
   const [names, setNames] = useState<string[]>(() => Array.from({ length: REAL_NAMES }, () => ''))
-  const [applied, setApplied] = useState(false)
+  const [appliedHere, setApplied] = useState(false)
   const [error, setError] = useState('')
+  const [pending, startTransition] = useTransition()
   const { requires } = scope
-  const { status } = useStatus(community, applicant.userId, applicant.status)
+  const { status } = applicant
+  const applied = toCommunity ? appliedOnServer : appliedHere
 
-  useEffect(() => setApplied(readApplication(key) !== null), [key])
+  useEffect(() => {
+    if (!toCommunity) setApplied(readApplication(key) !== null)
+  }, [key, toCommunity])
+
+  async function pick(file: Blob, verified: boolean) {
+    const resized = await resizeImage(file, IMAGE_FULL_PX)
+    setImage({ src: await blobDataUrl(resized.blob), verified, date: todayLabel(), file: resized })
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (applied) return
+    if (applied || pending) return
     if ((requires.image && !image) || (requires.text && !message.trim()) || (requires.names && !names[0]?.trim())) {
       setError(t.apply.missing)
+      return
+    }
+    setError('')
+    if (toCommunity && communityId) {
+      startTransition(async () => {
+        let photo = image?.uploaded ?? null
+        if (image?.file && !photo) {
+          try {
+            // Loaded only now: the upload code and Supabase client stay out of the form's first load.
+            const { uploadPhoto } = await import('@/features/profiles/upload')
+            const uploaded = await uploadPhoto('private', communityId, applicant.userId, image.file, image.verified)
+            photo = uploaded
+            setImage((current) => (current && current.file === image.file ? { ...current, uploaded } : current))
+          } catch {
+            setError(t.apply.imageFailed)
+            return
+          }
+        }
+        const result = await submitApplicationAction(community, { photo, message, realNames: names })
+        if (result) setError(result.error)
+      })
       return
     }
     saveApplication(key, {
@@ -59,9 +102,10 @@ export function ApplicationForm({
       realNames: names.map((name) => name.trim()),
       state: Array.from({ length: STATE_FIELDS }, () => ''),
       notes: '',
-      image,
+      image: image ? { src: image.src, verified: image.verified, date: image.date } : null,
       message: message.trim(),
       applied: true,
+      applicationId: null,
     })
     setApplied(true)
     setError('')
@@ -71,8 +115,8 @@ export function ApplicationForm({
     return (
       <CameraCapture
         onClose={() => setCamera(false)}
-        onCapture={(src) => {
-          setImage({ src, verified: true, date: todayLabel() })
+        onCapture={(src, file) => {
+          setImage({ src, verified: true, date: todayLabel(), file })
           setCamera(false)
         }}
       />
@@ -97,7 +141,7 @@ export function ApplicationForm({
                 <figure>
                   {/* A capture or upload as a data URL. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={image.src} alt={t.apply.image} className="aspect-video w-full rounded-2xl object-cover" />
+                  <img src={image.src} alt={t.apply.image} className="h-auto max-h-[70dvh] w-full rounded-2xl bg-sunken object-contain" />
                   <figcaption className="mt-1 flex items-center justify-between gap-2 text-[13px]">
                     <span className={image.verified ? 'font-semibold text-accent' : 'text-muted'}>{image.verified ? `✓ ${t.chats.takenInApp} · ${image.date}` : image.date}</span>
                     {applied ? null : (
@@ -128,7 +172,8 @@ export function ApplicationForm({
                 className="hidden"
                 onChange={async (event) => {
                   const file = event.target.files?.[0]
-                  if (file) setImage({ src: await imageDataUrl(file, 1600), verified: false, date: todayLabel() })
+                  event.target.value = ''
+                  if (file) await pick(file, false)
                 }}
               />
             </section>
@@ -173,8 +218,8 @@ export function ApplicationForm({
               {t.apply.chatAdmin}
             </Link>
           ) : null}
-          <button type="submit" disabled={applied} className={buttonClass('primary')}>
-            {applied ? t.apply.applied : t.apply.submit}
+          <button type="submit" disabled={applied || pending} className={`${buttonClass('primary')} disabled:opacity-50`}>
+            {applied ? t.apply.applied : pending ? t.apply.sending : t.apply.submit}
           </button>
         </div>
       </div>

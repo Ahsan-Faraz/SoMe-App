@@ -27,7 +27,7 @@ async function NewDmContent({ params }: PageProps<'/[community]/chats/dm/[userId
   const existing = chatIdForUser(userId)
   if (existing) redirect(`/${community}/chats/${existing}`)
 
-  const [profile, albums] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), listAlbums(viewer.userId)])
+  const [profile, albums] = await Promise.all([getProfile(community, userId), listAlbums(viewer.userId)])
   if (!profile) notFound()
 
   const base = `/${community}/chats/dm/${userId}`

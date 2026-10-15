@@ -26,6 +26,7 @@ export type MemberRecord = {
   image: ApplicationImage | null
   message: string
   applied: boolean // in the applications list, not a member yet
+  applicationId: string | null // the open application (community scope), for Approve
 }
 
 export type Roster = { members: MemberRecord[]; applications: MemberRecord[] }

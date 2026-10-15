@@ -23,7 +23,7 @@ async function SwipeContent({ params }: PageProps<'/[community]/profiles/swipe'>
   if (!viewer || !info) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const [profiles, schema] = await Promise.all([listBrowseProfiles(), getProfileSchema(info.id)])
+  const [profiles, schema] = await Promise.all([listBrowseProfiles(info.id), getProfileSchema(info.id)])
   const chatIds: Record<string, string> = {}
   for (const profile of profiles) {
     const chatId = chatIdForUser(profile.id)
@@ -37,6 +37,9 @@ async function SwipeContent({ params }: PageProps<'/[community]/profiles/swipe'>
       profiles={profiles}
       chatIds={chatIds}
       statuses={schema.statuses}
+      substatuses={schema.substatuses}
+      builtins={schema.builtins}
+      layout={schema.layout}
       fields={schema.fields.filter((field) => field.active)}
     />
   )

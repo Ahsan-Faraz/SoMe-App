@@ -25,7 +25,7 @@ async function Content({ params }: PageProps<'/[community]/admin/fields/new'>) {
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.builder.newField} backHref={`/${community}/admin/fields`} />
-      <FieldEditor community={community} field={null} statuses={schema.statuses} />
+      <FieldEditor community={community} field={null} statuses={schema.statuses} substatuses={schema.substatuses} />
     </div>
   )
 }

@@ -21,7 +21,7 @@ async function ProfileNotesContent({ params, searchParams }: PageProps<'/[commun
   const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
 
-  const profile = await getProfile(userId, viewer.userId, viewer.username)
+  const profile = await getProfile(community, userId)
   if (!profile) notFound()
 
   return (

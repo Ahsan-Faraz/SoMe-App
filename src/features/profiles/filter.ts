@@ -80,11 +80,11 @@ export function matchesProfile(profile: ProfileCard, stars: number, filter: Prof
   if (filter.lookingFor.length > 0 && !profile.lookingFor.some((item) => filter.lookingFor.includes(item))) return false
   if (filter.districts.length > 0 && !filter.districts.includes(profile.district)) return false
   if (place && !profile.place.toLowerCase().includes(place)) return false
-  if (minAge !== null && profile.age < minAge) return false
-  if (maxAge !== null && profile.age > maxAge) return false
+  // A couple matches when either person is in the age range (§6.6).
+  if ((minAge !== null || maxAge !== null) && !profile.ages.some((age) => (minAge === null || age >= minAge) && (maxAge === null || age <= maxAge))) return false
   if (minScore !== null && profile.score < minScore) return false
   if (minStars !== null && stars < minStars) return false
   if (maxStars !== null && stars > maxStars) return false
   if (!query) return true
-  return `${profile.username} ${profile.headline} ${profile.district} ${profile.place}`.toLowerCase().includes(query)
+  return `${profile.username} ${profile.district} ${profile.place}`.toLowerCase().includes(query)
 }

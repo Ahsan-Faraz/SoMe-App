@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { t } from '@/lib/i18n'
 import { FIELD_LABEL_MAX } from '@/lib/limits'
 import { saveFieldAction, type FieldInput } from '../actions'
-import { FIELD_KINDS, type FieldDef, type FieldKind, type StatusChoice } from '../types'
+import { FIELD_KINDS, type Choice, type FieldDef, type FieldKind, type StatusChoice } from '../types'
 import { ChoiceRows } from './ChoiceRows'
 
 const control = 'h-11 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] font-normal text-ink outline-none focus:border-accent'
@@ -20,15 +20,26 @@ const blank: FieldInput = {
   required: false,
   searchable: false,
   onCard: false,
-  perPerson: false,
   statuses: null,
+  substatuses: null,
   maxLength: null,
   active: true,
   choices: [],
 }
 
-// Add or edit one profile field: name, type (new fields only), choices, flags and which Statuses see it.
-export function FieldEditor({ community, field, statuses }: { community: string; field: FieldDef | null; statuses: readonly StatusChoice[] }) {
+// Add or edit one profile field: name, type (new fields only), choices, flags, which Statuses see it,
+// and its section: the main one, or each person of the chosen Substatuses.
+export function FieldEditor({
+  community,
+  field,
+  statuses,
+  substatuses,
+}: {
+  community: string
+  field: FieldDef | null
+  statuses: readonly StatusChoice[]
+  substatuses: readonly Choice[]
+}) {
   const [values, setValues] = useState<FieldInput>(() =>
     field
       ? {
@@ -38,11 +49,11 @@ export function FieldEditor({ community, field, statuses }: { community: string;
           required: field.required,
           searchable: field.searchable,
           onCard: field.onCard,
-          perPerson: field.perPerson,
           statuses: field.statuses,
+          substatuses: field.substatuses,
           maxLength: field.maxLength,
           active: field.active,
-          choices: field.choices.map(({ id, label: name, active }) => ({ id, label: name, active, people: 1 })),
+          choices: field.choices.map(({ id, label: name, active }) => ({ id, label: name, active })),
         }
       : blank,
   )
@@ -57,12 +68,17 @@ export function FieldEditor({ community, field, statuses }: { community: string;
     const next = on ? [...picked, id] : picked.filter((item) => item !== id)
     set('statuses', next.length > 0 ? next : null)
   }
+  const sections = values.substatuses ?? []
+  const shownSubstatuses = substatuses.filter((item) => item.active || sections.includes(item.id))
+  const toggleSection = (id: string, on: boolean) => {
+    const next = on ? [...sections, id] : sections.filter((item) => item !== id)
+    set('substatuses', next.length > 0 ? next : null)
+  }
 
-  const flags: [keyof Pick<FieldInput, 'required' | 'searchable' | 'onCard' | 'perPerson'>, string, string][] = [
+  const flags: [keyof Pick<FieldInput, 'required' | 'searchable' | 'onCard'>, string, string][] = [
     ['required', t.builder.required, t.builder.requiredHint],
     ['searchable', t.builder.searchable, t.builder.searchableHint],
     ['onCard', t.builder.onCard, t.builder.onCardHint],
-    ['perPerson', t.builder.perPerson, t.builder.perPersonHint],
   ]
 
   return (
@@ -100,7 +116,7 @@ export function FieldEditor({ community, field, statuses }: { community: string;
                 ...current,
                 kind,
                 searchable: kind === 'photo' ? false : current.searchable,
-                choices: isPick(kind) && current.choices.length === 0 ? [{ id: null, label: '', active: true, people: 1 }] : current.choices,
+                choices: isPick(kind) && current.choices.length === 0 ? [{ id: null, label: '', active: true }] : current.choices,
               }))
             }}
             className={control}
@@ -117,7 +133,7 @@ export function FieldEditor({ community, field, statuses }: { community: string;
       {isPick(values.kind) ? (
         <fieldset className="grid grid-cols-1 gap-2">
           <legend className="mb-1.5 text-[14px] font-semibold">{t.builder.choices}</legend>
-          <ChoiceRows items={values.choices} onChange={(choices) => set('choices', choices)} maxLength={FIELD_LABEL_MAX} />
+          <ChoiceRows items={values.choices} onChange={(choices) => set('choices', choices)} maxLength={FIELD_LABEL_MAX} blank={() => ({ id: null, label: '', active: true })} />
         </fieldset>
       ) : null}
 
@@ -146,6 +162,19 @@ export function FieldEditor({ community, field, statuses }: { community: string;
           ))}
         </div>
         <span className={hint}>{values.statuses ? t.builder.forStatusesHint : `${t.builder.everyStatus}. ${t.builder.forStatusesHint}`}</span>
+      </fieldset>
+
+      <fieldset className="grid grid-cols-1 gap-2">
+        <legend className="mb-1.5 text-[14px] font-semibold">{t.builder.section}</legend>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+          {shownSubstatuses.map((item) => (
+            <label key={item.id} className={`flex items-center gap-2.5 text-[16px] ${item.active ? '' : 'text-muted'}`}>
+              <input type="checkbox" checked={sections.includes(item.id)} onChange={(event) => toggleSection(item.id, event.target.checked)} />
+              {item.label}
+            </label>
+          ))}
+        </div>
+        <span className={hint}>{values.substatuses ? t.builder.sectionHint : `${t.builder.mainSection}. ${t.builder.sectionHint}`}</span>
       </fieldset>
 
       {field ? (

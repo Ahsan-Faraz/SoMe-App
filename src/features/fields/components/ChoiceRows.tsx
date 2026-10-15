@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
 import type { ChoiceInput } from '../actions'
@@ -9,18 +10,21 @@ const iconButton = 'inline-flex size-11 shrink-0 items-center justify-center rou
 
 // An ordered list of choices: rename, move, add. Saved choices are retired, never removed, so
 // profiles that picked them keep them; a choice added in this edit can still be dropped.
-export function ChoiceRows({
+// `extra` adds more to each row (the Status list: its people).
+export function ChoiceRows<Item extends ChoiceInput>({
   items,
   onChange,
   maxLength,
-  withPeople = false,
+  blank,
+  extra,
 }: {
-  items: ChoiceInput[]
-  onChange: (items: ChoiceInput[]) => void
+  items: Item[]
+  onChange: (items: Item[]) => void
   maxLength: number
-  withPeople?: boolean // Status list: a couple is 2 people
+  blank: () => Item
+  extra?: (item: Item, update: (patch: Partial<Item>) => void) => ReactNode
 }) {
-  const update = (index: number, patch: Partial<ChoiceInput>) => onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)))
+  const replace = (index: number, next: Item) => onChange(items.map((item, i) => (i === index ? next : item)))
   const move = (index: number, by: -1 | 1) => {
     const next = [...items]
     const [item] = next.splice(index, 1)
@@ -37,7 +41,7 @@ export function ChoiceRows({
             <li key={item.id ?? `new-${index}`} className={`flex flex-wrap items-center gap-1 rounded-2xl border border-line p-1.5 ${item.active ? '' : 'bg-sunken'}`}>
               <input
                 value={item.label}
-                onChange={(event) => update(index, { label: event.target.value })}
+                onChange={(event) => replace(index, { ...item, label: event.target.value })}
                 maxLength={maxLength}
                 required
                 aria-label={t.builder.choice(index + 1)}
@@ -52,7 +56,7 @@ export function ChoiceRows({
               {item.id ? (
                 <button
                   type="button"
-                  onClick={() => update(index, { active: !item.active })}
+                  onClick={() => replace(index, { ...item, active: !item.active })}
                   className="h-11 shrink-0 rounded-full px-3 text-[14px] font-semibold text-accent hover:bg-hover"
                 >
                   {item.active ? t.builder.retire : t.builder.restore}
@@ -62,19 +66,14 @@ export function ChoiceRows({
                   <Icon name="trash" className="size-5" />
                 </button>
               )}
-              {withPeople ? (
-                <label className="flex basis-full items-center gap-2 px-2 pb-1 text-[14px] text-ink-soft">
-                  <input type="checkbox" checked={item.people === 2} onChange={(event) => update(index, { people: event.target.checked ? 2 : 1 })} />
-                  {t.builder.twoPeople}
-                </label>
-              ) : null}
+              {extra ? <div className="basis-full px-2 pb-1">{extra(item, (patch) => replace(index, { ...item, ...patch }))}</div> : null}
             </li>
           )
         })}
       </ol>
       <button
         type="button"
-        onClick={() => onChange([...items, { id: null, label: '', active: true, people: 1 }])}
+        onClick={() => onChange([...items, blank()])}
         className="flex h-11 items-center gap-2 justify-self-start rounded-full px-3 text-[15px] font-semibold text-accent hover:bg-hover"
       >
         <Icon name="plus" className="size-5" />

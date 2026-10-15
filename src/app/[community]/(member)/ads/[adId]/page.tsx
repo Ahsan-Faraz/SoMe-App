@@ -29,7 +29,7 @@ async function AdContent({ params }: PageProps<'/[community]/ads/[adId]'>) {
 
   const [ads, me, albums, lists] = await Promise.all([
     listAds(),
-    getProfile(viewer.userId, viewer.userId, viewer.username),
+    getProfile(community, viewer.userId),
     listAlbums(viewer.userId),
     getChoiceLabels(info.id),
   ])
@@ -47,7 +47,7 @@ async function AdContent({ params }: PageProps<'/[community]/ads/[adId]'>) {
         own={own}
         profileHref={ad && !own ? `/${community}/profiles/${ad.userId}` : null}
         chatHref={ad && !own ? dmHref(community, ad.userId, chatIdForUser(ad.userId)) : null}
-        author={{ userId: me.id, username: me.username, status: me.status, age: me.age }}
+        author={{ userId: me.id, username: me.username, status: me.status, age: me.ages[0] ?? 0 }}
         albums={own ? albums : []}
         profilePhoto={me.photo}
         statuses={lists.statuses}

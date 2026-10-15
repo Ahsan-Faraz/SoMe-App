@@ -26,7 +26,7 @@ async function NewAdContent({ params }: PageProps<'/[community]/ads/new'>) {
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
   const [ads, profile, albums, lists] = await Promise.all([
     listAds(),
-    getProfile(viewer.userId, viewer.userId, viewer.username),
+    getProfile(community, viewer.userId),
     listAlbums(viewer.userId),
     getChoiceLabels(info.id),
   ])
@@ -42,7 +42,7 @@ async function NewAdContent({ params }: PageProps<'/[community]/ads/new'>) {
         own
         profileHref={null}
         chatHref={null}
-        author={{ userId: profile.id, username: profile.username, status: profile.status, age: profile.age }}
+        author={{ userId: profile.id, username: profile.username, status: profile.status, age: profile.ages[0] ?? 0 }}
         albums={albums}
         profilePhoto={profile.photo}
         statuses={lists.statuses}

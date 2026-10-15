@@ -29,8 +29,12 @@ async function ProfileContent({ params, searchParams }: PageProps<'/[community]/
   const [viewer, info] = await Promise.all([getViewer(community), getCommunity(community)])
   if (!viewer || !info) redirect(`/${community}/login`)
 
-  const [profile, schema] = await Promise.all([getProfile(userId, viewer.userId, viewer.username), getProfileSchema(info.id)])
-  if (!profile) notFound()
+  const [profile, schema] = await Promise.all([getProfile(community, userId), getProfileSchema(info.id)])
+  if (!profile) {
+    // Applicants see only their own profile (the database returns no other): back to their application.
+    if (viewer.role === 'pending') redirect(`/${community}/pending`)
+    notFound()
+  }
 
   const query = await searchParams
   const section = first(query.section)
@@ -45,7 +49,7 @@ async function ProfileContent({ params, searchParams }: PageProps<'/[community]/
         <ScreenHeader
           title={profile.username}
           backHref={backHref}
-          leading={<ProfileIcon community={community} userId={profile.id} name={profile.username} own={profile.own} />}
+          leading={<ProfileIcon name={profile.username} userId={profile.id} icon={schema.builtins.photo ? profile.photo : null} owner={profile.own && schema.builtins.photo ? { slug: community, communityId: info.id, userId: profile.id } : null} />}
           right={
             profile.own ? undefined : (
               <Link
@@ -62,7 +66,7 @@ async function ProfileContent({ params, searchParams }: PageProps<'/[community]/
       }
       footer={<ProfileActions community={community} profile={profile} chatId={chatId} isAdmin={viewer.role === 'admin'} />}
     >
-      <ProfileView community={community} profile={profile} schema={schema} section={section} />
+      <ProfileView community={community} communityId={info.id} profile={profile} schema={schema} section={section} />
     </Screen>
   )
 }

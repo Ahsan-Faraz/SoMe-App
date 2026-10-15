@@ -14,7 +14,8 @@ export function RosterStats({ community, scope, seed }: { community: string; sco
     const counts = new Map<string, number>()
     const totals = scope.stateLabels.map(() => 0)
     for (const member of members) {
-      counts.set(member.status, (counts.get(member.status) ?? 0) + 1)
+      const status = member.status || t.membership.noStatus
+      counts.set(status, (counts.get(status) ?? 0) + 1)
       member.state.forEach((value, index) => {
         const number = Number.parseInt(value, 10)
         if (Number.isFinite(number) && index < totals.length) totals[index] = (totals[index] ?? 0) + number

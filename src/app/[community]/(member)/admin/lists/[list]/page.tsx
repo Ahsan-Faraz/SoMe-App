@@ -9,7 +9,8 @@ import { getProfileSchema } from '@/features/fields/queries'
 import { CHOICE_LISTS } from '@/features/fields/types'
 import { t } from '@/lib/i18n'
 
-// The Status or District list (D2).
+// One of the community's lists (D2): Status (with its people), Substatus, Country, or the
+// Districts of one country (?country=).
 export default function ChoiceListPage(props: PageProps<'/[community]/admin/lists/[list]'>) {
   return (
     <Suspense fallback={<RouteSkeleton />}>
@@ -18,20 +19,34 @@ export default function ChoiceListPage(props: PageProps<'/[community]/admin/list
   )
 }
 
-async function Content({ params }: PageProps<'/[community]/admin/lists/[list]'>) {
+async function Content({ params, searchParams }: PageProps<'/[community]/admin/lists/[list]'>) {
   const { community, list: param } = await params
   const list = CHOICE_LISTS.find((item) => item === param)
   if (!list) notFound()
   const [, info] = await Promise.all([requireAdmin(community), getCommunity(community)])
   if (!info) notFound()
   const schema = await getProfileSchema(info.id)
-  const choices = list === 'status' ? schema.statuses : schema.districts
+
+  const countryParam = (await searchParams).country
+  const country = list === 'district' ? schema.countries.find((item) => item.id === countryParam) : undefined
+  if (list === 'district' && !country) notFound()
+
+  const choices =
+    list === 'status' ? schema.statuses : list === 'substatus' ? schema.substatuses : list === 'country' ? schema.countries : schema.districts.filter((item) => item.countryId === country?.id)
+  const title = country ? t.builder.districtsIn(country.label) : t.builder.lists[list]
 
   return (
     <div className="min-h-app w-full bg-canvas">
-      <ScreenHeader title={list === 'status' ? t.builder.statusList : t.builder.districtList} backHref={`/${community}/admin/fields`} />
+      <ScreenHeader title={title} backHref={`/${community}/admin/fields`} />
       {/* The form is a draft of the saved list: a newer save opens a fresh form. */}
-      <ListEditor key={JSON.stringify(choices)} community={community} list={list} choices={choices} />
+      <ListEditor
+        key={JSON.stringify(choices)}
+        community={community}
+        list={list}
+        choices={choices}
+        substatuses={schema.substatuses}
+        countryId={country?.id ?? null}
+      />
     </div>
   )
 }

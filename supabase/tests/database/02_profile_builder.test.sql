@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(46);
+select plan(65);
 
 -- Fixtures -------------------------------------------------------------------------------------
 create temp table ids as select
@@ -41,7 +41,24 @@ $$;
 create function pg_temp.field(p_key text) returns uuid language sql stable as $$
   select f.id from public.profile_fields f join ids on f.community_id = ids.biking where f.key = p_key
 $$;
-grant execute on function pg_temp.status(text), pg_temp.field(text) to anon, authenticated;
+create function pg_temp.option(p_list text, p_label text) returns uuid language sql stable as $$
+  select o.id from public.community_options o join ids on o.community_id = ids.biking
+  where o.list = p_list and o.label ->> 'en' = p_label
+$$;
+grant execute on function pg_temp.status(text), pg_temp.field(text), pg_temp.option(text, text) to anon, authenticated;
+
+-- The profile's order (fields and basic fields) just before the admin moves things.
+create temp table field_order (item text, n bigint);
+grant all on field_order to authenticated;
+-- The profile's order now: a field id, or 'builtin:<name>' for a basic field.
+create function pg_temp.layout() returns setof text language sql stable as $$
+  select item from (
+    select f.id::text as item, f.position, 1 as kind from public.profile_fields f join ids on f.community_id = ids.biking
+    union all
+    select 'builtin:' || l.builtin, l.position, 0 from public.profile_layout l join ids on l.community_id = ids.biking
+  ) as x order by position, kind, item
+$$;
+grant execute on function pg_temp.layout() to authenticated;
 
 -- Bike type's choices before it is retired.
 create temp table bike_choices as
@@ -50,16 +67,29 @@ grant select on bike_choices to authenticated;
 
 -- Seed -----------------------------------------------------------------------------------------
 select results_eq(
-  $$ select label ->> 'en', people::int from public.community_options o join ids on o.community_id = ids.biking
-     where list = 'status' order by position $$,
-  $$ values ('Man'::text, 1), ('Woman', 1), ('Other', 1), ('Couple MF', 2), ('Couple MM', 2), ('Couple FF', 2) $$,
-  'Status list is seeded in order; couples are 2 people'
+  $$ select st.label ->> 'en', string_agg((sub.label ->> 'en') || ' x' || s.count, ', ' order by s.position)
+     from public.community_options st join ids on st.community_id = ids.biking
+     left join public.status_slots s on s.status_id = st.id
+     left join public.community_options sub on sub.id = s.substatus_id
+     where st.list = 'status' and st.label ->> 'en' in ('Man', 'Woman', 'Other', 'Couple MF', 'Couple MM', 'Couple FF')
+     group by st.id, st.label, st.position order by st.position $$,
+  $$ values ('Man'::text, 'The Man x1'::text), ('Woman', 'The Woman x1'), ('Other', 'The Other x1'),
+     ('Couple MF', 'The Man x1, The Woman x1'), ('Couple MM', 'The Man x2'), ('Couple FF', 'The Woman x2') $$,
+  'each Status lists its people as substatuses: one for singles, two for couples'
 );
 select results_eq(
-  $$ select count(*)::int, count(*) filter (where active)::int from public.community_options o join ids on o.community_id = ids.biking
-     where list = 'district' $$,
-  $$ values (21, 21) $$,
-  'District list is Sweden''s 21 regions'
+  $$ select count(*)::int, count(*) filter (where d.active)::int, count(*) filter (where c.label ->> 'en' = 'Sweden')::int
+     from public.community_options d join ids on d.community_id = ids.biking
+     join public.community_options c on c.id = d.parent_id
+     where d.list = 'district' $$,
+  $$ values (21, 21, 21) $$,
+  'District list is Sweden''s 21 regions, all in the country Sweden'
+);
+select results_eq(
+  $$ select array(select label ->> 'en' from public.community_options where id = any(f.for_substatuses) order by position)
+     from public.profile_fields f where f.id = pg_temp.field('bike_type') $$,
+  $$ values (array['The Man', 'The Woman', 'The Other']) $$,
+  'Bike type shows in each person''s section (the old "per person")'
 );
 select results_eq(
   $$ select count(distinct kind)::int from public.profile_fields f join ids on f.community_id = ids.biking $$,
@@ -79,6 +109,16 @@ select results_eq(
 );
 
 -- Constraints ----------------------------------------------------------------------------------
+select is(
+  (select array_agg(item) from (select item from pg_temp.layout() as item limit 8) as x),
+  array['builtin:photo', 'builtin:looking_for', 'builtin:age', 'builtin:country', 'builtin:district', 'builtin:place', 'builtin:score', 'builtin:links'],
+  'the basic fields come first by default, then the fields'
+);
+select is(
+  (select count(*)::int from public.profile_layout l join public.communities c on c.id = l.community_id where c.slug = 'test-other'),
+  8,
+  'a new community gets the basic fields in the default order'
+);
 select throws_ok(
   $$ insert into public.profile_fields (community_id, key, label, kind, position)
      select biking, 'x', '{"en": "X"}', 'rating', 0 from ids $$,
@@ -90,9 +130,23 @@ select throws_ok(
   '23514', null, 'a label cannot be blank'
 );
 select throws_ok(
-  $$ insert into public.community_options (community_id, list, label, people, position)
-     select biking, 'district', '{"en": "Twin town"}', 2, 0 from ids $$,
-  '23514', null, 'only a Status can be 2 people'
+  $$ insert into public.community_options (community_id, list, label, position)
+     select biking, 'district', '{"en": "Nowhere"}', 0 from ids $$,
+  '23514', null, 'a District belongs to a Country'
+);
+select throws_ok(
+  $$ insert into public.community_options (community_id, list, label, position, parent_id)
+     select biking, 'district', '{"en": "Nowhere"}', 0, pg_temp.status('Man') from ids $$,
+  '23503', null, 'a District''s parent must be a Country'
+);
+select throws_ok(
+  $$ insert into public.status_slots (community_id, status_id, substatus_id, count, position)
+     select biking, pg_temp.status('Other'), pg_temp.option('district', 'Gotland'), 1, 1 from ids $$,
+  '23503', null, 'a Status lists Substatuses only'
+);
+select throws_ok(
+  $$ update public.profile_fields set for_substatuses = array[pg_temp.status('Man')] where id = pg_temp.field('area') $$,
+  '23503', null, 'a field''s section must be a Substatus'
 );
 select throws_ok(
   $$ insert into public.profile_field_options (community_id, field_id, label, position)
@@ -168,8 +222,16 @@ select throws_ok(
   '42501', null, 'a member cannot change the Status list'
 );
 select throws_ok(
-  $$ select public.reorder_profile_fields(biking, array[pg_temp.field('area')]) from ids $$,
-  '42501', null, 'a member cannot reorder fields'
+  $$ select public.reorder_profile_layout(biking, array[pg_temp.field('area')::text, 'builtin:photo']) from ids $$,
+  '42501', null, 'a member cannot reorder the profile'
+);
+select throws_ok(
+  $$ select public.save_profile_builtins(biking, '{"show_score": false}') from ids $$,
+  '42501', null, 'a member cannot switch basic fields'
+);
+select is_empty(
+  $$ delete from public.status_slots returning 1 $$,
+  'a member''s delete of a Status''s people removes nothing'
 );
 select throws_ok(
   $$ insert into public.community_options (community_id, list, label, position)
@@ -194,21 +256,71 @@ select set_config('request.jwt.claims', json_build_object('sub', carl, 'role', '
 
 -- Status list: the whole list in its new order, plus one new choice at the end.
 select lives_ok(
+  $$ select public.save_community_options(biking, 'substatus', (
+       select jsonb_agg(jsonb_build_object('id', id, 'label', label ->> 'en') order by position) || '[{"label": "The Kid"}]'::jsonb
+       from public.community_options where community_id = ids.biking and list = 'substatus')) from ids $$,
+  'the admin adds a Substatus'
+);
+select lives_ok(
   $$ select public.save_community_options(biking, 'status', (
-       select jsonb_agg(jsonb_build_object('id', id, 'label', label ->> 'en', 'people', people) order by position)
-         || '[{"label": "Group", "people": 2}]'::jsonb
+       select jsonb_agg(jsonb_build_object('id', id, 'label', label ->> 'en') order by position)
+         || jsonb_build_array(jsonb_build_object('label', 'Family', 'slots', jsonb_build_array(
+              jsonb_build_object('substatus_id', pg_temp.option('substatus', 'The Woman'), 'count', 2),
+              jsonb_build_object('substatus_id', pg_temp.option('substatus', 'The Kid'), 'count', 3))))
        from public.community_options where community_id = ids.biking and list = 'status')) from ids $$,
-  'the admin adds a Status'
+  'the admin adds a Status with its people: 2 adults and 3 kids'
 );
 select results_eq(
-  $$ select label ->> 'en', people, position from public.community_options o join ids on o.community_id = ids.biking
-     where list = 'status' and label ->> 'en' = 'Group' $$,
-  $$ values ('Group'::text, 2::smallint, 6::smallint) $$,
-  'the new Status is saved last, as 2 people'
+  $$ select st.position = (select max(position) from public.community_options o join ids on o.community_id = ids.biking where list = 'status'),
+       (select string_agg((sub.label ->> 'en') || ' x' || s.count, ', ' order by s.position)
+        from public.status_slots s join public.community_options sub on sub.id = s.substatus_id where s.status_id = st.id),
+       (select count(*)::int from public.status_slots s where s.status_id = pg_temp.status('Couple MF'))
+     from public.community_options st join ids on st.community_id = ids.biking
+     where st.list = 'status' and st.label ->> 'en' = 'Family' $$,
+  $$ values (true, 'The Woman x2, The Kid x3'::text, 2) $$,
+  'the new Status is saved last with its people; Statuses saved without people keep theirs'
 );
 select throws_ok(
-  $$ select public.save_community_options(biking, 'district', '[{"label": "Gotland"}, {"label": "gotland "}]') from ids $$,
+  $$ select public.save_community_options(biking, 'status', jsonb_build_array(jsonb_build_object('label', 'Odd', 'slots',
+       jsonb_build_array(jsonb_build_object('substatus_id', pg_temp.status('Man')))))) from ids $$,
+  '23503', null, 'a Status''s people must be Substatuses'
+);
+select throws_ok(
+  $$ select public.save_community_options(biking, 'district', '[{"label": "Gotland"}, {"label": "gotland "}]', pg_temp.option('country', 'Sweden')) from ids $$,
   '23505', null, 'two choices in a list cannot have the same name'
+);
+select throws_ok(
+  $$ select public.save_community_options(biking, 'district', '[{"label": "Oslo"}]') from ids $$,
+  '22023', null, 'districts are saved for one country'
+);
+select lives_ok(
+  $$ select public.save_community_options(biking, 'country', (
+       select jsonb_agg(jsonb_build_object('id', id, 'label', label ->> 'en')) || '[{"label": "Norway"}]'::jsonb
+       from public.community_options where community_id = ids.biking and list = 'country')) from ids $$,
+  'the admin adds a Country'
+);
+select lives_ok(
+  $$ select public.save_community_options(biking, 'district', '[{"label": "Oslo"}]', pg_temp.option('country', 'Norway')) from ids $$,
+  'the admin adds a District to it'
+);
+select results_eq(
+  $$ select c.label ->> 'en', count(*)::int from public.community_options d join ids on d.community_id = ids.biking
+     join public.community_options c on c.id = d.parent_id where d.list = 'district' group by c.label ->> 'en' order by 1 $$,
+  $$ values ('Norway'::text, 1), ('Sweden', 21) $$,
+  'each country keeps its own districts'
+);
+select lives_ok(
+  $$ select public.save_profile_builtins(biking, '{"show_score": false, "show_links": false}') from ids $$,
+  'the admin switches basic fields off'
+);
+select results_eq(
+  $$ select show_score, show_links, show_age from public.communities join ids on id = biking $$,
+  $$ values (false, false, true) $$,
+  'only the switches sent change'
+);
+select throws_ok(
+  $$ select public.save_profile_builtins(biking, '{"show_status": false}') from ids $$,
+  '22023', null, 'Status cannot be switched off'
 );
 
 -- A pick one field, limited to Couple MF.
@@ -220,9 +332,11 @@ select 'route', public.save_profile_field(
   '[{"label": "Slussen loop"}, {"label": "Lidingö"}]')
 from ids;
 select results_eq(
-  $$ select key, kind, searchable, for_statuses = array[pg_temp.status('Couple MF')], position
+  $$ select key ~ '^favourite_route(_\d+)?$', kind, searchable, for_statuses = array[pg_temp.status('Couple MF')],
+       position > (select max(position) from public.profile_layout l join ids on l.community_id = ids.biking)
+       and position = (select max(position) from public.profile_fields f join ids on f.community_id = ids.biking)
      from public.profile_fields where id = (select id from saved where name = 'route') $$,
-  $$ values ('favourite_route'::text, 'pick_one'::text, true, true, 12::smallint) $$,
+  $$ values (true, 'pick_one'::text, true, true, true) $$,
   'the admin adds a pick one field for Couple MF only, placed last'
 );
 select results_eq(
@@ -230,11 +344,24 @@ select results_eq(
   $$ values ('Slussen loop'::text), ('Lidingö') $$,
   'its choices are saved in order'
 );
+select lives_ok(
+  $$ select public.save_profile_field(biking, jsonb_build_object('label', 'Male competition level', 'kind', 'short_text',
+       'for_substatuses', jsonb_build_array(pg_temp.option('substatus', 'The Man')))) from ids $$,
+  'the admin adds a field shown only in The Man''s section'
+);
+select is(
+  (select for_substatuses from public.profile_fields f join ids on f.community_id = ids.biking where f.key ~ '^male_competition_level'
+   order by f.created_at desc limit 1),
+  array[pg_temp.option('substatus', 'The Man')],
+  'its section is saved'
+);
 insert into saved
 select 'route2', public.save_profile_field(biking, '{"label": "Favourite route", "kind": "short_text"}') from ids;
-select is(
-  (select key from public.profile_fields where id = (select id from saved where name = 'route2')),
-  'favourite_route_2',
+select results_eq(
+  $$ select r2.key ~ '^favourite_route_\d+$', r2.key <> r1.key
+     from public.profile_fields r1, public.profile_fields r2
+     where r1.id = (select id from saved where name = 'route') and r2.id = (select id from saved where name = 'route2') $$,
+  $$ values (true, true) $$,
   'a second field with the same name gets its own key'
 );
 select throws_ok(
@@ -291,15 +418,20 @@ select results_eq(
 );
 
 -- Order and isolation.
+insert into field_order select item, row_number() over () from pg_temp.layout() as item;
 select lives_ok(
-  $$ select public.reorder_profile_fields(biking, array(
-       select id from public.profile_fields where community_id = ids.biking order by key = 'area' desc, position)) from ids $$,
-  'the admin moves Area to the top'
+  $$ select public.reorder_profile_layout(biking,
+       array[pg_temp.field('area')::text, 'builtin:photo']
+       || array(select item from field_order where item not in (pg_temp.field('area')::text, 'builtin:photo', 'builtin:score') order by n)
+       || array['builtin:score']) from ids $$,
+  'the admin moves Area and the profile image to the top, and the score to the end'
 );
 select results_eq(
-  $$ select key from public.profile_fields f join ids on f.community_id = ids.biking order by position limit 3 $$,
-  $$ values ('area'::text), ('headline'), ('about') $$,
-  'the new order is saved'
+  $$ select item from pg_temp.layout() as item $$,
+  $$ select pg_temp.field('area')::text union all select 'builtin:photo'
+     union all (select item from field_order where item not in (pg_temp.field('area')::text, 'builtin:photo', 'builtin:score') order by n)
+     union all select 'builtin:score' $$,
+  'the new order is saved: fields and basic fields in one list'
 );
 select throws_ok(
   $$ select public.save_community_options(c.id, 'status', '[{"label": "Takeover"}]') from public.communities c where c.slug = 'test-other' $$,

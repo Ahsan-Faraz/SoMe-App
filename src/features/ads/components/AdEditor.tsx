@@ -7,7 +7,6 @@ import { buttonClass } from '@/components/ui/Button'
 import { MultiSelect } from '@/components/ui/MultiSelect'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
 import type { Album } from '@/features/albums/types'
-import { useStatus } from '@/features/profiles/status'
 import type { MainPhoto } from '@/features/profiles/types'
 import { formatDay } from '@/lib/format'
 import { useGoBack } from '@/lib/history'
@@ -48,8 +47,6 @@ export function AdEditor({
   districts: readonly string[]
 }) {
   const goBack = useGoBack(community)
-  // Your status as chosen on your profile (it may only be on this device so far).
-  const { status: authorStatus } = useStatus(community, author.userId, author.status)
   const seeded = adId ? (seed.find((item) => item.id === adId) ?? null) : null
   const [ad, setAd] = useState<Ad | null>(seeded)
   // Render the known ad straight away (first paint from the server); only wait when it may exist on this device only.
@@ -96,7 +93,7 @@ export function AdEditor({
 
   const locked = !own
   const shown = ad ?? {
-    status: authorStatus,
+    status: author.status,
     age: author.age,
     published: formatDay(),
   }
@@ -113,7 +110,7 @@ export function AdEditor({
           id: ad?.id ?? `ad-${Date.now()}`,
           userId: ad?.userId ?? author.userId,
           username: ad?.username ?? author.username,
-          status: ad?.status ?? authorStatus,
+          status: ad?.status ?? author.status,
           age: ad?.age ?? author.age,
           district,
           place: place.trim(),

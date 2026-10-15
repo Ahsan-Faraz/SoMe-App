@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { readPhoto } from '@/features/profiles/photo'
 import type { MainPhoto } from '@/features/profiles/types'
 import { t } from '@/lib/i18n'
 import { albumKey, loadAlbums } from '../storage'
@@ -27,7 +26,7 @@ export function AlbumPhotos({
   const [photos, setPhotos] = useState<(PickedPhoto & { id: string })[] | null>(null)
 
   useEffect(() => {
-    const profile = readPhoto(community, viewerId) ?? profilePhoto
+    const profile = profilePhoto
     const stored = loadAlbums(albumKey(community, viewerId), albums).flatMap((album) => album.images)
     setPhotos([...(profile ? [{ id: 'profile', ...profile }] : []), ...stored])
   }, [community, viewerId, albums, profilePhoto])

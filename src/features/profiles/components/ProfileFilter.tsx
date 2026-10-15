@@ -8,11 +8,25 @@ import { MultiSelect } from '@/components/ui/MultiSelect'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
 import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
+import type { Builtins } from '@/features/fields/types'
 import { emptyFilter, readFilter, writeFilter, type ProfileFilter } from '../filter'
 import { MAX_SCORE, MAX_STARS } from '../options'
 
-// statuses / districts: the community's active lists (profile builder).
-export function ProfileFilterForm({ community, returnHref, statuses, districts }: { community: string; returnHref: string; statuses: readonly string[]; districts: readonly string[] }) {
+// statuses / districts: the community's active lists (profile builder). builtins: the basic fields it
+// shows; filters for the others are left out.
+export function ProfileFilterForm({
+  community,
+  returnHref,
+  statuses,
+  districts,
+  builtins,
+}: {
+  community: string
+  returnHref: string
+  statuses: readonly string[]
+  districts: readonly string[]
+  builtins: Builtins
+}) {
   const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
   const goBack = useGoBack(community)
   const set = <K extends keyof ProfileFilter>(name: K) => (value: ProfileFilter[K]) => setFilter((current) => ({ ...current, [name]: value }))
@@ -47,30 +61,40 @@ export function ProfileFilterForm({ community, returnHref, statuses, districts }
           <FilterSection label={t.profiles.status}>
             <ChipSelect options={statuses} value={filter.picked} onChange={set('picked')} />
           </FilterSection>
-          <FilterSection label={t.profiles.lookingFor}>
-            <ChipSelect options={statuses} value={filter.lookingFor} onChange={set('lookingFor')} />
-          </FilterSection>
-          <FilterSection label={t.profiles.age}>
-            <NumberRange
-              label={t.profiles.age}
-              from={filter.minAge}
-              to={filter.maxAge}
-              onFrom={set('minAge')}
-              onTo={set('maxAge')}
-              fromLabel={t.profiles.ageFrom}
-              toLabel={t.profiles.ageTo}
-              max={120}
-            />
-          </FilterSection>
-          <FilterSection label={t.profiles.district}>
-            <MultiSelect label={t.profiles.district} options={districts} value={filter.districts} onChange={set('districts')} placeholder={t.profiles.choose} showLabel={false} />
-          </FilterSection>
-          <FilterSection label={t.profiles.place}>
-            <input value={filter.place} onChange={(event) => set('place')(event.target.value)} aria-label={t.profiles.place} className={filterInput} />
-          </FilterSection>
-          <FilterSection label={t.profiles.scoreMin(MAX_SCORE)}>
-            <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin(MAX_SCORE)} max={MAX_SCORE} />
-          </FilterSection>
+          {builtins.lookingFor ? (
+            <FilterSection label={t.profiles.lookingFor}>
+              <ChipSelect options={statuses} value={filter.lookingFor} onChange={set('lookingFor')} />
+            </FilterSection>
+          ) : null}
+          {builtins.age ? (
+            <FilterSection label={t.profiles.age}>
+              <NumberRange
+                label={t.profiles.age}
+                from={filter.minAge}
+                to={filter.maxAge}
+                onFrom={set('minAge')}
+                onTo={set('maxAge')}
+                fromLabel={t.profiles.ageFrom}
+                toLabel={t.profiles.ageTo}
+                max={120}
+              />
+            </FilterSection>
+          ) : null}
+          {builtins.district ? (
+            <FilterSection label={t.profiles.district}>
+              <MultiSelect label={t.profiles.district} options={districts} value={filter.districts} onChange={set('districts')} placeholder={t.profiles.choose} showLabel={false} />
+            </FilterSection>
+          ) : null}
+          {builtins.place ? (
+            <FilterSection label={t.profiles.place}>
+              <input value={filter.place} onChange={(event) => set('place')(event.target.value)} aria-label={t.profiles.place} className={filterInput} />
+            </FilterSection>
+          ) : null}
+          {builtins.score ? (
+            <FilterSection label={t.profiles.scoreMin(MAX_SCORE)}>
+              <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin(MAX_SCORE)} max={MAX_SCORE} />
+            </FilterSection>
+          ) : null}
           <FilterSection label={t.profiles.starsRange(MAX_STARS)}>
             <NumberRange
               label={t.profiles.stars}
