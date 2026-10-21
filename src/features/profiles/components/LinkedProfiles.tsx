@@ -35,7 +35,10 @@ export function LinkedProfiles({
             <Link href={`${linkBase}/${item.id}`} className={`flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-hover ${item.confirmed ? '' : 'opacity-50'}`}>
               <Avatar name={item.username} seed={item.id} size="sm" src={item.icon} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[16px] font-semibold">{item.username}</span>
+                <span className="block truncate text-[16px]">
+                  <span className="font-semibold">{item.username}</span>
+                  {item.comment ? <span className="text-ink-soft"> · {item.comment}</span> : null}
+                </span>
                 {item.confirmed ? null : <span className="block truncate text-[13px] text-muted">{t.linked.waiting}</span>}
               </span>
               <Icon name="chevronRight" className="size-5 shrink-0 text-muted" />

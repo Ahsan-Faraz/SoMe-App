@@ -6,7 +6,6 @@ import { personKey } from '@/features/fields/schema'
 import type { Choice, ProfileSchema } from '@/features/fields/types'
 import { formatDay, formatStamp } from '@/lib/format'
 import { createClient } from '@/lib/supabase/server'
-import { mockProfiles } from '@/mocks/data'
 import { valueKey, type FieldValue } from './fields'
 import { profilePhotoUrl, toProfilePhoto, type PhotoRow } from './photo'
 import type { BrowseProfile, LinkedProfile, Profile, ProfileCard, ProfilePhoto } from './types'
@@ -15,7 +14,7 @@ import type { BrowseProfile, LinkedProfile, Profile, ProfileCard, ProfilePhoto }
 // (backend step 9); until then the list filters this page on the phone.
 const CARDS_LIMIT = 50
 
-// What public.profile() returns (supabase/migrations/20261014120000_profile_sections.sql).
+// What public.profile() returns (supabase/migrations/20261017120000_feedback_261016.sql).
 type Person = { substatus_id: string | null; n: number }
 type ProfileRow = {
   user_id: string
@@ -35,7 +34,7 @@ type ProfileRow = {
   people: (Person & { birth_date: string | null; age: number | null })[]
   values: (Person & { field_id: string; text: string | null; num: number | null; bool: boolean | null; date: string | null; photo: PhotoRow | null })[]
   choices: (Person & { field_id: string; option_ids: string[] })[]
-  links: { user_id: string; username: string; icon: string | null; confirmed: boolean }[]
+  links: { user_id: string; username: string; icon: string | null; confirmed: boolean; comment: string | null }[]
   linked_you: { user_id: string; username: string; icon: string | null }[]
 }
 
@@ -98,11 +97,12 @@ function toProfile(row: ProfileRow, schema: ProfileSchema): Profile {
   for (const choice of row.choices) {
     values[keyOf(choice)] = kinds.get(choice.field_id) === 'pick_one' ? (choice.option_ids[0] ?? '') : choice.option_ids
   }
-  const link = (item: { user_id: string; username: string; icon: string | null }, confirmed: boolean): LinkedProfile => ({
+  const link = (item: { user_id: string; username: string; icon: string | null; comment?: string | null }, confirmed: boolean): LinkedProfile => ({
     id: item.user_id,
     username: item.username,
     icon: item.icon ? profilePhotoUrl(item.icon) : null,
     confirmed,
+    comment: item.comment ?? '',
   })
   const people = row.people.map((person) => ({ substatusId: person.substatus_id, n: person.n, birthDate: person.birth_date ?? '', age: person.age }))
 
@@ -139,16 +139,15 @@ const labelOf = (choices: readonly Choice[], id: string | null) => (id ? (choice
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const isUuid = (value: string) => UUID.test(value)
 
-// A27 swipe: mock profiles until search_profiles arrives (backend step 9). Their about and headline
-// texts stand in as answers to the community's matching fields.
-export async function listBrowseProfiles(communityId: string): Promise<BrowseProfile[]> {
-  const schema = await getProfileSchema(communityId)
-  return mockProfiles.slice(0, CARDS_LIMIT).map(({ id, username, status, age, district, place, score, lookingFor, photo, about, headline, lastLogin }) => {
-    const values: Record<string, FieldValue> = {}
-    for (const field of schema.fields) {
-      if (field.key === 'about' || field.key === 'about_us') values[field.id] = about
-      if (field.key === 'headline') values[field.id] = headline
-    }
-    return { id, username, status, ages: [age], country: '', district, place, score, lookingFor, photo, lastLogin, values }
-  })
+// A27 swipe: the same members as the Profiles list, with the full-size image. Their field answers
+// arrive with search_profiles (backend step 9); until then swipe shows the basic fields only.
+export async function listBrowseProfiles(slug: string): Promise<BrowseProfile[]> {
+  const cards = await listProfiles(slug)
+  return cards.map((card) => ({
+    ...card,
+    // The full image sits next to its thumbnail: name.webp beside name_t.webp (private.insert_photo).
+    photo: card.photo ? { ...card.photo, src: card.photo.src.replace(/_t\.(webp|jpg)$/, '.$1') } : null,
+    lastLogin: '',
+    values: {},
+  }))
 }

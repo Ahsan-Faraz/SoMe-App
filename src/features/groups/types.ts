@@ -1,3 +1,4 @@
+// A10: a group's settings as the edit form holds them (the group admin or the community admin).
 export type GroupForm = {
   id: string
   name: string
@@ -21,16 +22,40 @@ export type GroupForm = {
   reactions: boolean
 }
 
-export type GroupMember = { id: string; username: string }
+export type InfoPost = { n: number; headline: string; body: string }
 
+export type GroupMember = { id: string; username: string; icon: string | null; admin: boolean }
+
+// G3 / B2: what a group's members (and its admins) see. members and memberCount: null when the
+// group hides its member list (its admins still get it).
 export type GroupInfo = {
   id: string
   name: string
   headline: string
+  infos: InfoPost[]
   members: GroupMember[] | null
-  infoHeadlines: string[]
+  memberCount: number | null
+  member: boolean // the viewer is in the group
+  admin: boolean // the viewer is its group admin
+  manage: boolean // the viewer runs it (group admin or community admin)
 }
 
-export type InfoPost = { groupName: string; n: number; headline: string; body: string }
+// A24 / A2: a group seen from outside.
+export type GroupCard = {
+  id: string
+  name: string
+  headline: string
+  applicationText: string
+  directJoin: boolean
+  requires: { image: boolean; text: boolean; names: boolean }
+  member: boolean
+  applied: boolean
+}
+
+// F1 "Add to groups" for one member.
+export type GroupAssignments = {
+  canCreateGroups: boolean | null // shown to the community admin only
+  groups: { id: string; name: string; member: boolean }[]
+}
 
 export type GroupFlag = { [K in keyof GroupForm]: GroupForm[K] extends boolean ? K : never }[keyof GroupForm]

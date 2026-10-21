@@ -2,8 +2,11 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getSupabaseEnv } from '@/lib/env'
 
-export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request })
+// Refreshes the login session on every request. rewrite: serve this URL instead (a community's own
+// domain, src/proxy.ts); the session cookies go on whichever response is returned.
+export async function updateSession(request: NextRequest, rewrite: URL | null = null) {
+  const respond = () => (rewrite ? NextResponse.rewrite(rewrite, { request }) : NextResponse.next({ request }))
+  let response = respond()
   const { url, key } = getSupabaseEnv()
 
   const supabase = createServerClient(url, key, {
@@ -11,7 +14,7 @@ export async function updateSession(request: NextRequest) {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet, headers) {
         for (const { name, value } of cookiesToSet) request.cookies.set(name, value)
-        response = NextResponse.next({ request })
+        response = respond()
         for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options)
         for (const [headerName, value] of Object.entries(headers)) response.headers.set(headerName, value)
       },

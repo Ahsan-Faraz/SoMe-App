@@ -3,7 +3,8 @@
 
 export type ScopeKind = 'community' | 'group'
 
-export type Requirements = { image: boolean; text: boolean; names: boolean }
+// identity: an ID photo with the application, checked by hand (D31; communities only).
+export type Requirements = { image: boolean; text: boolean; names: boolean; identity: boolean }
 
 export type Scope = {
   kind: ScopeKind
@@ -16,6 +17,9 @@ export type Scope = {
 
 export type ApplicationImage = { src: string; verified: boolean; date: string }
 
+// A25 after applying: what the applicant sent, shown back to them.
+export type SentApplication = { image: ApplicationImage | null; idImage: ApplicationImage | null; message: string; realNames: string[] }
+
 export type MemberRecord = {
   userId: string
   username: string
@@ -24,19 +28,19 @@ export type MemberRecord = {
   state: string[] // 3 whole numbers as text; '' = not set
   notes: string
   image: ApplicationImage | null
+  idImage: ApplicationImage | null // identity check (D31)
+  // The images were deleted once the application was decided: when, and by whom ("Checked and deleted").
+  checked: { date: string; by: string } | null
   message: string
   applied: boolean // in the applications list, not a member yet
-  applicationId: string | null // the open application (community scope), for Approve
+  applicationId: string | null // the open application (community or group), for Approve
 }
 
 export type Roster = { members: MemberRecord[]; applications: MemberRecord[] }
 
-// What an admin changed on this device, by user id, until the memberships table exists.
+// One change an admin makes to a member (saveMember): record fields, Approve, or Remove.
 export type RosterEdit = { realNames?: string[]; state?: string[]; notes?: string; approved?: boolean; removed?: boolean }
 
 export const REAL_NAMES = 2
 export const STATE_FIELDS = 3
 
-export function scopeKey(scope: Pick<Scope, 'kind' | 'id'>) {
-  return scope.kind === 'community' ? 'community' : `group:${scope.id}`
-}

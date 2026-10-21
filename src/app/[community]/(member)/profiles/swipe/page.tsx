@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
 import { getViewer } from '@/features/auth/queries'
-import { chatIdForUser } from '@/features/chats/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
 import { BrowseProfiles } from '@/features/profiles/components/BrowseProfiles'
@@ -23,23 +22,18 @@ async function SwipeContent({ params }: PageProps<'/[community]/profiles/swipe'>
   if (!viewer || !info) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const [profiles, schema] = await Promise.all([listBrowseProfiles(info.id), getProfileSchema(info.id)])
-  const chatIds: Record<string, string> = {}
-  for (const profile of profiles) {
-    const chatId = chatIdForUser(profile.id)
-    if (chatId) chatIds[profile.id] = chatId
-  }
+  const [profiles, schema] = await Promise.all([listBrowseProfiles(community), getProfileSchema(info.id)])
 
   return (
     <BrowseProfiles
       community={community}
       viewerId={viewer.userId}
       profiles={profiles}
-      chatIds={chatIds}
       statuses={schema.statuses}
       substatuses={schema.substatuses}
       builtins={schema.builtins}
-      layout={schema.layout}
+      // The basic fields only: answers come with search in backend step 9.
+      layout={schema.layout.filter((item) => item.type === 'builtin')}
       fields={schema.fields.filter((field) => field.active)}
     />
   )

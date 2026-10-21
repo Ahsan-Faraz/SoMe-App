@@ -5,8 +5,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { EventForm } from '@/features/calendar/components/EventForm'
 import { listEvents } from '@/features/calendar/queries'
-import { getChatSummary } from '@/features/chats/queries'
-import { getGroup } from '@/features/groups/queries'
+import { getChatHeader } from '@/features/chats/queries'
 import { todayKey } from '@/lib/format'
 import { t } from '@/lib/i18n'
 
@@ -22,10 +21,11 @@ async function EventContent({ params, searchParams }: PageProps<'/[community]/ch
   const { community, chatId, eventId } = await params
   const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
-  if (viewer.role !== 'admin') redirect(`/${community}/chats/${chatId}/calendar`)
 
-  const [chat, group, events] = await Promise.all([getChatSummary(chatId), getGroup(chatId), listEvents(chatId)])
-  if (!chat || chat.kind !== 'group' || !group?.calendar) notFound()
+  const [chat, events] = await Promise.all([getChatHeader(community, chatId), listEvents(chatId)])
+  if (!chat || chat.kind !== 'group' || !chat.calendar) notFound()
+  // Only the group's admins (group admin or community admin) edit events.
+  if (!chat.manage) redirect(`/${community}/chats/${chatId}/calendar`)
 
   const creating = eventId === 'new'
   const requested = (await searchParams).date

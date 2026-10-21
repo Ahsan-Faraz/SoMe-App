@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useOptimistic, useState, useTransition } from 'react'
+import { useEffect, useOptimistic, useState, useTransition, type ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
-import { LINKED_PROFILES_MAX } from '@/lib/limits'
+import { LINK_COMMENT_MAX, LINKED_PROFILES_MAX } from '@/lib/limits'
 import { createClient } from '@/lib/supabase/browser'
-import { setLinkAction } from '../actions'
+import { setLinkAction, setLinkCommentAction } from '../actions'
 import { profilePhotoUrl } from '../photo'
 import type { LinkedProfile } from '../types'
 
@@ -15,7 +15,7 @@ const SEARCH_LIMIT = 20
 
 type Change = { on: boolean; item: LinkedProfile }
 
-// A32: your links first (remove), then people to link: those who linked to you (so you can link
+// A32: your links first (remove, and a short comment on each), then people to link: those who linked to you (so you can link
 // back), or the names matching the search. A link is confirmed when the other person links back:
 // until then it is dimmed. Changes show at once and go back if the database refuses them.
 export function LinkPicker({ slug, communityId, linked, linkedYou }: { slug: string; communityId: string; linked: LinkedProfile[]; linkedYou: LinkedProfile[] }) {
@@ -35,7 +35,7 @@ export function LinkPicker({ slug, communityId, linked, linkedYou }: { slug: str
       if (!current) return
       setFound({
         query: text,
-        items: (data ?? []).map((row) => ({ id: row.user_id, username: row.username, icon: row.icon ? profilePhotoUrl(row.icon) : null, confirmed: false })),
+        items: (data ?? []).map((row) => ({ id: row.user_id, username: row.username, icon: row.icon ? profilePhotoUrl(row.icon) : null, confirmed: false, comment: '' })),
       })
     }, SEARCH_DELAY_MS)
     return () => {
@@ -77,7 +77,9 @@ export function LinkPicker({ slug, communityId, linked, linkedYou }: { slug: str
         {list.length > 0 ? (
           <ul className="divide-y divide-line border-b-4 border-line">
             {list.map((item) => (
-              <Row key={item.id} item={item} note={item.confirmed ? null : t.linked.waiting} label={t.linked.remove(item.username)} icon="trash" danger onClick={() => save(false, item)} />
+              <Row key={item.id} item={item} note={item.confirmed ? null : t.linked.waiting} label={t.linked.remove(item.username)} icon="trash" danger onClick={() => save(false, item)}>
+                <LinkComment key={item.comment} slug={slug} item={item} onError={setError} />
+              </Row>
             ))}
           </ul>
         ) : null}
@@ -111,6 +113,7 @@ function Row({
   danger = false,
   disabled = false,
   onClick,
+  children = null,
 }: {
   item: LinkedProfile
   note: string | null
@@ -119,11 +122,12 @@ function Row({
   danger?: boolean
   disabled?: boolean
   onClick: () => void
+  children?: ReactNode // under the name: the comment of one of your links
 }) {
   // A link of yours that is still waiting for the other person is dimmed.
   const waiting = danger && note !== null
   return (
-    <li className="flex items-center gap-3 px-4 py-2.5 [contain-intrinsic-size:auto_60px] [content-visibility:auto]">
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 [contain-intrinsic-size:auto_60px] [content-visibility:auto]">
       <span className={`flex min-w-0 flex-1 items-center gap-3 ${waiting ? 'opacity-50' : ''}`}>
         <Avatar name={item.username} seed={item.id} src={item.icon} />
         <span className="min-w-0 flex-1">
@@ -131,6 +135,7 @@ function Row({
           {note ? <span className={`block truncate text-[13px] ${waiting ? 'text-muted' : 'font-semibold text-accent'}`}>{note}</span> : null}
         </span>
       </span>
+      {children}
       <button
         type="button"
         aria-label={label}
@@ -142,5 +147,31 @@ function Row({
         <Icon name={icon} className="size-5" />
       </button>
     </li>
+  )
+}
+
+// Your short comment on a link ("My partner"), shown next to it on your profile. Saved when the
+// field is left, only if it changed.
+function LinkComment({ slug, item, onError }: { slug: string; item: LinkedProfile; onError: (error: string) => void }) {
+  const [comment, setComment] = useState(item.comment)
+  const [pending, startTransition] = useTransition()
+  return (
+    <input
+      value={comment}
+      maxLength={LINK_COMMENT_MAX}
+      aria-label={t.linked.comment(item.username)}
+      placeholder={t.linked.commentPlaceholder}
+      disabled={pending}
+      onChange={(event) => setComment(event.target.value)}
+      onBlur={() => {
+        if (comment.trim() === item.comment) return
+        onError('')
+        startTransition(async () => {
+          const result = await setLinkCommentAction(slug, item.id, comment)
+          if (result) onError(result.error)
+        })
+      }}
+      className="order-last h-10 w-full rounded-xl border border-line-strong bg-canvas px-3 text-[15px] text-ink outline-none focus:border-accent"
+    />
   )
 }

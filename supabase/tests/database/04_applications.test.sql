@@ -16,10 +16,13 @@ grant select on ids to anon, authenticated;
 
 insert into public.communities (slug, name, headline) values ('test-other', 'Other', 'Another community');
 
+-- Sign-ups give their consents (step 5b); every community's version is 'test' here.
+update public.communities set privacy_version = 'test';
+
 insert into auth.users (id, email, raw_user_meta_data)
 select u.id, u.name || '@test.invalid',
   jsonb_build_object('community_id', case when u.name = 'dora' then (select id from public.communities where slug = 'test-other') else ids.biking end,
-    'username', initcap(u.name))
+    'username', initcap(u.name), 'consents', '{"privacy": "test", "age_18": true}'::jsonb)
 from ids cross join lateral (values
   (ids.anna, 'anna'), (ids.bert, 'bert'), (ids.carl, 'carl'), (ids.dora, 'dora'), (ids.erik, 'erik'), (ids.fred, 'fred')
 ) as u (id, name);

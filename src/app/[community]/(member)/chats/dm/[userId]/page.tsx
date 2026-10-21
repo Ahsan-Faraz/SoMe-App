@@ -2,14 +2,16 @@ import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { listAlbums } from '@/features/albums/queries'
 import { getViewer } from '@/features/auth/queries'
 import { ChatThread } from '@/features/chats/components/ChatThread'
-import { chatIdForUser } from '@/features/chats/queries'
+import { findDm } from '@/features/chats/queries'
+import type { ChatRules } from '@/features/chats/types'
+import { listAlbums } from '@/features/albums/queries'
+import { getCommunity } from '@/features/communities/queries'
 import { getProfile } from '@/features/profiles/queries'
 
-// A DM button for someone you have no chat with yet (e.g. an admin writing to an applicant).
-// The chat itself is made when the first message is sent (backend step 6: find or create a DM).
+// Every "DM" button lands here: the existing DM with that person, or an empty one that is made
+// when the first message is sent (open_dm). E.g. the community admin writing to an applicant.
 export default function NewDmPage(props: PageProps<'/[community]/chats/dm/[userId]'>) {
   return (
     <Suspense fallback={<RouteSkeleton />}>
@@ -24,19 +26,32 @@ async function NewDmContent({ params }: PageProps<'/[community]/chats/dm/[userId
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending' || userId === viewer.userId) redirect(`/${community}/chats`)
 
-  const existing = chatIdForUser(userId)
+  const [existing, profile, info, albums] = await Promise.all([findDm(community, userId), getProfile(community, userId), getCommunity(community), listAlbums(viewer.userId)])
   if (existing) redirect(`/${community}/chats/${existing}`)
+  if (!profile || !info) notFound()
 
-  const [profile, albums] = await Promise.all([getProfile(community, userId), listAlbums(viewer.userId)])
-  if (!profile) notFound()
-
-  const base = `/${community}/chats/dm/${userId}`
-  const rules = { post: true, comment: true, react: true, edit: true }
+  // A new DM: the first post (text or a picture) makes it; nothing to react to or comment on yet.
+  const rules: ChatRules = { post: true, comment: false, react: false, edit: false, remove: false, images: true }
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
       <ScreenHeader title={profile.username} backHref={`/${community}/chats`} />
-      <ChatThread community={community} chatId={`dm-${userId}`} backHref={base} messages={[]} isAdmin={viewer.role === 'admin'} rules={rules} viewerId={viewer.userId} albums={albums} />
+      <ChatThread
+        key={userId}
+        community={community}
+        communityId={info.id}
+        chatId={null}
+        dmUserId={userId}
+        group={false}
+        initial={[]}
+        hasOlder={false}
+        statuses={{}}
+        viewerId={viewer.userId}
+        isAdmin={false}
+        rules={rules}
+        albums={albums}
+        backHref={`/${community}/chats/dm/${userId}`}
+      />
     </div>
   )
 }

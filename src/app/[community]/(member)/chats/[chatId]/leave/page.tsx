@@ -4,7 +4,7 @@ import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { LeaveChat } from '@/features/chats/components/LeaveChat'
-import { getChatSummary } from '@/features/chats/queries'
+import { getChatHeader } from '@/features/chats/queries'
 
 export default function LeavePage(props: PageProps<'/[community]/chats/[chatId]/leave'>) {
   return (
@@ -20,13 +20,13 @@ async function LeaveContent({ params }: PageProps<'/[community]/chats/[chatId]/l
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const chat = await getChatSummary(chatId)
+  const chat = await getChatHeader(community, chatId)
   if (!chat) notFound()
 
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}`} />
-      <LeaveChat community={community} chatId={chat.id} kind={chat.kind} chatHref={`/${community}/chats/${chat.id}`} listHref={`/${community}/chats`} />
+      <LeaveChat community={community} chatId={chat.id} kind={chat.kind} />
     </div>
   )
 }

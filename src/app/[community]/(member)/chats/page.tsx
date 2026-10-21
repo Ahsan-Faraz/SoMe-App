@@ -43,7 +43,7 @@ async function ChatsContent({ params }: PageProps<'/[community]/chats'>) {
           <Link href={`/${community}/chats/new`} className={`${buttonClass('primary')} w-auto! px-6`}>
             {t.chats.newChat}
           </Link>
-          {viewer.role === 'admin' ? (
+          {viewer.role === 'admin' || viewer.canCreateGroups ? (
             <Link href={`/${community}/groups/new`} className={`${buttonClass('secondary')} w-auto! px-6`}>
               {t.chats.newGroup}
             </Link>

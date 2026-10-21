@@ -1,12 +1,12 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useGoBack } from '@/lib/history'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/Button'
 import { BigLink } from '@/components/ui/BigLink'
 import { t } from '@/lib/i18n'
-import type { GroupFlag, GroupForm as GroupValues } from '../types'
+import { deleteGroupAction, saveGroupAction } from '../actions'
+import { GROUP_HEADLINE_MAX, NAME_MAX } from '@/lib/limits'
+import type { GroupFlag, GroupForm as GroupValues, InfoPost } from '../types'
 
 const STATE_LABELS = 3
 
@@ -52,12 +52,19 @@ const field = 'rounded-xl border border-line-strong bg-canvas px-3 text-[16px] f
 const label = 'grid gap-1.5 text-[14px] font-semibold text-ink'
 const heading = 'col-span-full mt-2 text-[13px] font-bold tracking-wide text-muted uppercase'
 
-export function GroupForm({ community, group, infos: seedInfos }: { community: string; group: GroupValues | null; infos: string[] }) {
-  const router = useRouter()
-  const goBack = useGoBack(community)
+// A10 create / edit group, saved with "Save" (save_group). Info 1–3 are header + text pairs; an
+// info without a header is not kept. Keyed by the saved group on the page, so a save opens it fresh.
+export function GroupForm({ community, group, infos: saved }: { community: string; group: GroupValues | null; infos: InfoPost[] }) {
   const editing = group !== null
   const [values, setValues] = useState(group ?? blank)
-  const [infos, setInfos] = useState(() => Array.from({ length: 6 }, (_, i) => seedInfos[i] ?? ''))
+  const [infos, setInfos] = useState(() =>
+    Array.from({ length: 6 }, (_, i) => {
+      const post = saved.find((item) => item.n === Math.floor(i / 2) + 1)
+      return post ? (i % 2 === 0 ? post.headline : post.body) : ''
+    }),
+  )
+  const [error, setError] = useState('')
+  const [pending, startTransition] = useTransition()
   const set = <K extends keyof GroupValues>(key: K, value: GroupValues[K]) => setValues((current) => ({ ...current, [key]: value }))
   const base = editing ? `/${community}/groups/${group.id}` : ''
 
@@ -66,16 +73,20 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
       className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4 px-4 py-4 pb-10 sm:px-8 min-[64rem]:px-12"
       onSubmit={(event) => {
         event.preventDefault()
-        goBack(editing ? `/${community}/chats/${group.id}/info` : `/${community}/chats`)
+        setError('')
+        startTransition(async () => {
+          const result = await saveGroupAction(community, editing ? group.id : null, values, infos)
+          if (result) setError(result.error)
+        })
       }}
     >
       <label className={`col-span-full ${label}`}>
         {t.groups.name}
-        <input required value={values.name} onChange={(event) => set('name', event.target.value)} className={`${field} h-11`} />
+        <input required maxLength={NAME_MAX} value={values.name} onChange={(event) => set('name', event.target.value)} className={`${field} h-11`} />
       </label>
       <label className={`col-span-full ${label}`}>
         {t.groups.headline}
-        <input value={values.headline} onChange={(event) => set('headline', event.target.value)} className={`${field} h-11`} />
+        <input maxLength={GROUP_HEADLINE_MAX} value={values.headline} onChange={(event) => set('headline', event.target.value)} className={`${field} h-11`} />
       </label>
       <label className={`col-span-full ${label}`}>
         {t.groups.applicationText}
@@ -150,9 +161,27 @@ export function GroupForm({ community, group, infos: seedInfos }: { community: s
       ) : null}
 
       <div className="col-span-full mt-2 grid max-w-sm gap-2">
-        <Button type="submit">{editing ? t.groups.update : t.groups.save}</Button>
+        {error ? (
+          <p role="alert" className="text-[15px] text-danger">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" disabled={pending}>
+          {pending ? t.groups.saving : editing ? t.groups.update : t.groups.save}
+        </Button>
         {editing ? (
-          <Button variant="ghost" className="text-danger!" onClick={() => router.replace(`/${community}/chats`)}>
+          <Button
+            variant="ghost"
+            className="text-danger!"
+            disabled={pending}
+            onClick={() => {
+              if (!window.confirm(t.groups.deleteConfirm(group.name))) return
+              startTransition(async () => {
+                const result = await deleteGroupAction(community, group.id)
+                if (result) setError(result.error)
+              })
+            }}
+          >
             {t.groups.delete}
           </Button>
         ) : null}

@@ -16,15 +16,18 @@ insert into public.communities (slug, name, headline) values ('test-other', 'Oth
 insert into public.community_options (community_id, list, label, position)
 select id, 'status', '{"en": "Elsewhere"}', 0 from public.communities where slug = 'test-other';
 
+-- Sign-ups give their consents (step 5b); every community's version is 'test' here.
+update public.communities set privacy_version = 'test';
+
 insert into auth.users (id, email, raw_user_meta_data)
-select anna, 'anna@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Anna') from ids
+select anna, 'anna@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Anna', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids
 union all
-select bert, 'bert@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Bert') from ids
+select bert, 'bert@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Bert', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids
 union all
-select carl, 'carl@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Carl') from ids
+select carl, 'carl@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Carl', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids
 union all
 select dora, 'dora@test.invalid', jsonb_build_object(
-  'community_id', (select id from public.communities where slug = 'test-other'), 'username', 'Dora') from ids;
+  'community_id', (select id from public.communities where slug = 'test-other'), 'username', 'Dora', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids;
 
 update public.members set state = 'approved' where user_id = (select anna from ids);
 update public.members set state = 'approved', role = 'admin' where user_id in (select carl from ids union all select dora from ids);
@@ -81,7 +84,7 @@ select results_eq(
   $$ select count(*)::int, count(*) filter (where d.active)::int, count(*) filter (where c.label ->> 'en' = 'Sweden')::int
      from public.community_options d join ids on d.community_id = ids.biking
      join public.community_options c on c.id = d.parent_id
-     where d.list = 'district' $$,
+     where d.list = 'district' and c.label ->> 'en' not like 'Test %' $$,
   $$ values (21, 21, 21) $$,
   'District list is Sweden''s 21 regions, all in the country Sweden'
 );
@@ -188,7 +191,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', bert, 'role', 'authenticated')::text, true) from ids;
 select results_eq(
-  $$ select count(*)::int from public.community_options where list = 'status' $$,
+  $$ select count(*)::int from public.community_options where list = 'status' and label ->> 'en' not like 'Test %' $$,
   $$ values (6) $$,
   'an applicant reads the Status list (to set up their profile)'
 );
@@ -305,7 +308,8 @@ select lives_ok(
 );
 select results_eq(
   $$ select c.label ->> 'en', count(*)::int from public.community_options d join ids on d.community_id = ids.biking
-     join public.community_options c on c.id = d.parent_id where d.list = 'district' group by c.label ->> 'en' order by 1 $$,
+     join public.community_options c on c.id = d.parent_id where d.list = 'district' and c.label ->> 'en' not like 'Test %'
+     group by c.label ->> 'en' order by 1 $$,
   $$ values ('Norway'::text, 1), ('Sweden', 21) $$,
   'each country keeps its own districts'
 );

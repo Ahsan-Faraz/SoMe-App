@@ -24,7 +24,6 @@ export function BrowseProfiles({
   community,
   viewerId,
   profiles,
-  chatIds,
   statuses,
   substatuses,
   builtins,
@@ -34,7 +33,6 @@ export function BrowseProfiles({
   community: string
   viewerId: string
   profiles: BrowseProfile[]
-  chatIds: Record<string, string>
   // The community's profile builder (active fields only).
   statuses: readonly StatusChoice[]
   substatuses: readonly Choice[]
@@ -90,7 +88,7 @@ export function BrowseProfiles({
 
   const active = filterCount(filter)
   const current = profile ? (rated[profile.id] ?? stars[profile.id] ?? 0) : 0
-  // Mock profiles name their Status (backend step 9 brings real ones with ids).
+  // Cards carry their Status's name (backend step 9 brings its id).
   const status = profile ? statusByLabel({ statuses }, profile.status) : undefined
 
   return (
@@ -145,13 +143,13 @@ export function BrowseProfiles({
                   place: <Fact label={t.profiles.place} value={profile.place || '—'} />,
                   score: <Fact label={t.profiles.score} value={String(profile.score)} />,
                 }}
-                // A mock profile has one age: the first person's.
+                // One age per person with a birth date, in the Status's order.
                 ages={Object.fromEntries(peopleOf(status, substatuses).map((person, index) => [person.key, profile.ages[index] ?? null]))}
                 values={profile.values}
               />
             </div>
           </main>
-          <ProfileActions community={community} profile={{ id: profile.id, username: profile.username, own: false }} chatId={chatIds[profile.id] ?? null} isAdmin={false} />
+          <ProfileActions community={community} profile={{ id: profile.id, username: profile.username, own: false }} isAdmin={false} />
           <nav aria-label={t.browse.title} className="flex shrink-0 items-center justify-between gap-1 border-t border-line bg-canvas px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
             <button type="button" aria-label={t.browse.previous} title={t.browse.previous} disabled={position === 0} onClick={() => go(-1)} className="grid size-12 place-items-center rounded-full hover:bg-hover disabled:opacity-30">
               <Icon name="chevronLeft" className="size-7" />

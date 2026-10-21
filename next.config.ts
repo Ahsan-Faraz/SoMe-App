@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { ownDomainHosts } from './src/lib/domains'
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -11,8 +12,18 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
   poweredByHeader: false,
+  // The platform's `/` opens its default community; a community's own domain (D30) keeps `/` for
+  // itself (src/proxy.ts serves it there).
   async redirects() {
-    return [{ source: '/', destination: '/biking-stockholm', permanent: false }]
+    const own = ownDomainHosts().map((host) => host.replace(/[.]/g, '\\.'))
+    return [
+      {
+        source: '/',
+        destination: `/${process.env.DEFAULT_COMMUNITY ?? 'biking-stockholm'}`,
+        permanent: false,
+        ...(own.length ? { missing: [{ type: 'host' as const, value: `^(${own.join('|')})$` }] } : {}),
+      },
+    ]
   },
   async headers() {
     return [

@@ -7,7 +7,7 @@ import type { StatusChoice } from '@/features/fields/types'
 import { setMemberStatusAction } from '@/features/profiles/actions'
 import { t } from '@/lib/i18n'
 import { saveMember } from '../save'
-import { useMember, wholeNumber } from '../storage'
+import { wholeNumber } from '../numbers'
 import { REAL_NAMES, type MemberRecord, type RosterEdit, type Scope } from '../types'
 
 type ScopeRef = Pick<Scope, 'kind' | 'id' | 'stateLabels'>
@@ -30,9 +30,8 @@ export function MemberPanel({
   statusId: string | null // the member's Status, from their profile
   statuses: readonly StatusChoice[]
 }) {
-  const record = useMember(community, scope, seed)
-  if (!record) return null
-  // Re-seed the inputs when this device's saved values arrive after first paint.
+  const record = seed
+  // The inputs open fresh when a saved change comes back from the server.
   return (
     <PanelFields
       key={`${record.realNames.join('|')}|${record.state.join('|')}|${record.notes}`}
@@ -82,7 +81,7 @@ function StatusEditor({ community, userId, statusId, statuses }: { community: st
   )
 }
 
-// Each field is saved when it is left: the community's in the database, a group's on this device.
+// Each field is saved when it is left, in the database (the community's or the group's record).
 function PanelFields({
   community,
   scope,
@@ -111,18 +110,13 @@ function PanelFields({
     <section className="grid gap-5 rounded-2xl border border-line p-4 sm:p-5 min-[52rem]:grid-cols-2 min-[52rem]:gap-x-10">
       <div className="grid content-start gap-2">
         <h2 className="text-[14px] font-semibold">{t.membership.applicationImage}</h2>
-        {record.image ? (
-          <figure>
-            {/* A signed URL (private bucket, community) or a data URL (groups, until step 7). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={record.image.src} alt={t.membership.applicationImage} loading="lazy" decoding="async" className="h-auto max-h-[70dvh] w-full rounded-xl bg-sunken object-contain" />
-            <figcaption className={`mt-1 text-[13px] ${record.image.verified ? 'font-semibold text-accent' : 'text-muted'}`}>
-              {record.image.verified ? `✓ ${t.chats.takenInApp} · ${record.image.date}` : record.image.date}
-            </figcaption>
-          </figure>
-        ) : (
-          <p className="rounded-xl bg-sunken px-4 py-6 text-center text-[15px] text-muted">{t.membership.noImage}</p>
-        )}
+        <ApplicationFigure image={record.image} label={t.membership.applicationImage} checked={record.checked} />
+        {record.idImage || (record.checked && scope.kind === 'community') ? (
+          <>
+            <h2 className="mt-3 text-[14px] font-semibold">{t.membership.idPhoto}</h2>
+            <ApplicationFigure image={record.idImage} label={t.membership.idPhoto} checked={record.checked} />
+          </>
+        ) : null}
         <h2 className="mt-3 text-[14px] font-semibold">{t.membership.applicationMessage}</h2>
         <p className="text-[16px] leading-relaxed whitespace-pre-wrap text-ink-soft">{record.message || '—'}</p>
       </div>
@@ -181,7 +175,7 @@ function PanelFields({
 // Approve = add to the community or group and take it off the applications list. Gone once approved.
 // The community's approval is saved in the database and emails the member.
 export function ApproveButton({ community, scope, seed }: { community: string; scope: ScopeRef; seed: MemberRecord }) {
-  const record = useMember(community, scope, seed)
+  const record = seed
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
@@ -216,5 +210,27 @@ export function ApproveButton({ community, scope, seed }: { community: string; s
         </p>
       ) : null}
     </>
+  )
+}
+
+// An application image as the admin checks it; once the application is decided it is deleted (D31),
+// and the date and who decided show instead.
+function ApplicationFigure({ image, label, checked }: { image: MemberRecord['image']; label: string; checked: MemberRecord['checked'] }) {
+  if (!image) {
+    return (
+      <p className="rounded-xl bg-sunken px-4 py-6 text-center text-[15px] text-muted">
+        {checked ? t.membership.checkedDeleted(checked.date, checked.by) : t.membership.noImage}
+      </p>
+    )
+  }
+  return (
+    <figure>
+      {/* A signed URL (private bucket, community) or a data URL (groups, until step 7). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={image.src} alt={label} loading="lazy" decoding="async" className="h-auto max-h-[70dvh] w-full rounded-xl bg-sunken object-contain" />
+      <figcaption className={`mt-1 text-[13px] ${image.verified ? 'font-semibold text-accent' : 'text-muted'}`}>
+        {image.verified ? `✓ ${t.chats.takenInApp} · ${image.date}` : image.date}
+      </figcaption>
+    </figure>
   )
 }

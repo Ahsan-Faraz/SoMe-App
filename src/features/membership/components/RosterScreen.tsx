@@ -2,8 +2,7 @@ import Link from 'next/link'
 import { Icon } from '@/components/ui/Icon'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { t } from '@/lib/i18n'
-import { listRoster } from '../queries'
-import type { Scope } from '../types'
+import type { Roster, Scope } from '../types'
 import { RosterList } from './RosterList'
 
 // Header title for admin screens: the community or group name above the screen name.
@@ -16,9 +15,10 @@ export function ScopeTitle({ scope, title }: { scope: string; title: string }) {
   )
 }
 
-export async function RosterScreen({
+export function RosterScreen({
   community,
   scope,
+  seed,
   mode,
   backHref,
   profileBase,
@@ -26,12 +26,12 @@ export async function RosterScreen({
 }: {
   community: string
   scope: Scope
+  seed: Roster
   mode: 'members' | 'applications'
   backHref: string
   profileBase: string
   addHref?: string
 }) {
-  const seed = await listRoster(community, scope)
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader

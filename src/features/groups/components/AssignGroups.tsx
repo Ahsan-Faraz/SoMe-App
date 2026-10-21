@@ -1,52 +1,76 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useOptimistic, useState, useTransition, type ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
+import { approveApplicationAction, removeMemberAction } from '@/features/membership/actions'
 import { t } from '@/lib/i18n'
+import { setGroupMemberAction, setGroupRightsAction } from '../actions'
 
 type GroupRow = { id: string; name: string; member: boolean }
-type Saved = { community: boolean; groupAdmin: boolean; groups: string[] }
 
-// Community admin: Settings (community member, group create/admin rights) + all groups.
-// Group admin: only the groups they run — the caller passes just those, with settings off.
-export function AssignGroups({ storageKey, settings, groups }: { storageKey: string; settings: boolean; groups: GroupRow[] }) {
-  const [saved, setSaved] = useState<Saved>(() => ({ community: true, groupAdmin: false, groups: groups.filter((group) => group.member).map((group) => group.id) }))
-  const [ready, setReady] = useState(false)
+// The community admin's settings for this member: community membership (an open application to
+// approve, or removal) and group-create rights (D9). Null for a group admin.
+export type MemberSettings = { member: boolean; applicationId: string | null; canCreateGroups: boolean }
 
-  useEffect(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as Partial<Saved> | null
-      if (raw) {
-        setSaved((current) => ({
-          community: typeof raw.community === 'boolean' ? raw.community : current.community,
-          groupAdmin: typeof raw.groupAdmin === 'boolean' ? raw.groupAdmin : current.groupAdmin,
-          groups: Array.isArray(raw.groups) ? raw.groups : current.groups,
-        }))
-      }
-    } catch {
-      // Keep the server membership when the saved value is unreadable.
-    }
-    setReady(true)
-  }, [storageKey])
+// F1 "Add to groups". Community admin: the settings and every group. Group admin: only the groups
+// they run (the database lists just those). Each tick is saved at once and shown at once; it goes
+// back if the database refuses it.
+export function AssignGroups({ community, userId, settings, groups }: { community: string; userId: string; settings: MemberSettings | null; groups: GroupRow[] }) {
+  const [shownGroups, setGroup] = useOptimistic(groups, (current, change: { id: string; member: boolean }) =>
+    current.map((group) => (group.id === change.id ? { ...group, member: change.member } : group)),
+  )
+  const [shownSettings, setSetting] = useOptimistic(settings, (current, change: Partial<MemberSettings>) => (current ? { ...current, ...change } : current))
+  const [error, setError] = useState('')
+  const [, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (ready) localStorage.setItem(storageKey, JSON.stringify(saved))
-  }, [ready, storageKey, saved])
-
-  const toggleGroup = (id: string) =>
-    setSaved((current) => ({ ...current, groups: current.groups.includes(id) ? current.groups.filter((item) => item !== id) : [...current.groups, id] }))
+  const run = (apply: () => void, save: () => Promise<{ error: string } | undefined>) => {
+    setError('')
+    startTransition(async () => {
+      apply()
+      const result = await save()
+      if (result) setError(result.error)
+    })
+  }
 
   return (
     <div className="mx-auto grid max-w-2xl gap-8 px-4 pt-6 pb-10 sm:px-8">
-      {settings ? (
+      {error ? (
+        <p role="alert" className="-mb-4 text-[15px] text-danger">
+          {error}
+        </p>
+      ) : null}
+      {shownSettings ? (
         <Section title={t.groups.settings}>
-          <Row label={t.groups.communityMember} checked={saved.community} onChange={(community) => setSaved((current) => ({ ...current, community }))} />
-          <Row label={t.groups.groupAdmin} checked={saved.groupAdmin} onChange={(groupAdmin) => setSaved((current) => ({ ...current, groupAdmin }))} />
+          <Row
+            label={t.groups.communityMember}
+            checked={shownSettings.member}
+            // On: approve their open application. Off: remove them from the community (asked first).
+            disabled={shownSettings.member ? false : !shownSettings.applicationId}
+            onChange={(member) => {
+              if (member && shownSettings.applicationId) {
+                const applicationId = shownSettings.applicationId
+                run(() => setSetting({ member: true }), () => approveApplicationAction(community, applicationId))
+              } else if (!member && window.confirm(t.groups.removeConfirm)) {
+                run(() => setSetting({ member: false }), () => removeMemberAction(community, userId))
+              }
+            }}
+          />
+          <Row
+            label={t.groups.groupAdmin}
+            checked={shownSettings.canCreateGroups}
+            onChange={(canCreateGroups) => run(() => setSetting({ canCreateGroups }), () => setGroupRightsAction(community, userId, canCreateGroups))}
+          />
         </Section>
       ) : null}
       <Section title={t.groups.addToGroups}>
-        {groups.map((group) => (
-          <Row key={group.id} label={group.name} checked={saved.groups.includes(group.id)} onChange={() => toggleGroup(group.id)} icon={<Avatar name={group.name} seed={group.id} size="sm" />} />
+        {shownGroups.map((group) => (
+          <Row
+            key={group.id}
+            label={group.name}
+            checked={group.member}
+            onChange={(member) => run(() => setGroup({ id: group.id, member }), () => setGroupMemberAction(community, group.id, userId, member))}
+            icon={<Avatar name={group.name} seed={group.id} size="sm" shape="square" />}
+          />
         ))}
       </Section>
     </div>
@@ -62,13 +86,13 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function Row({ label, checked, onChange, icon }: { label: string; checked: boolean; onChange: (checked: boolean) => void; icon?: ReactNode }) {
+function Row({ label, checked, onChange, icon, disabled = false }: { label: string; checked: boolean; onChange: (checked: boolean) => void; icon?: ReactNode; disabled?: boolean }) {
   return (
     <li>
-      <label className="flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2 hover:bg-hover">
+      <label className={`flex min-h-14 items-center gap-3 px-4 py-2 ${disabled ? 'opacity-50' : 'cursor-pointer hover:bg-hover'}`}>
         {icon}
         <span className="min-w-0 flex-1 truncate text-[16px] font-semibold">{label}</span>
-        <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       </label>
     </li>
   )

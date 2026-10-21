@@ -3,6 +3,7 @@
 import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 import { getCommunity } from '@/features/communities/queries'
+import { sendEmail } from '@/lib/email'
 import { t } from '@/lib/i18n'
 import { OTP_PATTERN, PASSWORD_MIN, USERNAME_MAX, USERNAME_MIN } from '@/lib/limits'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -75,6 +76,10 @@ function recordLogin(supabase: Awaited<ReturnType<typeof createClient>>, communi
 
 // Join (AC). A new email signs up and gets a code. An email that already has a login
 // (another community, D17) must use that password, and gets a new account here.
+// The answer never tells whether an email has a login (D32): a wrong password for an existing email
+// shows the same "enter the code" step as a new email, and the owner gets an email explaining it.
+// The consents (privacy terms, 18+ when the community asks) are saved with the account, in the
+// same transaction (sign-up trigger, or join_community).
 export async function joinAction(_: AuthState, form: FormData): Promise<AuthState> {
   const slug = text(form, 'community')
   const username = text(form, 'username')
@@ -89,6 +94,10 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
 
   const community = await getCommunity(slug)
   if (!community) return { error: t.join.failed }
+  if (form.get('privacy') !== 'on' || (community.requireAge18 && form.get('age18') !== 'on')) return { error: t.join.consentMissing }
+  // The version of the text the form showed; a newer one means agreeing to text not yet seen.
+  if (text(form, 'privacyVersion') !== community.privacyVersion) return { error: t.join.consentChanged }
+  const consents = { privacy: community.privacyVersion, ...(community.requireAge18 ? { age_18: true } : {}) }
 
   const { data: check, error: checkError } = await createAdminClient()
     .rpc('join_check', { p_community: community.id, p_username: username, p_email: email })
@@ -102,7 +111,7 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { community_id: community.id, username } },
+      options: { data: { community_id: community.id, username, consents } },
     })
     // A username taken a moment ago fails inside the sign-up transaction.
     if (error) return { error: error.code === 'unexpected_failure' ? t.join.usernameTaken : t.join.failed }
@@ -114,12 +123,21 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
     await supabase.auth.resend({ type: 'signup', email })
     return { verifyEmail: email }
   }
-  if (error) return { error: t.join.emailHasLogin }
+  if (error) {
+    // Same answer as a new email; the owner learns by email what happened, at most once an hour
+    // (join_notice_due), so the form can't flood anyone's inbox.
+    after(async () => {
+      const { data: due } = await createAdminClient().rpc('join_notice_due', { p_email: email })
+      if (due) await sendEmail({ to: email, fromName: community.name, subject: t.joinNotice.subject(community.name), text: t.joinNotice.body(community.name) })
+    })
+    return { verifyEmail: email }
+  }
 
-  const { error: joinError } = await supabase.from('members').insert({ community_id: community.id, user_id: auth.user.id, username })
+  const { error: joinError } = await supabase.rpc('join_community', { p_community: community.id, p_username: username, p_consents: consents })
   if (joinError) {
     await supabase.auth.signOut({ scope: 'local' })
     if (joinError.message.includes('members_pkey')) return { error: t.join.alreadyMember }
+    if (joinError.code === '23502') return { error: t.join.consentChanged }
     return { error: joinError.code === '23505' ? t.join.usernameTaken : t.join.failed }
   }
   recordLogin(supabase, community.id, auth.user.id)
@@ -145,7 +163,9 @@ export async function resendCodeAction(_: AuthState, form: FormData): Promise<Au
   const email = text(form, 'email').toLowerCase()
   const supabase = await createClient()
   const { error } = await supabase.auth.resend({ type: 'signup', email })
-  if (error) return { verifyEmail: email, error: error.code === 'over_email_send_rate_limit' ? t.verify.wait : t.join.failed }
+  // Only the rate limit is told apart: any other failure (e.g. an email that already has a
+  // confirmed login) answers like a sent code, so it never reveals an account (D32).
+  if (error?.code === 'over_email_send_rate_limit') return { verifyEmail: email, error: t.verify.wait }
   return { verifyEmail: email, resent: true }
 }
 

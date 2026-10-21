@@ -21,11 +21,12 @@ export type ProfileCard = {
   photo: MainPhoto | null // the profile image (thumbnail)
 }
 
-// A27, still mock data until search arrives (backend step 9).
+// A27: values stay empty until search_profiles returns answers (backend step 9).
 export type BrowseProfile = ProfileCard & { lastLogin: string; values: Record<string, FieldValue> }
 
-// icon = thumbnail URL. confirmed = both have linked to each other (D23).
-export type LinkedProfile = { id: string; username: string; icon: string | null; confirmed: boolean }
+// icon = thumbnail URL. confirmed = both have linked to each other (D23). comment: the profile
+// owner's short note on the link ('' = none).
+export type LinkedProfile = { id: string; username: string; icon: string | null; confirmed: boolean; comment: string }
 
 // One person of the profile's Status. birthDate ('YYYY-MM-DD' or '') only on your own profile.
 export type ProfilePerson = { substatusId: string | null; n: number; birthDate: string; age: number | null }

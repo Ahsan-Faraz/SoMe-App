@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
-import { requireAdmin } from '@/features/auth/queries'
+import { requireMember } from '@/features/auth/queries'
 import { MemberProfileScreen } from '@/features/membership/components/MemberProfileScreen'
 import { getScope } from '@/features/membership/queries'
 import { backFrom } from '@/lib/back'
@@ -17,7 +17,7 @@ export default function GroupMemberPage(props: PageProps<'/[community]/groups/[g
 
 async function Content({ params, searchParams }: PageProps<'/[community]/groups/[groupId]/members/[userId]'>) {
   const { community, groupId, userId } = await params
-  const viewer = await requireAdmin(community)
+  const viewer = await requireMember(community)
   const scope = await getScope('group', community, groupId)
   if (!scope) notFound()
   const base = `/${community}/groups/${groupId}/members`

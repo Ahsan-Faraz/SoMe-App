@@ -12,14 +12,15 @@ import { PLACE_MAX } from '@/lib/limits'
 import { saveProfileAction, setStatusAction, setVisibleAction, type ProfileInput } from '../actions'
 import { valueKey, type FieldValue } from '../fields'
 import type { Owner } from '../photo'
+import { missingRequired } from '../required'
 import type { Profile } from '../types'
-import { control, FieldInput, fieldLabel } from './FieldInput'
+import { control, FieldInput, fieldLabel, RequiredTag } from './FieldInput'
 import { PhotoField } from './PhotoField'
 import type { BuiltinNodes } from './ProfileAnswers'
 
 const hint = 'text-[13px] font-normal text-muted'
 
-type Editable = Pick<Profile, 'statusId' | 'status' | 'lookingForIds' | 'countryId' | 'districtId' | 'place' | 'people' | 'visibleInSearch' | 'values' | 'photoValues'>
+type Editable = Pick<Profile, 'state' | 'statusId' | 'status' | 'lookingForIds' | 'countryId' | 'districtId' | 'place' | 'people' | 'visibleInSearch' | 'values' | 'photoValues'>
 type Lists = Pick<ProfileSchema, 'statuses' | 'substatuses' | 'countries' | 'districts' | 'builtins' | 'layout' | 'fields'>
 
 // B1, your own profile. Status sits at the top because it decides which fields the profile has (D4);
@@ -27,10 +28,12 @@ type Lists = Pick<ProfileSchema, 'statuses' | 'substatuses' | 'countries' | 'dis
 // main section, then a section per person of the Status with their birth date and the fields set for
 // their substatus. `nodes` are the basic fields that are not form inputs (the image, the score, linked
 // profiles), server-rendered and placed in order. The score is recomputed by the database.
+// Before applying, required fields are marked and the ones still empty (as saved) are listed.
 export function ProfileEditor({ owner, profile, lists, facts, nodes }: { owner: Owner; profile: Editable; lists: Lists; facts: ReactNode; nodes: BuiltinNodes }) {
   const [message, setMessage] = useState('')
   // The form is a draft of the saved profile: a newer save (fresh props) opens it fresh.
   const version = JSON.stringify([profile.statusId, profile.lookingForIds, profile.countryId, profile.districtId, profile.place, profile.people, profile.values])
+  const missing = profile.state === 'profile' ? missingRequired(lists, profile) : []
 
   return (
     <>
@@ -38,6 +41,7 @@ export function ProfileEditor({ owner, profile, lists, facts, nodes }: { owner: 
         <StatusField slug={owner.slug} statusId={profile.statusId} status={profile.status} statuses={lists.statuses} />
         {lists.builtins.visibility ? <VisibleToggle slug={owner.slug} visible={profile.visibleInSearch} /> : null}
         {facts}
+        {missing.length > 0 ? <MissingFields missing={missing} /> : null}
       </div>
       {profile.statusId ? (
         <EditForm key={version} owner={owner} profile={profile} lists={lists} nodes={nodes} message={message} setMessage={setMessage} />
@@ -49,6 +53,20 @@ export function ProfileEditor({ owner, profile, lists, facts, nodes }: { owner: 
         </div>
       )}
     </>
+  )
+}
+
+// Before applying: what still has to be filled in (Status first, then each required field).
+function MissingFields({ missing }: { missing: string[] }) {
+  return (
+    <div role="status" className="rounded-xl border border-accent/40 bg-canvas p-3 text-[14px]">
+      <p className="font-semibold">{t.apply.missingFields}</p>
+      <ul className="mt-1 list-disc pl-5 text-ink-soft">
+        {missing.map((name) => (
+          <li key={name}>{name}</li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -74,7 +92,10 @@ function StatusField({ slug, statusId, status, statuses }: { slug: string; statu
   return (
     <div className="grid gap-1.5">
       <label className={fieldLabel}>
-        {t.profiles.statusChoose}
+        <span>
+          {t.profiles.statusChoose}
+          <RequiredTag />
+        </span>
         <select value={choice} onChange={(event) => setChoice(event.target.value)} className={`${control} h-11`}>
           <option value="" disabled>
             {t.profiles.choose}

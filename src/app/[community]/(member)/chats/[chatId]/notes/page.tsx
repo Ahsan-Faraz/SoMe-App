@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
-import { getChatSummary } from '@/features/chats/queries'
+import { getChatHeader } from '@/features/chats/queries'
 import { PrivateNotes } from '@/features/notes/components/PrivateNotes'
 
 export default function ChatNotesPage(props: PageProps<'/[community]/chats/[chatId]/notes'>) {
@@ -20,7 +20,7 @@ async function ChatNotesContent({ params }: PageProps<'/[community]/chats/[chatI
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const chat = await getChatSummary(chatId)
+  const chat = await getChatHeader(community, chatId)
   if (!chat) notFound()
 
   return (

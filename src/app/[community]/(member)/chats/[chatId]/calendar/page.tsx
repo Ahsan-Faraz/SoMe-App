@@ -8,8 +8,7 @@ import { getViewer } from '@/features/auth/queries'
 import { CalendarBoard } from '@/features/calendar/components/CalendarBoard'
 import { listEvents } from '@/features/calendar/queries'
 import { dmHref } from '@/features/chats/links'
-import { chatIdForUser, getChatSummary } from '@/features/chats/queries'
-import { getGroup } from '@/features/groups/queries'
+import { getChatHeader } from '@/features/chats/queries'
 import { t } from '@/lib/i18n'
 
 export default function CalendarPage(props: PageProps<'/[community]/chats/[chatId]/calendar'>) {
@@ -26,14 +25,15 @@ async function CalendarContent({ params }: PageProps<'/[community]/chats/[chatId
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const [chat, group, events] = await Promise.all([getChatSummary(chatId), getGroup(chatId), listEvents(chatId)])
-  if (!chat || chat.kind !== 'group' || !group?.calendar) notFound()
+  const [chat, events] = await Promise.all([getChatHeader(community, chatId), listEvents(chatId)])
+  if (!chat || chat.kind !== 'group' || !chat.calendar) notFound()
 
   const base = `/${community}/chats/${chat.id}/calendar`
-  const isAdmin = viewer.role === 'admin'
+  // The group's admins (group admin or community admin) run its calendar.
+  const isAdmin = chat.manage
   const dmHrefs: Record<string, string> = {}
   for (const event of events) {
-    if (event.createdBy && event.createdBy !== viewer.userId) dmHrefs[event.createdBy] = dmHref(community, event.createdBy, chatIdForUser(event.createdBy))
+    if (event.createdBy && event.createdBy !== viewer.userId) dmHrefs[event.createdBy] = dmHref(community, event.createdBy)
   }
 
   return (

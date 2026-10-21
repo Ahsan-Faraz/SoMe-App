@@ -13,13 +13,11 @@ import type { Profile } from '../types'
 export function ProfileActions({
   community,
   profile,
-  chatId,
   isAdmin,
   top,
 }: {
   community: string
   profile: Pick<Profile, 'id' | 'username' | 'own'>
-  chatId: string | null
   isAdmin: boolean
   // A21/A22: Approve sits above DM.
   top?: ReactNode
@@ -30,7 +28,7 @@ export function ProfileActions({
       <div className="mx-auto grid max-w-xl gap-2">
         {top}
         {profile.own ? null : (
-          <Link href={dmHref(community, profile.id, chatId)} className={buttonClass('primary')}>
+          <Link href={dmHref(community, profile.id)} className={buttonClass('primary')}>
             <Icon name="chatSolid" className="mr-2 size-5" />
             {t.profiles.dm}
           </Link>

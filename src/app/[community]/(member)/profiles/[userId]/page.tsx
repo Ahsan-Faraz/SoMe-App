@@ -3,7 +3,6 @@ import { notFound, redirect } from 'next/navigation'
 import { Screen } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
-import { chatIdForUser } from '@/features/chats/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
 import Link from 'next/link'
@@ -40,7 +39,6 @@ async function ProfileContent({ params, searchParams }: PageProps<'/[community]/
   const section = first(query.section)
   const backHref = backFrom(query.back, community, viewer.role === 'pending' ? `/${community}/pending` : `/${community}/profiles`)
 
-  const chatId = profile.own ? null : chatIdForUser(profile.id)
   const self = `/${community}/profiles/${profile.id}`
 
   return (
@@ -64,7 +62,7 @@ async function ProfileContent({ params, searchParams }: PageProps<'/[community]/
           }
         />
       }
-      footer={<ProfileActions community={community} profile={profile} chatId={chatId} isAdmin={viewer.role === 'admin'} />}
+      footer={<ProfileActions community={community} profile={profile} isAdmin={viewer.role === 'admin'} />}
     >
       <ProfileView community={community} communityId={info.id} profile={profile} schema={schema} section={section} />
     </Screen>

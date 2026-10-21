@@ -8,6 +8,7 @@ import { t } from '@/lib/i18n'
 import type { PersonRef } from '../actions'
 import type { Owner } from '../photo'
 import type { ProfilePhoto } from '../types'
+import { RequiredTag } from './FieldInput'
 import { FullPhoto } from './FullPhoto'
 
 // The upload code and Supabase client load only when a photo is being changed.
@@ -19,7 +20,10 @@ export function PhotoField({ owner, field, person, label, photo }: { owner: Owne
   const [open, setOpen] = useState(false)
   return (
     <div className="grid gap-1.5">
-      <span className="text-[14px] font-semibold text-ink">{label}</span>
+      <span className="text-[14px] font-semibold text-ink">
+        {label}
+        {field.required ? <RequiredTag /> : null}
+      </span>
       {photo ? <FullPhoto photo={photo} alt={label} /> : null}
       <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-fit items-center gap-2 rounded-xl bg-soft px-3 text-[15px] font-semibold hover:bg-soft-hover">
         <Icon name={photo ? 'image' : 'plus'} className="size-4" />

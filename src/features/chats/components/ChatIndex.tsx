@@ -35,14 +35,14 @@ export function ChatIndex({
         <div className="flex items-center">
           {pane ? null : <ThemeToggle className={`${iconButton} rail:hidden`} />}
           {viewer.role === 'admin' ? (
-            <>
-              <Link href={`/${community}/admin`} aria-label={t.chats.communityAdmin} title={t.chats.communityAdmin} className={iconButton}>
-                <Icon name="shield" className="size-[22px]" />
-              </Link>
-              <Link href={`/${community}/groups/new`} aria-label={t.chats.newGroup} title={t.chats.newGroup} className={iconButton}>
-                <Icon name="usersPlus" className="size-[22px]" />
-              </Link>
-            </>
+            <Link href={`/${community}/admin`} aria-label={t.chats.communityAdmin} title={t.chats.communityAdmin} className={iconButton}>
+              <Icon name="shield" className="size-[22px]" />
+            </Link>
+          ) : null}
+          {viewer.role === 'admin' || viewer.canCreateGroups ? (
+            <Link href={`/${community}/groups/new`} aria-label={t.chats.newGroup} title={t.chats.newGroup} className={iconButton}>
+              <Icon name="usersPlus" className="size-[22px]" />
+            </Link>
           ) : null}
           <Link href={`/${community}/chats/new`} aria-label={t.chats.newChat} title={t.chats.newChat} className={iconButton}>
             <Icon name="plus" className="size-6" />

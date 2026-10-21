@@ -2,13 +2,12 @@
 
 import { useMemo } from 'react'
 import { t } from '@/lib/i18n'
-import { useRoster } from '../storage'
 import type { Roster, Scope } from '../types'
 
 // A28 group / A33 community statistics: member count, members per status, and the sum of each
-// profile-state number (e.g. Paid 300, Attended 32). Follows edits made in the member list.
-export function RosterStats({ community, scope, seed }: { community: string; scope: Pick<Scope, 'kind' | 'id' | 'stateLabels'>; seed: Roster }) {
-  const { members } = useRoster(community, scope, seed)
+// profile-state number (e.g. Paid 300, Attended 32), from the saved records.
+export function RosterStats({ scope, seed }: { scope: Pick<Scope, 'stateLabels'>; seed: Roster }) {
+  const { members } = seed
 
   const { byStatus, sums } = useMemo(() => {
     const counts = new Map<string, number>()

@@ -1,9 +1,9 @@
 import { CommunityStart } from '@/features/communities/components/CommunityStart'
 import { getCommunity } from '@/features/communities/queries'
 
-// Shown only if the `/` redirect in next.config.ts does not run.
+// Shown only if the `/` redirect in next.config.ts does not run: the platform's default community.
 export default async function HomePage() {
-  const community = await getCommunity('biking-stockholm')
+  const community = await getCommunity(process.env.DEFAULT_COMMUNITY ?? 'biking-stockholm')
   if (!community) return null
   return <CommunityStart community={community} />
 }

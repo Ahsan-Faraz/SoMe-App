@@ -15,15 +15,18 @@ grant select on ids to anon, authenticated;
 
 insert into public.communities (slug, name, headline) values ('test-other', 'Other', 'Another community');
 
+-- Sign-ups give their consents (step 5b); every community's version is 'test' here.
+update public.communities set privacy_version = 'test';
+
 insert into auth.users (id, email, raw_user_meta_data)
-select anna, 'anna@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Anna') from ids
+select anna, 'anna@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Anna', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids
 union all
-select bert, 'bert@test.invalid', jsonb_build_object('community_id', biking, 'username', ' Bert ', 'role', 'admin') from ids
+select bert, 'bert@test.invalid', jsonb_build_object('community_id', biking, 'username', ' Bert ', 'role', 'admin', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids
 union all
-select carl, 'carl@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Carl') from ids
+select carl, 'carl@test.invalid', jsonb_build_object('community_id', biking, 'username', 'Carl', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids
 union all
 select dora, 'dora@test.invalid', jsonb_build_object(
-  'community_id', (select id from public.communities where slug = 'test-other'), 'username', 'Dora') from ids;
+  'community_id', (select id from public.communities where slug = 'test-other'), 'username', 'Dora', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids;
 
 -- Sign-up ------------------------------------------------------------------------------------
 select results_eq(
@@ -38,17 +41,17 @@ select results_eq(
 );
 select throws_ok(
   $$ insert into auth.users (id, email, raw_user_meta_data)
-     select gen_random_uuid(), 'x1@test.invalid', jsonb_build_object('community_id', biking, 'username', 'anna') from ids $$,
+     select gen_random_uuid(), 'x1@test.invalid', jsonb_build_object('community_id', biking, 'username', 'anna', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids $$,
   '23505', null, 'usernames are unique per community, ignoring case'
 );
 select throws_ok(
   $$ insert into auth.users (id, email, raw_user_meta_data)
-     select gen_random_uuid(), 'x2@test.invalid', jsonb_build_object('community_id', biking, 'username', 'an@na') from ids $$,
+     select gen_random_uuid(), 'x2@test.invalid', jsonb_build_object('community_id', biking, 'username', 'an@na', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids $$,
   '23514', null, 'a username cannot contain @'
 );
 select throws_ok(
   $$ insert into auth.users (id, email, raw_user_meta_data)
-     select gen_random_uuid(), 'x3@test.invalid', jsonb_build_object('community_id', biking, 'username', 'ab') from ids $$,
+     select gen_random_uuid(), 'x3@test.invalid', jsonb_build_object('community_id', biking, 'username', 'ab', 'consents', '{"privacy": "test", "age_18": true}'::jsonb) from ids $$,
   '23514', null, 'a username has at least 3 characters'
 );
 insert into auth.users (id, email) values ('10000000-0000-4000-8000-0000000000ee', 'plain@test.invalid');
@@ -143,20 +146,18 @@ select results_eq(
   $$ values (true, true) $$,
   'last_login_at is always stamped with now(), and only on your own account'
 );
+select throws_ok(
+  $$ select public.join_community(c.id, 'Anna', '{}') from public.communities c where c.slug = 'test-other' $$,
+  '23502', null, 'joining another community needs the consents'
+);
 select lives_ok(
-  $$ insert into public.members (community_id, user_id, username)
-     select c.id, ids.anna, 'Anna' from public.communities c, ids where c.slug = 'test-other' $$,
-  'an existing login can join another community'
-);
-select throws_ok(
-  $$ insert into public.members (community_id, user_id, username, state)
-     select c.id, ids.anna, 'Anna3', 'approved' from public.communities c, ids where c.slug = 'test-other' $$,
-  '42501', null, 'joining cannot set the state'
+  $$ select public.join_community(c.id, 'Anna', '{"privacy": "test"}') from public.communities c where c.slug = 'test-other' $$,
+  'an existing login can join another community, with the consents'
 );
 select throws_ok(
   $$ insert into public.members (community_id, user_id, username)
-     select c.id, ids.bert, 'Bert' from public.communities c, ids where c.slug = 'test-other' $$,
-  '42501', null, 'nobody can create an account for someone else'
+     select c.id, ids.anna, 'Anna3' from public.communities c, ids where c.slug = 'test-other' $$,
+  '42501', null, 'accounts cannot be inserted directly (no state, no skipped consents, nobody else''s)'
 );
 select results_eq(
   $$ select private.is_approved(biking), private.is_community_admin(biking) from ids $$,

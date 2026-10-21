@@ -1,9 +1,8 @@
 import 'server-only'
-import { mockEvents } from '@/mocks/data'
 import type { CalEvent } from './storage'
 
-export async function listEvents(groupId: string): Promise<CalEvent[]> {
-  return mockEvents
-    .filter((event) => event.groupId === groupId)
-    .map(({ id, date, headline, text, createdBy }) => ({ id, date, headline, text, createdBy }))
+// A group's calendar events from the database arrive with backend step 12 (`events`). Until then the
+// calendar starts empty and keeps what the group admin adds on this device (CalendarBoard).
+export async function listEvents(_groupId: string): Promise<CalEvent[]> {
+  return []
 }

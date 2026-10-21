@@ -1,6 +1,6 @@
 # SoMe — Backend Design
 
-Status: design, ready to build. Date: 2026-10-06.
+Status: design, ready to build. Date: 2026-10-06 (own domains, real members and consent added 2026-10-19).
 Replaces `docs/Backend-Implementation-Plan.md` (29 Sep), which was written before Peter's answers. That file stays for history only.
 
 Sources: spec v0.33, the kick-off call transcript, mockups 260922, Peter's answers doc (261004), his drafts A19–A33 (PDF 261004), his annotated screenshots (Oct 2026), `.cursor/rules/*`, and the current frontend in `src/`.
@@ -78,6 +78,9 @@ Phone (PWA)
 | D27 | Basic fields | The community admin switches basic fields on/off: Looking for, Visible in search, Profile image, Score, Age, Country, District, Place, Linked profiles. Status is always on (261013). |
 | D29 | Profile order | Basic fields and fields are one ordered list ("Profile order" in the builder); profiles show one column in that order, photos full width at their place. Status stays at the top; Age shows in each person's section (261013 p.s.). |
 | D28 | Account creation date | Stored (`members.created_at`), shown to the member and the community admin ("Member since"), for future discounts (261013). |
+| D30 | Own domains | A community can have its own domain (`club-example.com`); without one it stays at the platform path `/{slug}`. The platform stays generic: any kind of club, nothing built for one kind of community (Oct 2026). |
+| D31 | Real members | Per community, the admin can require **18+** (a confirmation now, BankID later) and an **identity check** (an ID photo reviewed by hand, no automatic face matching), so communities get real people, not fake accounts. Identity material is deleted once the application is decided. |
+| D32 | Consent | Sign-up stores what the member agreed to (terms, privacy policy, 18+ when required) and which version. The join form never reveals whether an email already has a login. |
 
 **D17 note (separate accounts).** Supabase Auth allows one password per email. So each email has **one login**, and each community gets its own **member account**: its own username, profile, photos, chats, blocks and admin data. Communities never see each other. Default: the same email uses the same password in every community it joins (open question Q8).
 
@@ -131,7 +134,7 @@ The **No-reply account** is a system member per community (`members.is_system = 
 
 ### 4.3 Platform and communities
 
-**In plain English:** a community is a closed world at `domain.com/slug`. Its Status and District choices are rows, so each community can have its own.
+**In plain English:** a community is a closed world at `platform.com/slug`, or on its own domain (`club-example.com`, D30). Its Status and District choices are rows, so each community can have its own.
 
 ```sql
 platform_admins (
@@ -140,13 +143,17 @@ platform_admins (
 
 communities (
   id uuid pk,
-  slug text unique not null check (slug ~ '^[a-z0-9-]{2,40}$'),       -- domain.com/{slug}
+  slug text unique not null check (slug ~ '^[a-z0-9-]{2,40}$'),       -- platform.com/{slug}
+  domain text unique check (domain = lower(domain)),                  -- own domain, e.g. club-example.com (D30); null = path only
   name text not null, headline text not null, about text[] not null default '{}',
   hero_path text, about_path text,
   application_text text check (char_length(application_text) <= 4000), -- shown on top of the join application (A25)
   require_app_image boolean not null default true,                     -- verification photo required
   require_app_text  boolean not null default true,
   require_app_names boolean not null default true,
+  require_age_18 boolean not null default false,                       -- 18+ confirmation at sign-up (D31)
+  require_identity boolean not null default false,                     -- ID photo with the application, checked by hand (D31)
+  privacy_version text not null,                                       -- the privacy text members agree to (D32); terms of use when the client provides them
   state_label_1 text, state_label_2 text, state_label_3 text,          -- community-level "profile state" labels (D24)
   default_locale text not null default 'en',
   created_at timestamptz
@@ -212,6 +219,8 @@ applications (
   user_id uuid not null,
   chat_id uuid references chats on delete cascade,      -- null = joining the community, else a group
   photo_id uuid references photos,                       -- application image ("Taken in app" when from the camera)
+  id_photo_id uuid references photos,                    -- identity check (D31), when the community requires it
+  media_deleted_at timestamptz,                          -- both images deleted once approved/rejected ("Checked and deleted")
   message text check (char_length(message) <= 4000),
   real_name_1 text check (char_length(real_name_1) <= 80),
   real_name_2 text check (char_length(real_name_2) <= 80),
@@ -233,6 +242,17 @@ admin_records (
   notes text check (char_length(notes) <= 4000),
   updated_at timestamptz,
   primary key (scope_id, user_id),
+  foreign key (community_id, user_id) references members on delete cascade
+)
+
+-- What a member agreed to, and which version (D32). Never edited: a new version is a new row.
+member_consents (
+  community_id uuid not null,
+  user_id uuid not null,
+  kind text not null check (kind in ('privacy','age_18')),            -- 'terms' once there are terms of use
+  version text not null,
+  given_at timestamptz not null default now(),
+  primary key (community_id, user_id, kind, version),
   foreign key (community_id, user_id) references members on delete cascade
 )
 ```
@@ -483,11 +503,11 @@ index events_chat_date on events (chat_id, on_date);
 
 ```sql
 notes (
-  author_id uuid not null, community_id uuid not null, target_user_id uuid not null,
+  community_id uuid not null, author_id uuid not null, subject_id uuid not null,
   body text not null default '' check (char_length(body) <= 32000),
   stars smallint check (stars between 1 and 5),
   updated_at timestamptz,
-  primary key (author_id, community_id, target_user_id)
+  primary key (community_id, author_id, subject_id)   -- "my stars" in search = one key lookup per profile
 )
 index notes_stars on notes (author_id, community_id, stars);   -- "My stars min–max" filter
 ```
@@ -541,6 +561,8 @@ Deleting a member or a community removes everything below it (cascades). That is
 | A member's profile | Approved members, **except** people they blocked. Hidden from search if `visible_in_search = false`. Applicants see only themselves. | The member (`save_profile`); admins for `state`, `role`, `can_create_groups` |
 | Applications | The applicant (own), and the admin of the target (community admin or group admin) | Applicant creates; admin decides |
 | Admin records (real names, states, notes) | Admins of that scope only | Admins of that scope |
+| Identity photo (ID check, D31) | The community admin, through a signed URL, only until the application is decided; then deleted | The applicant (upload) |
+| Consents (D32) | The member (own) and the community admin | The member, once at sign-up (insert only) |
 | Chats, messages, reactions | Chat members, and only messages after `visible_from_seq` | Members, if the group allows posting/commenting/reacting; never in a DM with a block |
 | Group settings, info posts | Members of the community (headline/info for discovery), full settings to the group admin | Group admin, community admin |
 | Calendar events | Group members (if calendar on) | Group admin |
@@ -552,6 +574,8 @@ Deleting a member or a community removes everything below it (cascades). That is
 Extra protections:
 
 - **Cross-community:** every policy checks `community_id` via `is_member()`.
+- **No email probing:** joining with an email that already has a login answers exactly like a new email, so nobody can find out where someone is registered (D32).
+- **Own domains:** each domain keeps its own login cookie; being logged in on one community's domain never logs you in on another's.
 - **Album passwords:** `password_hash` is revoked from client roles. Only the server checks it and then signs URLs.
 - **Columns clients may not change** (role, state, score, username after sign-up) are protected with column grants and a trigger. Profile edits go through `save_profile`.
 - **"Taken in app" photos:** the label is the app's claim that the in-app camera took the photo. We never claim it can't be faked.
@@ -567,7 +591,8 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 ### 6.1 Sign up, verify email, log in
 
 - **Join (AC):** username, password ×2, email. **B** `supabase.auth.signUp`, after `username_available(community, username)`. A trigger on `auth.users` (or on first login for an existing email) creates the `members` row with `state = 'profile'`.
-- **Same email, second community (D17):** if the email already has a login, the join form asks for that password, then creates the new `members` row. Separate profile; same password (Q8).
+- **Same email, second community (D17):** if the email already has a login, the join form asks for that password, then creates the new `members` row. Separate profile; same password (Q8). The answer never reveals that the email exists (D32): a wrong password gets the same message as any failed join.
+- **Consent (D32):** the join form asks to agree to the community's privacy terms (and "I am 18 or older" when `require_age_18`). Joining stores one `member_consents` row per item with its version, in the same transaction as the account (the sign-up trigger, or `join_community` for an existing login); without them the account is not created.
 - **Verify email:** Supabase Auth sends the link. `/auth/confirm` verifies it and sends the user to the community login.
 - **Log in (AB):** username **or** email + password. **S** `signInAction`: the server looks up the email for a username (service role, never exposed to the browser), then signs in. It always returns the same generic error. `last_login_at` is set after the response.
 - **Forgot password:** Supabase reset email.
@@ -575,13 +600,14 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 ### 6.2 Community application and approval (Peter's process)
 
 1. **Applicant (state `profile`):** edits own profile only (A25 "Create/edit profile").
-2. **Application form (A25):** community `application_text` at the top, application image (camera = Taken in app, or upload), message, real name 1/2. Which ones are required comes from `communities.require_app_*`.
+2. **Application form (A25):** community `application_text` at the top, application image (camera = Taken in app, or upload), message, real name 1/2. Which ones are required comes from `communities.require_app_*`. When `require_identity` is on, an **ID photo** too (camera or upload, private bucket).
 3. **Apply:** **B** insert into `applications` (`chat_id = null`) and set `members.state = 'applied'`. The Apply button is dimmed while an application is open (unique index).
 4. **"Chat with admin":** shown only if there is an ongoing conversation: a DM with the admin that has messages, i.e. the admin wrote first. Otherwise there is no button at all, not even a dimmed one. Applicants can't open new DMs (`open_dm` refuses); the admin can always start one from the applicant's profile (DM button on A21).
 5. **Admin queue (A19 → A20):** list of `applications where chat_id is null and status in ('pending','later')`.
 6. **Admin view (A21):** profile + DM button + linked profiles + application image (Taken in app + date) + Status (editable here, community admin only) + message + real names + 3 profile states + notes (from `admin_records`, community scope).
 7. **Decide:** **S** `decideApplication(id, 'approved' | 'later' | 'rejected')`. Q5 default: show Approve only; the others stay available in the database.
 8. **On approve:** `members.state = 'approved'`, the application's real names are copied into `admin_records` (community scope), the "Approve" button disappears, and an **approval email** is sent (§9). The member now has full access.
+9. **Identity material is deleted (D31):** on approve or reject (not "later"), the application image and the ID photo are deleted, the rows in the same transaction and the files right after the response. `applications.media_deleted_at` is set and A21 shows "Checked and deleted" with the date and who decided.
 
 ### 6.3 Group application and approval
 
@@ -665,7 +691,8 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 - **Delete:** own posts. Group and community admins can delete any. Deleting a post also deletes its comments.
 - **Details (who reacted):** select on `reactions` for that post, limit 100.
 - **Mark read:** **B** `mark_read(chat, seq)` when the chat opens and when you leave, never per message.
-- **Images:** shrunk on the phone, uploaded to the private bucket, thumbnail in the chat, full image signed on tap (§7).
+- **Images:** shrunk on the phone, uploaded to the private bucket, thumbnail in the chat (its own shape, at most 320 px high), full image signed on tap (§7). Only a member who can see the post may sign its files (storage policy `private_chat_photos_read`). Deleting a post, a DM or a group deletes its pictures' files too.
+- **Built (step 8):** `send_message` (comment, photo), `list_messages`, `set_reaction`, `reaction_details`, `edit_message`, `delete_message`; live events `message`, `reaction`, `edited`, `removed`.
 
 ### 6.9 DMs, leaving and blocking
 
@@ -673,7 +700,8 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 - **Leave a DM (D12):**
   - **"Keep chat, block writing":** adds a `blocks` row. The chat stays for both, and nobody can write.
   - **"Delete chat, block user":** deletes the DM (messages cascade, gone for both) and adds the `blocks` row.
-- **A block also hides your profile** from that person: search, profile view, member lists, ads (D13).
+- **A block also hides your profile** from that person, and theirs from you: search, profile view, Profiles list, name search, linked profiles, member lists, ads (D13). The community admin still sees everyone. Unblocking is not in the spec yet.
+- **Live:** leaving a DM tells the other person's open chat at once (Realtime events `blocked` / `deleted`): the box is replaced by "Writing is blocked in this chat.", or the chat closes.
 - **Admin in a DM:** "Add to groups" for the other person (§6.11).
 
 ### 6.10 Groups
@@ -687,7 +715,9 @@ Each feature lists: what the user sees, which tables it uses, and where the work
   - big buttons: Group statistics (A28), Member list (A30), Applications (A23)
 - **Group info (G3):** headline, info posts, member list and **number of members** if `member_list` (or you're an admin), Leave group, Edit group (admin).
 - **Info bar in the chat:** calendar icon + Info 1 headline.
-- **Leave group:** delete your `chat_members` row.
+- **Leave group:** delete your `chat_members` row (`leave_chat`); the group admin can't leave their group.
+- **Who runs a group:** its group admin or the community admin (`private.can_manage_group`), for every group screen and RPC. Group admins also run its calendar (step 12).
+- **Built (step 7):** `save_group`, `delete_group`, `group_settings`, `group_info` (G3 + Info posts, member list limited to 500 by name), `group_card` (A24), `group_directory` (A2), `group_assignments` (F1), `group_roster` / `group_member` (A23/A30, A22), `join_group`, `apply_to_group`, `save_group_record`, `set_group_member`, `set_group_admin`, `set_group_rights`.
 
 ### 6.11 Member lists, door list and "Add to groups" (A30/A31, F1)
 
@@ -749,6 +779,15 @@ Each feature lists: what the user sees, which tables it uses, and where the work
   - filter: Users / Groups.
 - **Tap:** a user opens their profile; a group joins directly or opens the application (A24).
 
+### 6.17 Own domains (D30)
+
+- **Where a community lives:** at the platform path `platform.com/{slug}` (always works), or on its own domain when `communities.domain` is set.
+- **How a domain reaches its community:** each domain is added to the Vercel project (DNS at the registrar, HTTPS automatic). `src/proxy.ts` **rewrites** a known host to `/{slug}/…`, so `club-example.com/chats` serves the same `/[community]/chats` page. The host → slug map comes from a setting (`COMMUNITY_DOMAINS`), not a database query: the proxy only refreshes the session and rewrites (project rule).
+- **Links:** today links keep the `/{slug}` prefix everywhere; on an own domain the proxy lets a path that starts with the community's slug through, so they work. Later (cosmetic): one helper so links on an own domain drop the prefix.
+- **Branding:** page titles, the iOS home-screen title, the manifest (`/{slug}/manifest.webmanifest`: name, start page) and the email sender name come from the community. Icons stay the platform's until communities have their own.
+- **Login:** Supabase Auth lists every domain in its redirect allow-list; each domain keeps its own login cookie.
+- **Emails:** the approval email links to the community's own domain; each domain gets its own verified sender in Brevo (DKIM + DMARC).
+
 ---
 
 ## 7. Photos and files
@@ -766,6 +805,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 
 - Both buckets limit file size and type (`image/webp`, `image/jpeg`) on the server. The size limit is one constant, `MAX_IMAGE_BYTES`, default 5 MB.
 - **Deleting** a message, photo, album or account removes the database row first, then the files right after (`after()`). A failed file delete only leaves an unreachable file.
+- **Identity material** (application image, ID photo) lives in the `private` bucket only, is reviewed by a person (no automatic face matching, which would make it biometric data), and is deleted as soon as the application is approved or rejected (D31).
 
 ---
 
@@ -858,11 +898,12 @@ Each slice ships: migration + indexes + RLS, database tests (pgTAP via `supabase
 | 3 | Profiles | `profile` + `save_profile`, Status-driven fields, couples, photos (profile bucket), score, visibility, linked profiles |
 | 4 | Community approval | Applications, A25 form, A19/A20/A21, `admin_records`, approval email |
 | 5 | Chats core | Chats, members, messages, chat list, thread paging, send, mark-read, Realtime |
+| 5b | Own domains, real members, privacy basics | `communities.domain` + proxy rewrite + link helper; 18+ and identity check per community, identity material deleted after the decision; `member_consents`; no email probing on join |
 | 6 | DMs + blocking | `open_dm`, leave options, blocks everywhere, admin "Add to groups" from a DM |
 | 7 | Groups | Create/edit with all settings, info posts, group info, group applications (A22/A23/A24), No-reply DM |
 | 8 | Post actions + images | Reactions (one per person), comments, edit/delete rules, chat images, Taken in app flag |
-| 9 | Search | `search_profiles`, filter, swipe (A27), `find_new` |
-| 10 | Notes + stars | `notes`, DM ⭐ and profile ⭐ share one record, stars filter |
+| 9 | Search | `notes` table + `set_note` (pulled forward for stars), `search_profiles`, filter, swipe (A27), `find_new` |
+| 10 | Notes screens | DM ⭐ and profile ⭐ share one record (table built in step 9) |
 | 11 | Member lists + statistics | A30/A31 editable rows, door list, A28/A33 |
 | 12 | Calendar | Events, edit/delete, DM Admin |
 | 13 | Albums | Albums, password, signed URLs, "From profile/album" copy |
@@ -885,6 +926,9 @@ The app stays usable after every slice.
 | Q6 | Who sees real names? | Admins only | One policy |
 | Q7 | Linked profile must accept? | **Answered:** yes, by linking back (both link each other) | — |
 | Q8 | Same email in two communities = same password? | Yes | — (Supabase allows one password per email) |
+| Q9 | Profile photos visible to logged-in members only? | Public bucket, unguessable URLs | Private bucket + batched signed URLs |
+| Q10 | Identity check: ID card photo, a photo of the person, or both? | One ID photo, the admin decides what to ask for in the application text | A second photo slot |
+| Q11 | BankID later: who pays per check, members or community admins? | Not built yet | A per-community setting |
 
 Also to pick before launch (technical, not for Peter): the EU email provider, and `MAX_IMAGE_BYTES` (default 5 MB).
 
@@ -896,7 +940,7 @@ These rule files were updated to match Peter's decisions:
 
 - `AGENTS.md` / `docs/AGENTS.md`:
   - "Do not build: … reputation, profile score" → profile score is now V1 (rule TBD); reputation stays Later.
-  - The "Undecided" list → account scope, Ads tab, 2 vs 3 tabs and path vs subdomain are now decided (D15, D17, path).
+  - The "Undecided" list → account scope, Ads tab, 2 vs 3 tabs and path vs subdomain are now decided (D15, D17, path). Oct 2026: communities can also have their own domain (D30); the path stays.
 - `.cursor/rules/00-application-context.mdc`: the same two changes.
 - `.cursor/rules/performance.mdc`: the per-user Realtime channel for the chat list → refresh on focus instead (§8).
 - `.cursor/rules/ui-context.mdc`: "Verified" → "Real" → "Taken in app" (Oct 2026).

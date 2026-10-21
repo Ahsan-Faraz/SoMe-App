@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Icon } from './Icon'
 
 // Multi-select drop-down: a closed field showing the choices; opens a list of checkboxes in place
@@ -13,8 +13,10 @@ export function MultiSelect({
   placeholder,
   showLabel = true,
   format = (option) => option,
+  tag = null,
 }: {
   label: string
+  tag?: ReactNode // after the label, e.g. "Required"
   options: readonly string[]
   value: string[]
   onChange: (value: string[]) => void
@@ -38,7 +40,12 @@ export function MultiSelect({
 
   return (
     <div className="grid gap-1.5">
-      {showLabel ? <span className="text-[14px] font-semibold text-ink">{label}</span> : null}
+      {showLabel ? (
+        <span className="text-[14px] font-semibold text-ink">
+          {label}
+          {tag}
+        </span>
+      ) : null}
       <details ref={ref} className="group">
         <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] text-ink group-open:border-accent [&::-webkit-details-marker]:hidden">
           <span className={`min-w-0 flex-1 truncate ${value.length ? '' : 'text-muted'}`}>{value.length ? value.map(format).join(', ') : placeholder}</span>

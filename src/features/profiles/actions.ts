@@ -7,7 +7,7 @@ import { getProfileSchema } from '@/features/fields/queries'
 import type { FieldKind } from '@/features/fields/types'
 import { isBool, isRecord, isUuid } from '@/lib/guards'
 import { t } from '@/lib/i18n'
-import { FIELD_TEXT_MAX, LINKED_PROFILES_MAX, PLACE_MAX } from '@/lib/limits'
+import { FIELD_TEXT_MAX, LINK_COMMENT_MAX, LINKED_PROFILES_MAX, PLACE_MAX } from '@/lib/limits'
 import type { Json } from '@/lib/supabase/database.types'
 import { createClient } from '@/lib/supabase/server'
 import type { FieldValue } from './fields'
@@ -113,6 +113,18 @@ export async function setLinkAction(slug: string, userId: string, on: boolean): 
   const supabase = await createClient()
   const { error } = await supabase.rpc('set_profile_link', { p_community: community.id, p_linked: userId, p_on: on })
   if (error) return { error: error.code === '23514' ? t.linked.full(LINKED_PROFILES_MAX) : errorText(error.code) }
+  refresh()
+}
+
+// A32: your short comment on one of your links ('' clears it), saved when the field is left.
+export async function setLinkCommentAction(slug: string, userId: string, comment: string): Promise<ProfileResult> {
+  if (!isUuid(userId) || typeof comment !== 'string') return { error: t.profiles.invalid }
+  if (comment.trim().length > LINK_COMMENT_MAX) return { error: t.profiles.tooLong }
+  const community = await getCommunity(slug)
+  if (!community) return { error: t.profiles.notAllowed }
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('set_profile_link_comment', { p_community: community.id, p_linked: userId, p_comment: comment.trim() })
+  if (error) return { error: errorText(error.code) }
   refresh()
 }
 

@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { Screen } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import type { Viewer } from '@/features/auth/types'
-import { chatIdForUser } from '@/features/chats/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
 import { ProfileActions } from '@/features/profiles/components/ProfileActions'
@@ -40,7 +39,6 @@ export async function MemberProfileScreen({
   if (!profile) notFound()
 
   const scopeRef = { kind: scope.kind, id: scope.id, stateLabels: scope.stateLabels }
-  const chatId = profile.own ? null : chatIdForUser(profile.id)
 
   return (
     <Screen
@@ -49,7 +47,6 @@ export async function MemberProfileScreen({
         <ProfileActions
           community={community}
           profile={profile}
-          chatId={chatId}
           isAdmin
           top={record ? <ApproveButton community={community} scope={scopeRef} seed={record} /> : null}
         />

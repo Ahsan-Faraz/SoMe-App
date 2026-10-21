@@ -6,7 +6,7 @@ import { memo, useDeferredValue, useState, useTransition } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
 import { saveMember } from '../save'
-import { useRoster, wholeNumber } from '../storage'
+import { wholeNumber } from '../numbers'
 import type { MemberRecord, Roster, RosterEdit, Scope } from '../types'
 
 const cell = 'h-10 w-full min-w-0 rounded-lg border border-line bg-canvas px-2.5 text-[15px] text-ink outline-none focus:border-accent'
@@ -26,14 +26,14 @@ export function RosterList({
   mode: 'members' | 'applications'
   profileBase: string
 }) {
-  const roster = useRoster(community, scope, seed)
+  const roster = seed
   // The profile's Back returns to this list (members or applications).
   const back = `?back=${encodeURIComponent(usePathname())}`
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const [, startTransition] = useTransition()
   const deferred = useDeferredValue(query.trim().toLowerCase())
-  // Saved when a field is left (or on Remove); the community's in the database, a group's on this device.
+  // Saved when a field is left (or on Remove), in the database; the list then comes back fresh.
   const save = (row: MemberRecord, edit: RosterEdit) => {
     setError('')
     startTransition(async () => setError((await saveMember(community, scope, row, edit)) ?? ''))

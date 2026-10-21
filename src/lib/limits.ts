@@ -24,6 +24,7 @@ export const CHOICES_MAX = 200 // choices in one list or field
 
 export const MAIN_PHOTOS_MAX = 3
 export const LINKED_PROFILES_MAX = 3
+export const LINK_COMMENT_MAX = 60 // a short comment next to a linked profile
 export const SCORE_MAX = 100
 export const STARS_MAX = 5
 

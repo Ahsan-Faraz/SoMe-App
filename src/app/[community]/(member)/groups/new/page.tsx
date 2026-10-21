@@ -18,7 +18,8 @@ async function NewGroupContent({ params }: PageProps<'/[community]/groups/new'>)
   const { community } = await params
   const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
-  if (viewer.role !== 'admin') redirect(`/${community}/chats`)
+  // D9: the community admin and members with group-create rights (the database checks it too).
+  if (viewer.role !== 'admin' && !viewer.canCreateGroups) redirect(`/${community}/chats`)
 
   return (
     <div className="min-h-app w-full bg-canvas">

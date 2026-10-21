@@ -17,10 +17,13 @@ grant select on ids to anon, authenticated;
 
 insert into public.communities (slug, name, headline) values ('test-other', 'Other', 'Another community');
 
+-- Sign-ups give their consents (step 5b); every community's version is 'test' here.
+update public.communities set privacy_version = 'test';
+
 insert into auth.users (id, email, raw_user_meta_data)
 select u.id, u.name || '@test.invalid',
   jsonb_build_object('community_id', case when u.name = 'dora' then (select id from public.communities where slug = 'test-other') else ids.biking end,
-    'username', initcap(u.name))
+    'username', initcap(u.name), 'consents', '{"privacy": "test", "age_18": true}'::jsonb)
 from ids cross join lateral (values
   (ids.anna, 'anna'), (ids.bert, 'bert'), (ids.carl, 'carl'), (ids.dora, 'dora'), (ids.erik, 'erik'), (ids.fred, 'fred'), (ids.gina, 'gina')
 ) as u (id, name);
@@ -73,7 +76,7 @@ insert into public.community_options (community_id, list, label, position) selec
 insert into public.community_options (community_id, list, label, position, parent_id)
 select biking, 'district', '{"en": "Oslo"}', 0, pg_temp.option('country', 'Norway') from ids;
 insert into public.profile_fields (community_id, key, label, kind, for_substatuses, position)
-select biking, 'test_male_level', '{"en": "Male competition level"}', 'short_text', array[pg_temp.sub('The Man')], 900 from ids;
+select biking, 'fixture_male_level', '{"en": "Male competition level"}', 'short_text', array[pg_temp.sub('The Man')], 900 from ids;
 
 -- Gina picked a District before countries existed: she has no Country.
 update public.members set district_id = pg_temp.option('district', 'Stockholm') where user_id = (select gina from ids);
@@ -199,7 +202,7 @@ select lives_ok(
          pg_temp.answer('rides_per_month', '4.5', 'The Woman'),
          pg_temp.answer('riding_since', '"2015-04-01"', 'The Man'),
          pg_temp.answer('own_bike', 'true', 'The Man'),
-         pg_temp.answer('test_male_level', '"Elite"', 'The Man')
+         pg_temp.answer('fixture_male_level', '"Elite"', 'The Man')
        )) from ids $$,
   'a couple saves every field type: shared ones in the main section, the rest per person'
 );
@@ -214,13 +217,13 @@ select results_eq(
      order by f.key collate "C", coalesce(sub.label ->> 'en', 'main') collate "C" $$,
   $$ values
      ('about_us'::text, 'main'::text, 0, (select btrim(body) from long_text)),
+     ('fixture_male_level', 'The Man', 1, 'Elite'),
      ('headline', 'main', 0, 'Sunday riders'),
      ('own_bike', 'The Man', 1, 'true'),
      ('ride_together', 'main', 0, 'false'),
      ('rides_per_month', 'The Man', 1, '8'),
      ('rides_per_month', 'The Woman', 1, '4.5'),
-     ('riding_since', 'The Man', 1, '2015-04-01'),
-     ('test_male_level', 'The Man', 1, 'Elite') $$,
+     ('riding_since', 'The Man', 1, '2015-04-01') $$,
   'text, number, yes/no and date answers come back in their sections (trimmed; an empty text is no answer)'
 );
 select results_eq(
@@ -260,7 +263,7 @@ select throws_ok(
   '22023', null, 'there is no second Man in Couple MF'
 );
 select throws_ok(
-  $$ select public.save_profile(biking, '{}', jsonb_build_array(pg_temp.answer('test_male_level', '"Pro"', 'The Woman'))) from ids $$,
+  $$ select public.save_profile(biking, '{}', jsonb_build_array(pg_temp.answer('fixture_male_level', '"Pro"', 'The Woman'))) from ids $$,
   '22023', null, 'a field for The Man''s section is refused for The Woman'
 );
 select throws_ok(

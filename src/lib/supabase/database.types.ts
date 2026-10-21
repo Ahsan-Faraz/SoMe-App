@@ -69,6 +69,8 @@ export type Database = {
           decided_at: string | null
           decided_by: string | null
           id: string
+          id_photo_id: string | null
+          media_deleted_at: string | null
           message: string | null
           photo_id: string | null
           real_name_1: string | null
@@ -83,6 +85,8 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           id?: string
+          id_photo_id?: string | null
+          media_deleted_at?: string | null
           message?: string | null
           photo_id?: string | null
           real_name_1?: string | null
@@ -97,6 +101,8 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           id?: string
+          id_photo_id?: string | null
+          media_deleted_at?: string | null
           message?: string | null
           photo_id?: string | null
           real_name_1?: string | null
@@ -105,6 +111,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "applications_chat_fk"
+            columns: ["community_id", "chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["community_id", "id"]
+          },
           {
             foreignKeyName: "applications_community_id_photo_id_fkey"
             columns: ["community_id", "photo_id"]
@@ -119,6 +132,209 @@ export type Database = {
             referencedRelation: "members"
             referencedColumns: ["community_id", "user_id"]
           },
+          {
+            foreignKeyName: "applications_id_photo_fk"
+            columns: ["community_id", "id_photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["community_id", "id"]
+          },
+        ]
+      }
+      blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          community_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          community_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          community_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocks_community_id_blocked_id_fkey"
+            columns: ["community_id", "blocked_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+          {
+            foreignKeyName: "blocks_community_id_blocker_id_fkey"
+            columns: ["community_id", "blocker_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+        ]
+      }
+      chat_members: {
+        Row: {
+          chat_id: string
+          community_id: string
+          joined_at: string
+          last_read_seq: number
+          role: string
+          user_id: string
+          visible_from_seq: number
+        }
+        Insert: {
+          chat_id: string
+          community_id: string
+          joined_at?: string
+          last_read_seq?: number
+          role?: string
+          user_id: string
+          visible_from_seq?: number
+        }
+        Update: {
+          chat_id?: string
+          community_id?: string
+          joined_at?: string
+          last_read_seq?: number
+          role?: string
+          user_id?: string
+          visible_from_seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_members_community_id_chat_id_fkey"
+            columns: ["community_id", "chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["community_id", "id"]
+          },
+          {
+            foreignKeyName: "chat_members_community_id_user_id_fkey"
+            columns: ["community_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+        ]
+      }
+      chats: {
+        Row: {
+          allow_commenting: boolean
+          allow_post_editing: boolean
+          allow_posting: boolean
+          allow_reactions: boolean
+          application_text: string | null
+          calendar: boolean
+          community_id: string
+          created_at: string
+          created_by: string
+          direct_join: boolean
+          dm_user_a: string | null
+          dm_user_b: string | null
+          headline: string | null
+          history: boolean
+          id: string
+          kind: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          last_seq: number
+          member_list: boolean
+          name: string | null
+          require_app_image: boolean
+          require_app_names: boolean
+          require_app_text: boolean
+          state_label_1: string | null
+          state_label_2: string | null
+          state_label_3: string | null
+          visible_in_search: boolean
+        }
+        Insert: {
+          allow_commenting?: boolean
+          allow_post_editing?: boolean
+          allow_posting?: boolean
+          allow_reactions?: boolean
+          application_text?: string | null
+          calendar?: boolean
+          community_id: string
+          created_at?: string
+          created_by: string
+          direct_join?: boolean
+          dm_user_a?: string | null
+          dm_user_b?: string | null
+          headline?: string | null
+          history?: boolean
+          id?: string
+          kind: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          last_seq?: number
+          member_list?: boolean
+          name?: string | null
+          require_app_image?: boolean
+          require_app_names?: boolean
+          require_app_text?: boolean
+          state_label_1?: string | null
+          state_label_2?: string | null
+          state_label_3?: string | null
+          visible_in_search?: boolean
+        }
+        Update: {
+          allow_commenting?: boolean
+          allow_post_editing?: boolean
+          allow_posting?: boolean
+          allow_reactions?: boolean
+          application_text?: string | null
+          calendar?: boolean
+          community_id?: string
+          created_at?: string
+          created_by?: string
+          direct_join?: boolean
+          dm_user_a?: string | null
+          dm_user_b?: string | null
+          headline?: string | null
+          history?: boolean
+          id?: string
+          kind?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          last_seq?: number
+          member_list?: boolean
+          name?: string | null
+          require_app_image?: boolean
+          require_app_names?: boolean
+          require_app_text?: boolean
+          state_label_1?: string | null
+          state_label_2?: string | null
+          state_label_3?: string | null
+          visible_in_search?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chats_community_id_dm_user_a_fkey"
+            columns: ["community_id", "dm_user_a"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+          {
+            foreignKeyName: "chats_community_id_dm_user_b_fkey"
+            columns: ["community_id", "dm_user_b"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+          {
+            foreignKeyName: "chats_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       communities: {
@@ -128,13 +344,17 @@ export type Database = {
           application_text: string | null
           created_at: string
           default_locale: string
+          domain: string | null
           headline: string
           hero_path: string | null
           id: string
           name: string
+          privacy_version: string
+          require_age_18: boolean
           require_app_image: boolean
           require_app_names: boolean
           require_app_text: boolean
+          require_identity: boolean
           show_age: boolean
           show_country: boolean
           show_district: boolean
@@ -155,13 +375,17 @@ export type Database = {
           application_text?: string | null
           created_at?: string
           default_locale?: string
+          domain?: string | null
           headline: string
           hero_path?: string | null
           id?: string
           name: string
+          privacy_version?: string
+          require_age_18?: boolean
           require_app_image?: boolean
           require_app_names?: boolean
           require_app_text?: boolean
+          require_identity?: boolean
           show_age?: boolean
           show_country?: boolean
           show_district?: boolean
@@ -182,13 +406,17 @@ export type Database = {
           application_text?: string | null
           created_at?: string
           default_locale?: string
+          domain?: string | null
           headline?: string
           hero_path?: string | null
           id?: string
           name?: string
+          privacy_version?: string
+          require_age_18?: boolean
           require_app_image?: boolean
           require_app_names?: boolean
           require_app_text?: boolean
+          require_identity?: boolean
           show_age?: boolean
           show_country?: boolean
           show_district?: boolean
@@ -250,6 +478,70 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "community_options"
             referencedColumns: ["community_id", "id"]
+          },
+        ]
+      }
+      group_info_posts: {
+        Row: {
+          body: string
+          chat_id: string
+          community_id: string
+          headline: string
+          n: number
+        }
+        Insert: {
+          body?: string
+          chat_id: string
+          community_id: string
+          headline: string
+          n: number
+        }
+        Update: {
+          body?: string
+          chat_id?: string
+          community_id?: string
+          headline?: string
+          n?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_info_posts_community_id_chat_id_fkey"
+            columns: ["community_id", "chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["community_id", "id"]
+          },
+        ]
+      }
+      member_consents: {
+        Row: {
+          community_id: string
+          given_at: string
+          kind: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          community_id: string
+          given_at?: string
+          kind: string
+          user_id: string
+          version: string
+        }
+        Update: {
+          community_id?: string
+          given_at?: string
+          kind?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_consents_community_id_user_id_fkey"
+            columns: ["community_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
           },
         ]
       }
@@ -349,6 +641,83 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "community_options"
             referencedColumns: ["community_id", "id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          author_id: string
+          body: string | null
+          chat_id: string
+          client_id: string | null
+          community_id: string
+          created_at: string
+          edited_at: string | null
+          kind: string
+          photo_id: string | null
+          reactions: Json
+          reply_snippet: string | null
+          reply_to_seq: number | null
+          seq: number
+        }
+        Insert: {
+          author_id: string
+          body?: string | null
+          chat_id: string
+          client_id?: string | null
+          community_id: string
+          created_at?: string
+          edited_at?: string | null
+          kind?: string
+          photo_id?: string | null
+          reactions?: Json
+          reply_snippet?: string | null
+          reply_to_seq?: number | null
+          seq: number
+        }
+        Update: {
+          author_id?: string
+          body?: string | null
+          chat_id?: string
+          client_id?: string | null
+          community_id?: string
+          created_at?: string
+          edited_at?: string | null
+          kind?: string
+          photo_id?: string | null
+          reactions?: Json
+          reply_snippet?: string | null
+          reply_to_seq?: number | null
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_community_id_author_id_fkey"
+            columns: ["community_id", "author_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+          {
+            foreignKeyName: "messages_community_id_chat_id_fkey"
+            columns: ["community_id", "chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["community_id", "id"]
+          },
+          {
+            foreignKeyName: "messages_photo_fk"
+            columns: ["community_id", "photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["community_id", "id"]
+          },
+          {
+            foreignKeyName: "messages_reply_fk"
+            columns: ["chat_id", "reply_to_seq"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["chat_id", "seq"]
           },
         ]
       }
@@ -542,18 +911,21 @@ export type Database = {
       }
       profile_links: {
         Row: {
+          comment: string | null
           community_id: string
           created_at: string
           linked_user_id: string
           user_id: string
         }
         Insert: {
+          comment?: string | null
           community_id: string
           created_at?: string
           linked_user_id: string
           user_id: string
         }
         Update: {
+          comment?: string | null
           community_id?: string
           created_at?: string
           linked_user_id?: string
@@ -739,6 +1111,48 @@ export type Database = {
           },
         ]
       }
+      reactions: {
+        Row: {
+          chat_id: string
+          community_id: string
+          created_at: string
+          emoji: string
+          seq: number
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          community_id: string
+          created_at?: string
+          emoji: string
+          seq: number
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          community_id?: string
+          created_at?: string
+          emoji?: string
+          seq?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reactions_chat_id_seq_fkey"
+            columns: ["chat_id", "seq"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["chat_id", "seq"]
+          },
+          {
+            foreignKeyName: "reactions_community_id_user_id_fkey"
+            columns: ["community_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+        ]
+      }
       status_slots: {
         Row: {
           community_id: string
@@ -787,6 +1201,7 @@ export type Database = {
         Args: { p_community: string; p_photo: Json; p_slot: Json }
         Returns: Json
       }
+      admin_chat: { Args: { p_community: string }; Returns: string }
       admin_member: {
         Args: { p_community: string; p_user: string }
         Returns: Json
@@ -807,8 +1222,111 @@ export type Database = {
           username: string
         }[]
       }
+      apply_to_group: {
+        Args: { p_application: Json; p_chat: string; p_community: string }
+        Returns: string
+      }
+      chat_header: {
+        Args: { p_chat: string; p_community: string }
+        Returns: {
+          allow_commenting: boolean
+          allow_post_editing: boolean
+          allow_reactions: boolean
+          blocked: boolean
+          calendar: boolean
+          can_post: boolean
+          chat_id: string
+          info_headline: string
+          kind: string
+          last_read_seq: number
+          last_seq: number
+          manage: boolean
+          my_role: string
+          name: string
+          other_user_id: string
+        }[]
+      }
+      chat_list: {
+        Args: { p_community: string; p_limit?: number }
+        Returns: {
+          chat_id: string
+          kind: string
+          last_message_at: string
+          name: string
+          other_icon: string
+          other_user_id: string
+          preview: string
+          unread: number
+        }[]
+      }
       decide_application: {
         Args: { p_application: string; p_decision: string }
+        Returns: Json
+      }
+      delete_group: {
+        Args: { p_chat: string; p_community: string }
+        Returns: Json
+      }
+      delete_message: {
+        Args: { p_chat: string; p_community: string; p_seq: number }
+        Returns: Json
+      }
+      edit_message: {
+        Args: {
+          p_body: string
+          p_chat: string
+          p_community: string
+          p_seq: number
+        }
+        Returns: undefined
+      }
+      find_dm: {
+        Args: { p_community: string; p_user: string }
+        Returns: string
+      }
+      group_assignments: {
+        Args: { p_community: string; p_user: string }
+        Returns: Json
+      }
+      group_card: {
+        Args: { p_chat: string; p_community: string }
+        Returns: Json
+      }
+      group_directory: {
+        Args: { p_community: string; p_limit?: number }
+        Returns: {
+          chat_id: string
+          direct_join: boolean
+          headline: string
+          name: string
+        }[]
+      }
+      group_info: {
+        Args: { p_chat: string; p_community: string }
+        Returns: Json
+      }
+      group_member: {
+        Args: { p_chat: string; p_community: string; p_user: string }
+        Returns: Json
+      }
+      group_roster: {
+        Args: { p_applications: boolean; p_chat: string; p_community: string }
+        Returns: {
+          application_id: string
+          message: string
+          notes: string
+          real_name_1: string
+          real_name_2: string
+          state_1: number
+          state_2: number
+          state_3: number
+          status_id: string
+          user_id: string
+          username: string
+        }[]
+      }
+      group_settings: {
+        Args: { p_chat: string; p_community: string }
         Returns: Json
       }
       join_check: {
@@ -817,6 +1335,49 @@ export type Database = {
           email_exists: boolean
           username_taken: boolean
         }[]
+      }
+      join_community: {
+        Args: { p_community: string; p_consents: Json; p_username: string }
+        Returns: undefined
+      }
+      join_group: {
+        Args: { p_chat: string; p_community: string }
+        Returns: undefined
+      }
+      join_notice_due: { Args: { p_email: string }; Returns: boolean }
+      leave_chat: {
+        Args: { p_chat: string; p_community: string; p_mode: string }
+        Returns: Json
+      }
+      list_messages: {
+        Args: {
+          p_after?: number
+          p_before?: number
+          p_chat: string
+          p_community: string
+          p_limit?: number
+        }
+        Returns: {
+          author_id: string
+          author_name: string
+          author_status_id: string
+          body: string
+          client_id: string
+          created_at: string
+          edited_at: string
+          kind: string
+          my_reaction: string
+          photo: Json
+          reactions: Json
+          reply_author: string
+          reply_snippet: string
+          reply_to_seq: number
+          seq: number
+        }[]
+      }
+      mark_read: {
+        Args: { p_chat: string; p_community: string; p_seq: number }
+        Returns: undefined
       }
       member_email: {
         Args: { p_community: string; p_username: string }
@@ -829,6 +1390,11 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      my_application: { Args: { p_community: string }; Returns: Json }
+      open_dm: {
+        Args: { p_community: string; p_user: string }
+        Returns: string
       }
       profile: { Args: { p_community: string; p_user: string }; Returns: Json }
       profile_cards: {
@@ -852,9 +1418,17 @@ export type Database = {
           username: string
         }[]
       }
+      reaction_details: {
+        Args: { p_chat: string; p_community: string; p_seq: number }
+        Returns: {
+          emoji: string
+          user_id: string
+          username: string
+        }[]
+      }
       remove_member: {
         Args: { p_community: string; p_user: string }
-        Returns: undefined
+        Returns: Json
       }
       remove_profile_photo: {
         Args: { p_community: string; p_photo: string }
@@ -877,6 +1451,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_group: {
+        Args: { p_chat: string; p_community: string; p_group: Json }
+        Returns: string
+      }
+      save_group_record: {
+        Args: {
+          p_chat: string
+          p_community: string
+          p_record: Json
+          p_user: string
+        }
+        Returns: undefined
+      }
       save_profile: {
         Args: { p_community: string; p_profile: Json; p_values?: Json }
         Returns: Json
@@ -889,6 +1476,34 @@ export type Database = {
         Args: { p_community: string; p_field: Json; p_options?: Json }
         Returns: string
       }
+      send_message: {
+        Args: {
+          p_body: string
+          p_chat: string
+          p_client_id?: string
+          p_community: string
+          p_photo?: Json
+          p_reply_to?: number
+        }
+        Returns: Json
+      }
+      set_group_admin: {
+        Args: { p_chat: string; p_community: string; p_user: string }
+        Returns: undefined
+      }
+      set_group_member: {
+        Args: {
+          p_chat: string
+          p_community: string
+          p_on: boolean
+          p_user: string
+        }
+        Returns: Json
+      }
+      set_group_rights: {
+        Args: { p_community: string; p_on: boolean; p_user: string }
+        Returns: undefined
+      }
       set_member_status: {
         Args: { p_community: string; p_status: string; p_user: string }
         Returns: undefined
@@ -896,6 +1511,19 @@ export type Database = {
       set_profile_link: {
         Args: { p_community: string; p_linked: string; p_on: boolean }
         Returns: undefined
+      }
+      set_profile_link_comment: {
+        Args: { p_comment: string; p_community: string; p_linked: string }
+        Returns: undefined
+      }
+      set_reaction: {
+        Args: {
+          p_chat: string
+          p_community: string
+          p_emoji: string
+          p_seq: number
+        }
+        Returns: Json
       }
       submit_application: {
         Args: { p_application: Json; p_community: string }
