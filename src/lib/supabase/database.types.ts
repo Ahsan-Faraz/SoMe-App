@@ -1251,22 +1251,6 @@ export type Database = {
         Args: { p_community: string; p_user: string }
         Returns: Json
       }
-      admin_roster: {
-        Args: { p_applications: boolean; p_community: string }
-        Returns: {
-          application_id: string
-          message: string
-          notes: string
-          real_name_1: string
-          real_name_2: string
-          state_1: number
-          state_2: number
-          state_3: number
-          status_id: string
-          user_id: string
-          username: string
-        }[]
-      }
       apply_to_group: {
         Args: { p_application: Json; p_chat: string; p_community: string }
         Returns: string
@@ -1369,15 +1353,6 @@ export type Database = {
         Args: { p_chat: string; p_community: string }
         Returns: Json
       }
-      group_directory: {
-        Args: { p_community: string; p_limit?: number }
-        Returns: {
-          chat_id: string
-          direct_join: boolean
-          headline: string
-          name: string
-        }[]
-      }
       group_info: {
         Args: { p_chat: string; p_community: string }
         Returns: Json
@@ -1385,22 +1360,6 @@ export type Database = {
       group_member: {
         Args: { p_chat: string; p_community: string; p_user: string }
         Returns: Json
-      }
-      group_roster: {
-        Args: { p_applications: boolean; p_chat: string; p_community: string }
-        Returns: {
-          application_id: string
-          message: string
-          notes: string
-          real_name_1: string
-          real_name_2: string
-          state_1: number
-          state_2: number
-          state_3: number
-          status_id: string
-          user_id: string
-          username: string
-        }[]
       }
       group_settings: {
         Args: { p_chat: string; p_community: string }
@@ -1474,27 +1433,6 @@ export type Database = {
         Returns: string
       }
       profile: { Args: { p_community: string; p_user: string }; Returns: Json }
-      profile_cards: {
-        Args: {
-          p_after_score?: number
-          p_after_user?: string
-          p_community: string
-          p_limit?: number
-        }
-        Returns: {
-          ages: number[]
-          country_id: string
-          district_id: string
-          looking_for: string[]
-          photo_taken_in_app: boolean
-          photo_thumb: string
-          place: string
-          score: number
-          status_id: string
-          user_id: string
-          username: string
-        }[]
-      }
       reaction_details: {
         Args: { p_chat: string; p_community: string; p_seq: number }
         Returns: {

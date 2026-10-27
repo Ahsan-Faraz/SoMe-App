@@ -22,25 +22,14 @@ These are applied to the shared project and are safe for the old build. Deployin
 | 9 | `20261027120000_card_answers.sql` | `search_profiles` + the column `answers` ("Shown on card" answers). Dropped and created: only the step 9 code calls it. |
 | 7 | `20261027130000_group_admin_pick.sql` | `group_assignments` + the key `admin` per group (same arguments; the old build ignores the key). |
 
-## 2. In the repo, push after the deploy
-
-These two migrations are committed with the step 9–11 code but **not pushed**. Push them only once that code is **deployed and working** on the live site. Before that, the live site would call functions that no longer exist.
+## 2. Pushed after steps 9–11 shipped
 
 | Migration | What it does |
 |---|---|
-| `20261027140000_drop_live_compat.sql` | Drops `profile_cards` and `group_directory` (the new code uses `search_profiles` and `find_new`). |
-| `20261027150000_drop_old_rosters.sql` | Drops `admin_roster` and `group_roster` (at most 2,000 rows, searched and counted on the phone; the new code uses `roster_members`, `roster_applications` and `scope_stats`). |
+| `20261027140000_drop_live_compat.sql` | Dropped `profile_cards` and `group_directory` (the new code uses `search_profiles` and `find_new`). |
+| `20261027150000_drop_old_rosters.sql` | Dropped `admin_roster` and `group_roster` (the new code uses `roster_members`, `roster_applications` and `scope_stats`). |
 
-The tests and speed scripts no longer call the four functions (`04_applications` and `09_groups` use `roster_members` / `roster_applications`; `13_search` lost its two checks for the old build). Every test file passes both without the drops (today's database) and with them (checked 2026-10-27 in rolled-back copies).
-
-**Any `db push` sends both**, so nothing else may be pushed until the deploy (step 12's first migration included).
-
-### After the deploy
-
-1. `npx supabase db push --dry-run` lists exactly these two (plus anything newer).
-2. `npx supabase db push`, then `npm run test:db`.
-3. `npm run db:types` (the four functions leave the generated types), `npm run typecheck`, commit.
-4. Delete this section.
+Committed with the step 9–11 code (4985c5b) and pushed 2026-10-27. Types regenerated; every test file passes. A build older than steps 9–11 can no longer list profiles, Find new, members or applications on this database.
 
 ## 3. Known before this file
 

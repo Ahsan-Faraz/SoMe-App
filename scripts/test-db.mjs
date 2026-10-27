@@ -37,12 +37,15 @@ for (const file of files) {
   let counts
   let failures = []
   try {
-    const out = execFileSync('npx', ['supabase', 'db', 'query', '--linked', '-f', path], {
+    // -o json: a terminal otherwise gets a table. The rows come as a plain array, or as {rows} when
+    // the CLI runs under an AI agent.
+    const out = execFileSync('npx', ['supabase', 'db', 'query', '--linked', '-o', 'json', '-f', path], {
       encoding: 'utf8',
       shell: process.platform === 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-    const rows = JSON.parse(out.slice(out.indexOf('{'))).rows
+    const json = JSON.parse(out.slice(out.search(/[[{]/)))
+    const rows = Array.isArray(json) ? json : json.rows
     counts = Object.fromEntries(rows.filter((r) => r.label !== 'not ok').map((r) => [r.label, Number(r.value)]))
     failures = rows.filter((r) => r.label === 'not ok').map((r) => r.value)
   } catch (error) {
