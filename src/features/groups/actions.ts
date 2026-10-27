@@ -92,6 +92,18 @@ export async function setGroupMemberAction(slug: string, groupId: string, userId
   refresh()
 }
 
+// F1 "Make admin" (community admin): this member runs the group, added first if needed; the group's
+// admin until now stays in it as a member (one admin per group, D10).
+export async function setGroupAdminAction(slug: string, groupId: string, userId: string): Promise<GroupResult> {
+  if (!isUuid(groupId) || !isUuid(userId)) return { error: t.common.error }
+  const community = await communityId(slug)
+  if (!community) return { error: t.common.error }
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('set_group_admin', { p_community: community, p_chat: groupId, p_user: userId })
+  if (error) return { error: errorText(error.code) }
+  refresh()
+}
+
 // F1 "Group create/admin rights" (community admin).
 export async function setGroupRightsAction(slug: string, userId: string, on: boolean): Promise<GroupResult> {
   if (!isUuid(userId) || !isBool(on)) return { error: t.common.error }

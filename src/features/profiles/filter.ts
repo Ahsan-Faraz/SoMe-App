@@ -1,9 +1,12 @@
-import type { ProfileCard } from './types'
+import type { FieldDef } from '@/features/fields/types'
+import { isRecord } from '@/lib/guards'
+import type { Json } from '@/lib/supabase/database.types'
 
-// G1. Number fields are strings: '' = no limit. Reputation min comes later.
+// G1, saved on the account (members.search_filter) and applied by search_profiles. Choices are ids;
+// number fields are strings while typed: '' = no limit. Reputation min comes later.
 export type ProfileFilter = {
   text: string
-  picked: string[] // status
+  statuses: string[]
   lookingFor: string[]
   districts: string[]
   place: string
@@ -12,11 +15,15 @@ export type ProfileFilter = {
   minScore: string
   minStars: string
   maxStars: string
+  fields: Record<string, FieldFilter> // by field id: the searchable builder fields
 }
+
+// One searchable field's condition, by its kind: text, yes/no, any of the choices, or a range.
+export type FieldFilter = { text?: string; yes?: boolean; options?: string[]; min?: string; max?: string; from?: string; to?: string }
 
 export const emptyFilter: ProfileFilter = {
   text: '',
-  picked: [],
+  statuses: [],
   lookingFor: [],
   districts: [],
   place: '',
@@ -25,66 +32,84 @@ export const emptyFilter: ProfileFilter = {
   minScore: '',
   minStars: '',
   maxStars: '',
+  fields: {},
 }
 
-function key(community: string) {
-  return `some:filter:${community}`
-}
+// The fields the filter offers: searchable, active, and not photos.
+export const searchableFields = (fields: readonly FieldDef[]) => fields.filter((field) => field.searchable && field.active && field.kind !== 'photo')
 
-const lists = ['picked', 'lookingFor', 'districts'] as const
+const lists = ['statuses', 'lookingFor', 'districts'] as const
 const texts = ['text', 'place', 'minAge', 'maxAge', 'minScore', 'minStars', 'maxStars'] as const
+// Their keys in the saved filter (save_search_filter).
+const saved = {
+  text: 'text',
+  statuses: 'statuses',
+  lookingFor: 'looking_for',
+  districts: 'districts',
+  place: 'place',
+  minAge: 'age_min',
+  maxAge: 'age_max',
+  minScore: 'score_min',
+  minStars: 'stars_min',
+  maxStars: 'stars_max',
+} as const
+const numbers = new Set<string>(['minAge', 'maxAge', 'minScore', 'minStars', 'maxStars'])
 
-// Saved filters from older versions miss the newer fields: fill them in, drop anything malformed.
-export function readFilter(community: string): ProfileFilter {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key(community)) ?? '') as Partial<ProfileFilter> | null
-    if (!parsed || typeof parsed !== 'object') return emptyFilter
-    const filter = { ...emptyFilter }
-    for (const name of lists) if (Array.isArray(parsed[name])) filter[name] = parsed[name].filter((item) => typeof item === 'string')
-    for (const name of texts) if (typeof parsed[name] === 'string') filter[name] = parsed[name]
-    return filter
-  } catch {
-    return emptyFilter
+const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [])
+const asText = (value: unknown) => (typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '')
+const number = (value: string | undefined) => (value === undefined || value === '' ? null : Number(value))
+
+// The saved filter as the form edits it; anything malformed is left out.
+export function fromSaved(value: unknown): ProfileFilter {
+  if (!isRecord(value)) return emptyFilter
+  const filter: ProfileFilter = { ...emptyFilter, fields: {} }
+  for (const name of lists) filter[name] = strings(value[saved[name]])
+  for (const name of texts) filter[name] = asText(value[saved[name]])
+  if (isRecord(value.fields)) {
+    for (const [id, cond] of Object.entries(value.fields)) {
+      if (!isRecord(cond)) continue
+      filter.fields[id] = {
+        ...(typeof cond.text === 'string' ? { text: cond.text } : {}),
+        ...(typeof cond.yes === 'boolean' ? { yes: cond.yes } : {}),
+        ...(Array.isArray(cond.options) ? { options: strings(cond.options) } : {}),
+        ...(typeof cond.min === 'number' ? { min: String(cond.min) } : {}),
+        ...(typeof cond.max === 'number' ? { max: String(cond.max) } : {}),
+        ...(typeof cond.from === 'string' ? { from: cond.from } : {}),
+        ...(typeof cond.to === 'string' ? { to: cond.to } : {}),
+      }
+    }
   }
+  return filter
 }
 
-export function writeFilter(community: string, filter: ProfileFilter) {
-  localStorage.setItem(key(community), JSON.stringify(filter))
-  window.dispatchEvent(new Event('some-filter'))
+// What save_search_filter takes; it drops the empty parts.
+export function toSaved(filter: ProfileFilter): Json {
+  const out: Record<string, Json> = {}
+  for (const name of lists) out[saved[name]] = filter[name]
+  for (const name of texts) out[saved[name]] = numbers.has(name) ? number(filter[name]) : filter[name]
+  const fields: Record<string, Json> = {}
+  for (const [id, cond] of Object.entries(filter.fields)) {
+    fields[id] = {
+      text: cond.text ?? null,
+      yes: cond.yes ?? null,
+      options: cond.options ?? null,
+      min: number(cond.min),
+      max: number(cond.max),
+      from: cond.from || null,
+      to: cond.to || null,
+    }
+  }
+  out.fields = fields
+  return out
 }
 
-export function watchFilter(community: string, onChange: (filter: ProfileFilter) => void) {
-  const read = () => onChange(readFilter(community))
-  read()
-  window.addEventListener('some-filter', read)
-  return () => window.removeEventListener('some-filter', read)
-}
-
+// For the badge on the filter icon: how many filters are set.
 export function filterCount(filter: ProfileFilter) {
-  return lists.reduce((sum, name) => sum + filter[name].length, 0) + texts.filter((name) => filter[name].trim() !== '').length
+  const fields = Object.values(filter.fields).filter(
+    (cond) => Boolean(cond.text?.trim()) || cond.yes !== undefined || Boolean(cond.options?.length) || Boolean(cond.min || cond.max || cond.from || cond.to),
+  ).length
+  return lists.reduce((sum, name) => sum + filter[name].length, 0) + texts.filter((name) => filter[name].trim() !== '').length + fields
 }
 
-function limit(value: string) {
-  return value === '' ? null : Number(value)
-}
-
-// stars = my private-notes score for this profile (0 = not rated yet).
-export function matchesProfile(profile: ProfileCard, stars: number, filter: ProfileFilter, query: string) {
-  const minAge = limit(filter.minAge)
-  const maxAge = limit(filter.maxAge)
-  const minScore = limit(filter.minScore)
-  const minStars = limit(filter.minStars)
-  const maxStars = limit(filter.maxStars)
-  const place = filter.place.trim().toLowerCase()
-  if (filter.picked.length > 0 && !filter.picked.includes(profile.status)) return false
-  if (filter.lookingFor.length > 0 && !profile.lookingFor.some((item) => filter.lookingFor.includes(item))) return false
-  if (filter.districts.length > 0 && !filter.districts.includes(profile.district)) return false
-  if (place && !profile.place.toLowerCase().includes(place)) return false
-  // A couple matches when either person is in the age range (§6.6).
-  if ((minAge !== null || maxAge !== null) && !profile.ages.some((age) => (minAge === null || age >= minAge) && (maxAge === null || age <= maxAge))) return false
-  if (minScore !== null && profile.score < minScore) return false
-  if (minStars !== null && stars < minStars) return false
-  if (maxStars !== null && stars > maxStars) return false
-  if (!query) return true
-  return `${profile.username} ${profile.district} ${profile.place}`.toLowerCase().includes(query)
-}
+// Lists and swipe start over when the saved filter changes.
+export const filterKey = (filter: ProfileFilter) => JSON.stringify(toSaved(filter))

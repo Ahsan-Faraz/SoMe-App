@@ -2,21 +2,16 @@ import 'server-only'
 import { cache } from 'react'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
-import { personKey } from '@/features/fields/schema'
 import type { Choice, ProfileSchema } from '@/features/fields/types'
 import { formatDay, formatStamp } from '@/lib/format'
 import { createClient } from '@/lib/supabase/server'
-import { valueKey, type FieldValue } from './fields'
+import { CARDS_PAGE, cardLabels, toAnswers, toCard, type AnswerRows, type ProfileSearch } from './cards'
+import { fromSaved, type ProfileFilter } from './filter'
 import { profilePhotoUrl, toProfilePhoto, type PhotoRow } from './photo'
-import type { BrowseProfile, LinkedProfile, Profile, ProfileCard, ProfilePhoto } from './types'
-
-// The first page of the Profiles list. Paging and filters run in the database with search_profiles
-// (backend step 9); until then the list filters this page on the phone.
-const CARDS_LIMIT = 50
+import type { LinkedProfile, Profile } from './types'
 
 // What public.profile() returns (supabase/migrations/20261017120000_feedback_261016.sql).
-type Person = { substatus_id: string | null; n: number }
-type ProfileRow = {
+type ProfileRow = AnswerRows & {
   user_id: string
   username: string
   own: boolean
@@ -31,9 +26,7 @@ type ProfileRow = {
   score: number
   last_login_at: string | null
   photo: PhotoRow | null
-  people: (Person & { birth_date: string | null; age: number | null })[]
-  values: (Person & { field_id: string; text: string | null; num: number | null; bool: boolean | null; date: string | null; photo: PhotoRow | null })[]
-  choices: (Person & { field_id: string; option_ids: string[] })[]
+  people: { substatus_id: string | null; n: number; birth_date: string | null; age: number | null }[]
   links: { user_id: string; username: string; icon: string | null; confirmed: boolean; comment: string | null }[]
   linked_you: { user_id: string; username: string; icon: string | null }[]
 }
@@ -55,48 +48,37 @@ export const getProfile = cache(async (slug: string, userId: string): Promise<Pr
   return toProfile(data as unknown as ProfileRow, schema)
 })
 
-// A5 cards: approved members visible in search, best score first.
-export async function listProfiles(slug: string): Promise<ProfileCard[]> {
+// A5 and A27: the first page through your saved filter, and that filter (both in one round trip).
+// The phone loads the next pages itself (useCardPages).
+
+export async function searchProfiles(slug: string): Promise<ProfileSearch | null> {
   const community = await getCommunity(slug)
-  if (!community) return []
+  if (!community) return null
 
   const supabase = await createClient()
-  const [{ data, error }, schema] = await Promise.all([
-    supabase.rpc('profile_cards', { p_community: community.id, p_limit: CARDS_LIMIT }),
+  const [cards, filter, schema] = await Promise.all([
+    supabase.rpc('search_profiles', { p_community: community.id, p_limit: CARDS_PAGE }),
+    supabase.rpc('search_filter', { p_community: community.id }),
     getProfileSchema(community.id),
   ])
-  if (error) throw error
+  if (cards.error) throw cards.error
+  if (filter.error) throw filter.error
+  const labels = cardLabels(schema)
+  return { communityId: community.id, cards: cards.data.map((row) => toCard(row, labels)), filter: fromSaved(filter.data), labels }
+}
 
-  return data.map((row) => ({
-    id: row.user_id,
-    username: row.username,
-    status: labelOf(schema.statuses, row.status_id),
-    ages: row.ages,
-    country: labelOf(schema.countries, row.country_id),
-    district: labelOf(schema.districts, row.district_id),
-    place: row.place ?? '',
-    score: row.score,
-    lookingFor: row.looking_for.map((id) => labelOf(schema.statuses, id)).filter(Boolean),
-    photo: row.photo_thumb ? { src: profilePhotoUrl(row.photo_thumb), verified: Boolean(row.photo_taken_in_app), date: '' } : null,
-  }))
+// G1: your saved filter, to edit.
+export async function getSearchFilter(slug: string): Promise<ProfileFilter> {
+  const community = await getCommunity(slug)
+  if (!community) return fromSaved(null)
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('search_filter', { p_community: community.id })
+  if (error) throw error
+  return fromSaved(data)
 }
 
 function toProfile(row: ProfileRow, schema: ProfileSchema): Profile {
-  const kinds = new Map(schema.fields.map((field) => [field.id, field.kind]))
-  const keyOf = (item: Person & { field_id: string }) => valueKey(item.field_id, personKey(item.substatus_id, item.n))
-  const values: Record<string, FieldValue> = {}
-  const photoValues: Record<string, ProfilePhoto> = {}
-  for (const value of row.values) {
-    const key = keyOf(value)
-    if (value.photo) photoValues[key] = toProfilePhoto(value.photo)
-    else if (value.text !== null) values[key] = value.text
-    else if (value.num !== null) values[key] = String(value.num)
-    else if (value.bool !== null) values[key] = value.bool
-    else if (value.date !== null) values[key] = value.date
-  }
-  for (const choice of row.choices) {
-    values[keyOf(choice)] = kinds.get(choice.field_id) === 'pick_one' ? (choice.option_ids[0] ?? '') : choice.option_ids
-  }
+  const { values, photoValues } = toAnswers(row, new Map(schema.fields.map((field) => [field.id, field.kind])))
   const link = (item: { user_id: string; username: string; icon: string | null; comment?: string | null }, confirmed: boolean): LinkedProfile => ({
     id: item.user_id,
     username: item.username,
@@ -138,16 +120,3 @@ const labelOf = (choices: readonly Choice[], id: string | null) => (id ? (choice
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const isUuid = (value: string) => UUID.test(value)
-
-// A27 swipe: the same members as the Profiles list, with the full-size image. Their field answers
-// arrive with search_profiles (backend step 9); until then swipe shows the basic fields only.
-export async function listBrowseProfiles(slug: string): Promise<BrowseProfile[]> {
-  const cards = await listProfiles(slug)
-  return cards.map((card) => ({
-    ...card,
-    // The full image sits next to its thumbnail: name.webp beside name_t.webp (private.insert_photo).
-    photo: card.photo ? { ...card.photo, src: card.photo.src.replace(/_t\.(webp|jpg)$/, '.$1') } : null,
-    lastLogin: '',
-    values: {},
-  }))
-}

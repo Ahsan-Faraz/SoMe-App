@@ -3,13 +3,11 @@ import { cache } from 'react'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
 import { profilePhotoUrl } from '@/features/profiles/photo'
-import { listProfiles } from '@/features/profiles/queries'
 import { isUuid } from '@/lib/guards'
 import { createClient } from '@/lib/supabase/server'
-import { listGroupDirectory } from '@/features/groups/queries'
 import { withThumbnails } from './images'
 import { MESSAGE_PAGE, toMessage, type MessageRow } from './messages'
-import type { ChatHeader, ChatListItem, ChatPage, DirectoryEntry } from './types'
+import type { ChatHeader, ChatListItem, ChatPage } from './types'
 
 // Chats read through RPCs that check the caller's membership and the community
 // (supabase/migrations/20261018120000_chats.sql). Nothing here is cached across requests:
@@ -113,29 +111,4 @@ export async function getAdminChatId(slug: string): Promise<string | null> {
   const { data, error } = await supabase.rpc('admin_chat', { p_community: community.id })
   if (error) throw error
   return data
-}
-
-// A2 "Find new user/group". A user opens their profile; a group opens its join / apply screen (A24).
-// People: the Profiles list's first page; groups: visible groups the viewer is not in. Both in one
-// round trip. "Not connected yet" for people and typing to search (find_new) come with step 9.
-export async function listDirectory(community: string, viewerId: string): Promise<DirectoryEntry[]> {
-  const back = encodeURIComponent(`/${community}/chats/new`)
-  const [profiles, directory] = await Promise.all([listProfiles(community), listGroupDirectory(community)])
-  const people = profiles
-    .filter((profile) => profile.id !== viewerId)
-    .map((profile) => ({
-      id: profile.id,
-      kind: 'user' as const,
-      name: profile.username,
-      detail: [profile.status, profile.place || profile.district].filter(Boolean).join(' · '),
-      href: `/${community}/profiles/${profile.id}?back=${back}`,
-    }))
-  const groups = directory.map((group) => ({
-    id: group.id,
-    kind: 'group' as const,
-    name: group.name,
-    detail: group.headline,
-    href: `/${community}/groups/${group.id}/join`,
-  }))
-  return [...people, ...groups]
 }

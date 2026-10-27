@@ -15,8 +15,19 @@ export function FilterSection({ label, children }: { label: string; children: Re
   )
 }
 
-// Multi select as tappable chips: one tap per choice, no menu to open.
-export function ChipSelect({ options, value, onChange }: { options: readonly string[]; value: string[]; onChange: (value: string[]) => void }) {
+// Multi select as tappable chips: one tap per choice, no menu to open. format: the text shown for an
+// option, when the values are ids.
+export function ChipSelect({
+  options,
+  value,
+  onChange,
+  format = (option) => option,
+}: {
+  options: readonly string[]
+  value: string[]
+  onChange: (value: string[]) => void
+  format?: (option: string) => string
+}) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((option) => {
@@ -30,7 +41,7 @@ export function ChipSelect({ options, value, onChange }: { options: readonly str
             className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-[15px] font-semibold ${on ? 'border-accent bg-accent text-white' : 'border-line bg-canvas text-ink hover:bg-hover'}`}
           >
             {on ? <Icon name="check" className="size-4" /> : null}
-            {option}
+            {format(option)}
           </button>
         )
       })}

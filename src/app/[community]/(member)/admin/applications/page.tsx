@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
 import { requireAdmin } from '@/features/auth/queries'
 import { RosterScreen } from '@/features/membership/components/RosterScreen'
-import { getScope, listRoster } from '@/features/membership/queries'
+import { getScope, listRosterPage } from '@/features/membership/queries'
 
 export default function CommunityApplicationsPage(props: PageProps<'/[community]/admin/applications'>) {
   return (
@@ -16,8 +16,8 @@ export default function CommunityApplicationsPage(props: PageProps<'/[community]
 async function Content({ params }: PageProps<'/[community]/admin/applications'>) {
   const { community } = await params
   await requireAdmin(community)
-  const [scope, seed] = await Promise.all([getScope('community', community), listRoster(community, 'community', 'community')])
-  if (!scope) notFound()
+  const [scope, seed] = await Promise.all([getScope('community', community), listRosterPage(community, { kind: 'community', id: 'community' }, 'applications')])
+  if (!scope || !seed) notFound()
 
   return (
     <RosterScreen

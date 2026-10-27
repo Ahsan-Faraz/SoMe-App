@@ -1,10 +1,8 @@
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
-import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { getChatHeader } from '@/features/chats/queries'
-import { PrivateNotes } from '@/features/notes/components/PrivateNotes'
 
 export default function ChatNotesPage(props: PageProps<'/[community]/chats/[chatId]/notes'>) {
   return (
@@ -14,6 +12,8 @@ export default function ChatNotesPage(props: PageProps<'/[community]/chats/[chat
   )
 }
 
+// A DM's notes are the notes about that person, the same note as from their profile (B5); the DM ⭐
+// links there directly. This older address forwards there too. Groups have no notes.
 async function ChatNotesContent({ params }: PageProps<'/[community]/chats/[chatId]/notes'>) {
   const { community, chatId } = await params
   const viewer = await getViewer(community)
@@ -21,12 +21,6 @@ async function ChatNotesContent({ params }: PageProps<'/[community]/chats/[chatI
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
   const chat = await getChatHeader(community, chatId)
-  if (!chat) notFound()
-
-  return (
-    <div className="min-h-app w-full bg-canvas">
-      <ScreenHeader title={chat.name} backHref={`/${community}/chats/${chat.id}`} />
-      <PrivateNotes storageKey={`some:notes:${community}:${viewer.userId}:chat:${chat.id}`} />
-    </div>
-  )
+  if (!chat || chat.kind !== 'dm' || !chat.otherUserId) notFound()
+  return redirect(`/${community}/profiles/${chat.otherUserId}/notes?back=${encodeURIComponent(`/${community}/chats/${chat.id}`)}`)
 }

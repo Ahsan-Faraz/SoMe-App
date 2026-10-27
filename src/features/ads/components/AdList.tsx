@@ -4,7 +4,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
-import { readStars } from '@/features/notes/stars'
 import { t } from '@/lib/i18n'
 import { loadAds, matches, watchAdFilter } from '../storage'
 import { emptyAdFilter, type Ad, type AdFilter } from '../types'
@@ -19,20 +18,17 @@ export function AdList({
   community,
   seed,
   onlyUserId,
-  viewerId = '',
   scores = noScores,
 }: {
   community: string
   seed: Ad[]
   // Set on a profile's Ads: show that member's ads, unfiltered.
   onlyUserId: string | null
-  // For the D1 filter: whose stars to read, and each author's profile score.
-  viewerId?: string
+  // For the D1 filter: each author's profile score.
   scores?: Record<string, number>
 }) {
   const [ads, setAds] = useState(seed)
   const [filter, setFilter] = useState<AdFilter>(emptyAdFilter)
-  const [stars, setStars] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const read = () => setAds(loadAds(community, seed))
@@ -42,14 +38,14 @@ export function AdList({
   }, [community, seed])
   useEffect(() => {
     if (onlyUserId) return
-    const unwatch = watchAdFilter(community, setFilter)
-    setStars(readStars(community, viewerId, Object.keys(scores)))
-    return unwatch
-  }, [community, onlyUserId, viewerId, scores])
+    return watchAdFilter(community, setFilter)
+  }, [community, onlyUserId])
 
   const visible = useMemo(
-    () => ads.filter((ad) => (onlyUserId ? ad.userId === onlyUserId : matches(ad, filter, scores[ad.userId] ?? 0, stars[ad.userId] ?? 0))),
-    [ads, onlyUserId, filter, scores, stars],
+    // My stars: 0 until ads come from the database (step 14, search_ads reads the notes table); the
+    // ads here are your own, and nobody has stars about themselves.
+    () => ads.filter((ad) => (onlyUserId ? ad.userId === onlyUserId : matches(ad, filter, scores[ad.userId] ?? 0, 0))),
+    [ads, onlyUserId, filter, scores],
   )
 
   return (

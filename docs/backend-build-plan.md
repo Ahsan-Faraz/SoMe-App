@@ -10,6 +10,7 @@ The step-by-step order for building the backend. Build **one step per chat**, fi
 A step is only finished when all of these are true:
 
 1. **Migration**: tables, indexes and security rules (RLS) in one file in `supabase/migrations/`, applied to the Supabase project.
+   The live site shares that project and runs an older build until the code is deployed: a migration only adds. Drops, renames and changed signatures of anything the live build uses wait in `supabase/deferred/` until the code is live (`docs/prod-db-changes-steps-9-11.md`).
 2. **Database tests**: pgTAP tests in `supabase/tests/database/` pass (`npm run test:db`, which runs them on the linked project without Docker; `supabase test db` also works when Docker is running). They prove the rules: who can and can't read and write.
 3. **App wired**: the screen reads and writes real data. Its mock data and `localStorage` code are deleted.
 4. **Typecheck** passes (`npm run typecheck`) and **build** passes (`npm run build`).
@@ -203,7 +204,7 @@ Domains
 - [x] The platform's `/` redirect is a setting (`DEFAULT_COMMUNITY`, default `biking-stockholm`) and skips own domains
 - [x] Per-community app name: page `<title>`, iOS home-screen title and the manifest (`/{slug}/manifest.webmanifest`, start page) come from the community; icons stay the platform's until communities have their own. The email sender name was already the community's
 - [x] The approval email link and redirects use the domain the admin works on
-- [ ] Later (cosmetic, not needed to work): one link helper so links on an own domain drop the `/{slug}` prefix (about 176 links in 73 files). Today they keep it, and the proxy lets them through
+- [x] Links keep the `/{slug}` prefix, also on an own domain (the proxy lets them through). Not changed (decided 2026-10-27): our domains host several communities at `/{slug}` (`docs/scope-boundaries.md`), so the prefix is needed; a helper that drops it only fits a domain with one community
 
 Real members: 18+ and identity (community settings)
 - [x] Community settings: `require_age_18` and `require_identity` (on/off per community). Set by the platform admin in the database for now, like `require_app_*`; a settings screen for the community admin comes with the community settings screen (not built yet for any setting)
@@ -220,7 +221,7 @@ Built with: migration `20261019120000_real_members.sql` (`member_consents`, `pri
 
 Settings to add where the app runs: `COMMUNITY_DOMAINS` (when a community gets its own domain) and optionally `DEFAULT_COMMUNITY`.
 
-Not done here: 3 applications approved before this step still have their images (test data from step 4); delete them once (rows + files) or leave them. Older app builds can't sign anyone up any more (they don't send consents): deploy this code together with the migration.
+Cleaned up 2026-10-27: the applications approved before this step (test data from step 4) no longer point at images; their last 2 files (an image and its thumbnail, no row using them) were deleted from Storage. Older app builds can't sign anyone up any more (they don't send consents): deploy this code together with the migration.
 
 **Test it:**
 - `club-example.com/chats` (a test host mapped in the hosts file) opens the community's chats; links stay on the domain without `/{slug}`; the platform path `/{slug}/chats` still works.
@@ -269,7 +270,7 @@ Built with: migration `20261021120000_groups.sql`: group settings on `chats`, `g
 
 Also fixed on the way: the Realtime broadcast test now checks for today's partition (Realtime makes one per day while phones are connected).
 
-Not done here: a screen for the community admin to pick a group's admin (the RPC exists); the calendar's events stay on the device until step 12. Browser-tested 2026-10-21 (see the review of steps 5b–8).
+Added 2026-10-27: the community admin picks a group's admin on F1 "Add to groups" ("Make admin", asked first; the admin until now stays a member; the admin's tick is locked); `group_assignments` says who runs each group (migration `20261027130000_group_admin_pick.sql`, one more check in `09_groups.test.sql`). The calendar's events stay on the device until step 12. Browser-tested 2026-10-21 (see the review of steps 5b–8).
 
 **Test it:**
 - A member without rights can't create a group.
@@ -321,12 +322,16 @@ Browser test of steps 5b–8 (2026-10-21, two users): join form, groups (create,
 
 Pulled forward from step 10 (decided 2026-10-21): the `notes` table and `set_note`, because three of this step's items use stars (the filter, the cards, swipe rating). `search_profiles` is the hottest query; building it once with the notes join avoids rewriting it, re-indexing and redoing the speed check in step 10. The notes screens stay in step 10.
 
-- [ ] `notes` (community, author, subject, text, stars 1–5), primary key `(community_id, author_id, subject_id)`; RLS: only the author reads it; written only through `set_note`
-- [ ] `search_profiles` in one call: Status, Looking for, age range, District (multi), Place, Profile score min, My stars min–max, searchable builder fields, text in a field
-- [ ] Filter applies on "Show"; saved on the account
-- [ ] Profiles list cards: username · age · status / district + place / photo + Taken in app / score · my stars / looking for
-- [ ] Swipe browse (A27): next, previous, star-rate (`set_note`) and move on
-- [ ] Find new user/group: empty until typing, only people/groups you're not connected to, Users/Groups filter, respects visibility and blocks
+- [x] `notes` (community, author, subject, text, stars 1–5), primary key `(community_id, author_id, subject_id)`; RLS: only the author reads it; written only through `set_note`
+- [x] `search_profiles` in one call: Status, Looking for, age range, District (multi), Place, Profile score min, My stars min–max, searchable builder fields, text in a field
+- [x] Filter applies on "Show"; saved on the account
+- [x] Profiles list cards: username · age · status / district + place / photo + Taken in app / score · my stars / looking for
+- [x] Swipe browse (A27): next, previous, star-rate (`set_note`) and move on
+- [x] Find new user/group: empty until typing, only people/groups you're not connected to, Users/Groups filter, respects visibility and blocks
+
+Built with: migration `20261025120000_search.sql`: `notes` + `set_note`; `members.search_filter` (written only by `save_search_filter`, which keeps known ids and searchable fields only; read with `search_filter`); `search_profiles` (plain SQL, reads the saved filter itself: approved, visible in search, never yourself, blocks either way; age as a birth-date range, a couple matches when either person is in it, only people of the member's current Status; text matches username, Place, District name or a searchable text answer; each builder field filter needs a matching answer in a section the Status has; basic fields the admin switched off are not filtered on; keyset on score, user); `find_new` (from 2 characters, trigram indexes on usernames and on group names (new `chats_group_name_trgm`); people without a DM with you, groups you are not in). Then `20261025130000_search_speed.sql`: inside the functions the planner expected few members to pass and scanned blocks and notes once per member (887 ms for the first page); now the people already known are one hashed set, stars a key lookup only when filtered on, and photo, stars and ages are added for the page's rows only. `20261025140000_live_compat.sql` keeps `profile_cards` and `group_directory` for the deployed build until this code is live (`docs/prod-db-changes-steps-9-11.md`). The app: the list and swipe start from the server's first page and load the next pages from the phone (`useCardPages`), swipe loads each profile's answers with `profile()` (the next one ahead), saving the filter and rating are browser → database. The group "+" screen started from `member_names` (the filtered list was the wrong start; step 11 gave it `group_candidates`), and you are no longer in your own Profiles list or swipe. Tests `13_search.test.sql` (64; 03, 08 and 09 moved to the new functions). Speed (`scripts/speed/11_search.sql`: 5,000 members, 3 Statuses, birth dates, 4 searchable fields answered by everyone, 1,000 notes, 400 blocks, 200 groups): search 9.5–38 ms (first page 12.9, three filters 10.3, age 28, field filters 32, text that matches nobody so every row is checked 37.5); find_new 2–17 ms (1,111 of 5,000 names matching: 17), 63 ms in the extreme case where all 5,000 names match.
+
+Added 2026-10-27: the answers of fields the admin marks "Shown on card" are on the cards, a line each under Looking for, in the profile order (migration `20261027120000_card_answers.sql`: `search_profiles` + `answers`, built for the page's rows only, same section rules as `profile()`; photo fields stay off; 5 more checks in `13_search.test.sql`). Speed with 4 fields on the cards: first page 16.6 ms (was 12.9), every search under 33 ms. Browser-tested 2026-10-27 (admin + member): 3 filters combined, filter saved and cleared, never yourself, cards with "Shown on card" answers (each person's joined; in field order, so a person's field can come before a main-section one), swipe star moves on, Find new (2 characters, never yourself or people you have a DM with).
 
 **Test it:**
 - Combine 3 filters → only matching profiles show.
@@ -340,7 +345,9 @@ Pulled forward from step 10 (decided 2026-10-21): the `notes` table and `set_not
 
 The `notes` table, `set_note`, card stars and the "My stars" filter come in step 9. This step is the notes screens.
 
-- [ ] The profile ⭐ and the DM ⭐ open the same note from the `notes` table (text + 1–5 stars); their `localStorage` code is deleted
+- [x] The profile ⭐ and the DM ⭐ open the same note from the `notes` table (text + 1–5 stars); their `localStorage` code is deleted
+
+Built with: no migration (the table and `set_note` came in step 9). The notes screen reads your note with one primary-key select under RLS (`features/notes/queries.ts`) and saves with `set_note` from the phone; empty text and no stars delete the note. The DM ⭐ opens the person's notes (the old `/chats/{id}/notes` address forwards there; groups have none). The device-only stars (`features/notes/stars.ts`) are deleted; the Ads list's "My stars" is 0 until ads come from the database (step 14). Notes kept on a phone by older builds are not moved. Tests `14_notes.test.sql` (16). Speed (`scripts/speed/12_notes.sql`: 5,000 members, 100,000 notes): read 0.03 ms, save 0.5–0.8 ms. Browser-tested 2026-10-27: a swipe star shows on the card and the notes, text and stars survive a reload, another member sees an empty note, a group's old notes address is a 404. A DM with no message yet has no ⭐ (it appears once the DM exists).
 
 **Test it:**
 - Another member, **including an admin**, gets 0 rows when reading your notes.
@@ -350,9 +357,13 @@ The `notes` table, `set_note`, card stars and the "My stars" filter come in step
 
 ## Step 11 — Member lists, door list, statistics
 
-- [ ] One list screen (A30/A31) for group or community members and applications
-- [ ] Rows: username, status, real names, 3 states + notes, editable in the row; remove; + add
-- [ ] Statistics (A28 group, A33 community): member count, count per Status, sums of the 3 states
+- [x] One list screen (A30/A31) for group or community members and applications
+- [x] Rows: username, status, real names, 3 states + notes, editable in the row; remove; + add
+- [x] Statistics (A28 group, A33 community): member count, count per Status, sums of the 3 states
+
+Built with: the screens and the row edits were real since steps 4 and 7, but `admin_roster` / `group_roster` returned at most 2,000 rows, and the search and the statistics ran on the phone over them (a bigger community was cut off and counted wrong). Migration `20261026120000_rosters.sql`: `roster_members` (by name, 50 a page, keyset on the username, unique per community), `roster_applications` (oldest first, keyset on applied at + id; the queue indexes gained the id), both for the community (`p_chat` null) or a group, searching username and the scope's real names in the database; `scope_stats` (count, per Status, the 3 sums, counted in the database; null for a group you don't run); `group_candidates` for the "+" list (approved members not in the group, blocks respected). The LIKE pattern is worked out once per call (inside a function it was rebuilt for every row: a search took 126 ms); `find_new` got the same fix (63 → 16 ms when every name matches). `20261026130000_roster_page_key.sql`: the database lower-cases the page key itself. Only adds: the old functions stay for the deployed build until this code is live (`docs/prod-db-changes-steps-9-11.md`). The app: the first page from the server, the next ones as you scroll and the search from the phone (`features/membership/rows.ts`, `RosterList`); a removed member leaves the loaded pages at once; the statistics render the database's counts. Tests `15_rosters.test.sql` (28). Speed (`scripts/speed/13_rosters.sql`: 5,000 members with records, a group of 2,001, 500 + 500 open applications): pages 1.4–10 ms, statistics 9 ms, "+" 4.7–8.5 ms, a search over every name 27 ms (50 ms target for a search).
+
+Browser-tested 2026-10-27 (admin + a group admin): a row edit survives a reload, search finds usernames and real names, the statistics match the list (community and group), a group admin gets only their group's lists, statistics and F1 groups, and is sent away from the community lists. Cosmetic: a group with no state labels shows an empty "Profile state (sums)" heading.
 
 **Test it:**
 - An edit in the list saves and survives a reload.

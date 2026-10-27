@@ -56,7 +56,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.u(1), 'role', 'authenticated')::text, true);
 create temp table dm as select public.open_dm((select biking from seed), pg_temp.u(4500)) as id;
 
-select pg_temp.time('profile_cards first 50 (minus 400 blocked)', format('select * from public.profile_cards(%L, 50)', (select biking from seed)), 20);
+select pg_temp.time('search_profiles first 50 (minus 400 blocked)', format('select * from public.search_profiles(%L, 50)', (select biking from seed)), 20);
 select pg_temp.time('member_names search, 1,111 matches (worst case)', format('select * from public.member_names(%L, %L)', (select biking from seed), 'speed6 4'), 15);
 select pg_temp.time('member_names search, a few matches', format('select * from public.member_names(%L, %L)', (select biking from seed), 'speed6 432'), 15);
 select pg_temp.time('member_names search, a name nobody has', format('select * from public.member_names(%L, %L)', (select biking from seed), 'kitty'), 15);

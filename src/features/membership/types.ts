@@ -34,9 +34,15 @@ export type MemberRecord = {
   message: string
   applied: boolean // in the applications list, not a member yet
   applicationId: string | null // the open application (community or group), for Approve
+  appliedAt: string | null // when it was sent: the applications list's page key
 }
 
-export type Roster = { members: MemberRecord[]; applications: MemberRecord[] }
+// The list screen's two lists: members (A30/A31) or open applications (A20/A23).
+export type RosterMode = 'members' | 'applications'
+
+// A28/A33, counted in the database (scope_stats). byStatus: [Status name, count], most first.
+// sums: the 3 profile-state numbers added up over the scope's records.
+export type ScopeStats = { members: number; byStatus: [string, number][]; sums: number[] }
 
 // One change an admin makes to a member (saveMember): record fields, Approve, or Remove.
 export type RosterEdit = { realNames?: string[]; state?: string[]; notes?: string; approved?: boolean; removed?: boolean }

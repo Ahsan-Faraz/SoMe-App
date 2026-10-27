@@ -14,23 +14,13 @@ const SEARCH_LIMIT = 30
 
 type Person = { id: string; username: string; icon: string | null }
 
-// A30 "+": add community members to the group. The first page of the Profiles list to start, then
-// the names matching what is typed (member_names: approved members, blocks respected). Adding saves
-// at once (set_group_member) and shows at once; people already in the group are left out.
-export function AddList({
-  community,
-  communityId,
-  groupId,
-  people,
-  memberIds,
-}: {
-  community: string
-  communityId: string
-  groupId: string
-  people: Person[]
-  memberIds: string[]
-}) {
-  const [added, addOne] = useOptimistic(memberIds, (current, id: string) => [...current, id])
+// A30 "+": add community members to the group. Approved members not in it yet, by name, to start;
+// then the names matching what is typed, searched in the database (group_candidates: blocks
+// respected). Adding saves at once (set_group_member) and shows at once.
+export function AddList({ community, communityId, groupId, people }: { community: string; communityId: string; groupId: string; people: Person[] }) {
+  // Added here: marked at once, and stay marked (the search results don't reload).
+  const [saved, setSaved] = useState<string[]>([])
+  const [added, addOne] = useOptimistic(saved, (current, id: string) => [...current, id])
   const [, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -42,7 +32,7 @@ export function AddList({
     if (!text) return
     let current = true
     const timer = setTimeout(async () => {
-      const { data } = await createClient().rpc('member_names', { p_community: communityId, p_query: text, p_limit: SEARCH_LIMIT })
+      const { data } = await createClient().rpc('group_candidates', { p_community: communityId, p_chat: groupId, p_query: text, p_limit: SEARCH_LIMIT })
       if (!current) return
       setFound({ query: text, items: (data ?? []).map((row) => ({ id: row.user_id, username: row.username, icon: row.icon ? profilePhotoUrl(row.icon) : null })) })
     }, SEARCH_DELAY_MS)
@@ -50,9 +40,9 @@ export function AddList({
       current = false
       clearTimeout(timer)
     }
-  }, [communityId, text])
+  }, [communityId, groupId, text])
 
-  const list = (text ? (found.query === text ? found.items : []) : people).filter((person) => !memberIds.includes(person.id))
+  const list = text ? (found.query === text ? found.items : []) : people
 
   function add(person: Person) {
     setError('')
@@ -60,6 +50,7 @@ export function AddList({
       addOne(person.id)
       const result = await setGroupMemberAction(community, groupId, person.id, true)
       if (result) setError(result.error)
+      else setSaved((current) => [...current, person.id])
     })
   }
 

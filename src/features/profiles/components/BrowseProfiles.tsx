@@ -1,29 +1,37 @@
 'use client'
 
 import Link from 'next/link'
-import { useDeferredValue, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { readStars, writeStars } from '@/features/notes/stars'
-import { peopleOf, profileLayout, statusByLabel } from '@/features/fields/schema'
+import { peopleOf, profileLayout } from '@/features/fields/schema'
 import type { Builtins, Choice, FieldDef, LayoutItem, StatusChoice } from '@/features/fields/types'
 import { t } from '@/lib/i18n'
-import { emptyFilter, filterCount, matchesProfile, watchFilter, type ProfileFilter } from '../filter'
+import { createClient } from '@/lib/supabase/browser'
+import { toAnswers, type AnswerRows, type ProfileSearch } from '../cards'
+import { filterCount } from '../filter'
 import { MAX_STARS } from '../options'
-import type { BrowseProfile } from '../types'
+import { useCardPages } from '../useCardPages'
 import { ProfileActions } from './ProfileActions'
 import { Fact, ProfileAnswers } from './ProfileAnswers'
 import { ProfileImage } from './ProfileImage'
 
 const SWIPE_PX = 60
+// Load the next page this many profiles before the end.
+const LOAD_AHEAD = 3
 const headerButton = 'relative inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover'
 
-// A27 Browse profiles: one profile at a time through the filtered list (rated ones too).
-// Star a profile to rate it and move on; arrows (or swipe / ←→ keys) move without rating.
+type Answers = ReturnType<typeof toAnswers>
+const noAnswers: Answers = { values: {}, photoValues: {} }
+
+// A27 Browse profiles: one profile at a time through the saved filter (rated ones too), the same
+// list as A5. Star a profile to rate it and move on; arrows (or swipe / ←→ keys) move without rating.
+// The cards come in pages; each profile's answers load as it comes up (profile(), one call), the
+// next one's ahead of time.
 export function BrowseProfiles({
   community,
-  viewerId,
-  profiles,
+  search,
   statuses,
   substatuses,
   builtins,
@@ -31,8 +39,7 @@ export function BrowseProfiles({
   fields,
 }: {
   community: string
-  viewerId: string
-  profiles: BrowseProfile[]
+  search: ProfileSearch
   // The community's profile builder (active fields only).
   statuses: readonly StatusChoice[]
   substatuses: readonly Choice[]
@@ -40,24 +47,49 @@ export function BrowseProfiles({
   layout: readonly LayoutItem[]
   fields: readonly FieldDef[]
 }) {
-  const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
-  // Stars as they were when the screen opened: they decide what the filter lets through, so rating
-  // a profile never reshuffles the list. `rated` holds the stars given here.
-  const [stars, setStars] = useState<Record<string, number>>({})
+  const router = useRouter()
+  const shown = useRef(false)
+  const { cards, done, loadMore } = useCardPages(search)
+  // Stars given here. The cards keep the stars they had when the screen opened, so rating never
+  // reshuffles the list.
   const [rated, setRated] = useState<Record<string, number>>({})
+  const [answers, setAnswers] = useState<Record<string, Answers>>({})
+  const requested = useRef(new Set<string>())
   const [index, setIndex] = useState(0)
   const touch = useRef<{ x: number; y: number } | null>(null)
-  const query = useDeferredValue(filter.text.trim().toLowerCase())
   const self = `/${community}/profiles/swipe`
+  const kinds = useMemo(() => new Map(fields.map((field) => [field.id, field.kind])), [fields])
 
-  useEffect(() => watchFilter(community, setFilter), [community])
-  useEffect(() => setStars(readStars(community, viewerId, profiles.map((profile) => profile.id))), [community, viewerId, profiles])
-
-  const visible = useMemo(() => profiles.filter((profile) => matchesProfile(profile, stars[profile.id] ?? 0, filter, query)), [profiles, filter, query, stars])
-  const last = Math.max(visible.length - 1, 0)
+  const last = Math.max(cards.length - 1, 0)
   const position = Math.min(index, last)
-  const profile = visible[position]
+  const profile = cards[position]
+  const next = cards[position + 1]
   const go = (by: number) => setIndex(Math.min(Math.max(position + by, 0), last))
+
+  // Shown again after the filter or a profile's notes (pages stay alive): reload; a new filter starts over.
+  useEffect(() => {
+    if (shown.current) router.refresh()
+    shown.current = true
+  }, [router])
+
+  useEffect(() => {
+    if (!done && position >= cards.length - LOAD_AHEAD) void loadMore()
+  }, [cards.length, done, loadMore, position])
+
+  // This profile's answers, and the next one's; each asked for once (a failed one again on return).
+  useEffect(() => {
+    for (const id of [profile?.id, next?.id]) {
+      if (!id || requested.current.has(id)) continue
+      requested.current.add(id)
+      void createClient()
+        .rpc('profile', { p_community: search.communityId, p_user: id })
+        .then(({ data, error }) => {
+          if (error) return void requested.current.delete(id)
+          // Null when the profile can't be seen any more (hidden or blocked since the list loaded).
+          setAnswers((loaded) => ({ ...loaded, [id]: data ? toAnswers(data as unknown as AnswerRows, kinds) : noAnswers }))
+        })
+    }
+  }, [kinds, next?.id, profile?.id, search.communityId])
 
   // Desktop: ← and → move between profiles.
   useEffect(() => {
@@ -70,11 +102,18 @@ export function BrowseProfiles({
     return () => window.removeEventListener('keydown', onKey)
   }, [position, last])
 
+  // My stars (set_note): shown at once, taken back if the database refuses.
   function rate(score: number) {
     if (!profile) return
-    writeStars(community, viewerId, profile.id, score)
-    setRated((current) => ({ ...current, [profile.id]: score }))
+    const id = profile.id
+    const before = rated[id]
+    setRated((current) => ({ ...current, [id]: score }))
     go(1)
+    void createClient()
+      .rpc('set_note', { p_community: search.communityId, p_subject: id, p_note: { stars: score } })
+      .then(({ error }) => {
+        if (error) setRated((current) => ({ ...current, [id]: before ?? 0 }))
+      })
   }
 
   function onTouchEnd(event: TouchEvent) {
@@ -86,10 +125,10 @@ export function BrowseProfiles({
     if (Math.abs(dx) > SWIPE_PX && Math.abs(dx) > Math.abs(end.clientY - start.y) * 2) go(dx < 0 ? 1 : -1)
   }
 
-  const active = filterCount(filter)
-  const current = profile ? (rated[profile.id] ?? stars[profile.id] ?? 0) : 0
-  // Cards carry their Status's name (backend step 9 brings its id).
-  const status = profile ? statusByLabel({ statuses }, profile.status) : undefined
+  const active = filterCount(search.filter)
+  const current = profile ? (rated[profile.id] ?? profile.stars) : 0
+  const status = profile ? statuses.find((choice) => choice.id === profile.statusId) : undefined
+  const answered = profile ? (answers[profile.id] ?? noAnswers) : noAnswers
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
@@ -119,7 +158,7 @@ export function BrowseProfiles({
               <div className="mb-4 flex items-center gap-2">
                 <h2 className="min-w-0 truncate text-[20px] font-bold">{profile.username}</h2>
                 <span className="shrink-0 text-[17px]">{profile.ages.join(' / ')}</span>
-                <span className="flex-1 text-right text-[13px] text-muted tabular-nums">{t.browse.position(position + 1, visible.length)}</span>
+                <span className="flex-1 text-right text-[13px] text-muted tabular-nums">{t.browse.position(position + 1, cards.length)}</span>
                 <Link
                   href={`/${community}/profiles/${profile.id}/notes?back=${encodeURIComponent(self)}`}
                   aria-label={t.profiles.notes}
@@ -137,7 +176,14 @@ export function BrowseProfiles({
                 }
                 layout={profileLayout({ layout, fields, builtins, substatuses }, status)}
                 nodes={{
-                  photo: <ProfileImage photo={profile.photo ? { ...profile.photo, id: profile.id, thumb: profile.photo.src } : null} owner={null} eager />,
+                  // The full image sits next to its thumbnail: name.webp beside name_t.webp (private.insert_photo).
+                  photo: (
+                    <ProfileImage
+                      photo={profile.photo ? { ...profile.photo, id: profile.id, src: profile.photo.src.replace(/_t\.(webp|jpg)$/, '.$1'), thumb: profile.photo.src } : null}
+                      owner={null}
+                      eager
+                    />
+                  ),
                   lookingFor: <Fact label={t.profiles.lookingFor} value={profile.lookingFor.join(', ') || '—'} />,
                   district: <Fact label={t.profiles.district} value={profile.district || '—'} />,
                   place: <Fact label={t.profiles.place} value={profile.place || '—'} />,
@@ -145,7 +191,8 @@ export function BrowseProfiles({
                 }}
                 // One age per person with a birth date, in the Status's order.
                 ages={Object.fromEntries(peopleOf(status, substatuses).map((person, index) => [person.key, profile.ages[index] ?? null]))}
-                values={profile.values}
+                values={answered.values}
+                photoValues={answered.photoValues}
               />
             </div>
           </main>

@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { Icon } from '@/components/ui/Icon'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { t } from '@/lib/i18n'
-import type { Roster, Scope } from '../types'
+import type { RosterStart } from '../queries'
+import type { RosterMode, Scope } from '../types'
 import { RosterList } from './RosterList'
 
 // Header title for admin screens: the community or group name above the screen name.
@@ -26,8 +27,8 @@ export function RosterScreen({
 }: {
   community: string
   scope: Scope
-  seed: Roster
-  mode: 'members' | 'applications'
+  seed: RosterStart
+  mode: RosterMode
   backHref: string
   profileBase: string
   addHref?: string
@@ -45,7 +46,15 @@ export function RosterScreen({
           ) : undefined
         }
       />
-      <RosterList community={community} scope={{ kind: scope.kind, id: scope.id, stateLabels: scope.stateLabels }} seed={seed} mode={mode} profileBase={profileBase} />
+      <RosterList
+        community={community}
+        communityId={seed.communityId}
+        scope={{ kind: scope.kind, id: scope.id, stateLabels: scope.stateLabels }}
+        first={seed.rows}
+        labels={seed.labels}
+        mode={mode}
+        profileBase={profileBase}
+      />
     </div>
   )
 }

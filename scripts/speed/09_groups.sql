@@ -64,8 +64,6 @@ set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.u(1), 'role', 'authenticated')::text, true);
 select pg_temp.time('group_info (G3, 2,001 members, first 500)', format('select public.group_info(%L, %L)', (select biking from seed), pg_temp.g(1)), 50);
 select pg_temp.time('group_settings (A10)', format('select public.group_settings(%L, %L)', (select biking from seed), pg_temp.g(1)), 15);
-select pg_temp.time('group_roster members (2,001)', format('select * from public.group_roster(%L, %L, false)', (select biking from seed), pg_temp.g(1)), 50);
-select pg_temp.time('group_roster applications (500 open)', format('select * from public.group_roster(%L, %L, true)', (select biking from seed), pg_temp.g(1)), 50);
 select pg_temp.time('group_member (A22)', format('select public.group_member(%L, %L, %L)', (select biking from seed), pg_temp.g(1), pg_temp.u(2100)), 15);
 select pg_temp.time('chat_header (group, with rules)', format('select * from public.chat_header(%L, %L)', (select biking from seed), pg_temp.g(1)), 15);
 select pg_temp.time('send_message (group, rules)', format('select public.send_message(%L, %L, %L)', (select biking from seed), pg_temp.g(1), 'Test speed'), 15);
@@ -76,7 +74,7 @@ select pg_temp.time('save_group (edit)', format('select public.save_group(%L, %L
   '{"name": "Test group 1", "headline": "Test", "infos": [{"headline": "Rules", "body": "x"}]}'), 15);
 -- As an ordinary member who is in no group.
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.u(4900), 'role', 'authenticated')::text, true);
-select pg_temp.time('group_directory (200 groups, first 50)', format('select * from public.group_directory(%L)', (select biking from seed)), 20);
+select pg_temp.time('find_new groups (200 groups)', format('select * from public.find_new(%L, %L, false, true)', (select biking from seed), 'test'), 20);
 select pg_temp.time('group_card (A24)', format('select public.group_card(%L, %L)', (select biking from seed), pg_temp.g(5)), 15);
 select pg_temp.time('chat_list (member of none)', format('select * from public.chat_list(%L)', (select biking from seed)), 20);
 

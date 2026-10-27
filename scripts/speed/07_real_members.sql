@@ -57,7 +57,6 @@ grant execute on function pg_temp.time(text, text, numeric, integer), pg_temp.u(
 set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.u(1), 'role', 'authenticated')::text, true);
 select pg_temp.time('admin_member (A21, with ID photo)', format('select public.admin_member(%L, %L)', (select biking from seed), pg_temp.u(500)), 15);
-select pg_temp.time('admin_roster applications (1,000 open)', format('select * from public.admin_roster(%L, true)', (select biking from seed)), 50);
 -- Each run decides a different application (approve: rows deleted, files returned).
 select pg_temp.time('decide_application (approve + delete images)',
   format('select public.decide_application((select id from public.applications where user_id = pg_temp.u(600 + $i)), %L)', 'approved'), 15);

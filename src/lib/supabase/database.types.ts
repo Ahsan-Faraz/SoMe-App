@@ -560,6 +560,7 @@ export type Database = {
           place: string | null
           role: string
           score: number
+          search_filter: Json
           state: string
           status_id: string | null
           user_id: string
@@ -580,6 +581,7 @@ export type Database = {
           place?: string | null
           role?: string
           score?: number
+          search_filter?: Json
           state?: string
           status_id?: string | null
           user_id: string
@@ -600,6 +602,7 @@ export type Database = {
           place?: string | null
           role?: string
           score?: number
+          search_filter?: Json
           state?: string
           status_id?: string | null
           user_id?: string
@@ -718,6 +721,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "messages"
             referencedColumns: ["chat_id", "seq"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          author_id: string
+          body: string
+          community_id: string
+          stars: number | null
+          subject_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          community_id: string
+          stars?: number | null
+          subject_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          community_id?: string
+          stars?: number | null
+          subject_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_community_id_author_id_fkey"
+            columns: ["community_id", "author_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+          {
+            foreignKeyName: "notes_community_id_subject_id_fkey"
+            columns: ["community_id", "subject_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
           },
         ]
       }
@@ -1284,9 +1329,41 @@ export type Database = {
         Args: { p_community: string; p_user: string }
         Returns: string
       }
+      find_new: {
+        Args: {
+          p_community: string
+          p_groups?: boolean
+          p_limit?: number
+          p_query: string
+          p_users?: boolean
+        }
+        Returns: {
+          district_id: string
+          headline: string
+          icon: string
+          id: string
+          kind: string
+          name: string
+          place: string
+          status_id: string
+        }[]
+      }
       group_assignments: {
         Args: { p_community: string; p_user: string }
         Returns: Json
+      }
+      group_candidates: {
+        Args: {
+          p_chat: string
+          p_community: string
+          p_limit?: number
+          p_query?: string
+        }
+        Returns: {
+          icon: string
+          user_id: string
+          username: string
+        }[]
       }
       group_card: {
         Args: { p_chat: string; p_community: string }
@@ -1438,6 +1515,50 @@ export type Database = {
         Args: { p_community: string; p_items: string[] }
         Returns: undefined
       }
+      roster_applications: {
+        Args: {
+          p_after_at?: string
+          p_after_id?: string
+          p_chat?: string
+          p_community: string
+          p_limit?: number
+          p_query?: string
+        }
+        Returns: {
+          application_id: string
+          applied_at: string
+          message: string
+          notes: string
+          real_name_1: string
+          real_name_2: string
+          state_1: number
+          state_2: number
+          state_3: number
+          status_id: string
+          user_id: string
+          username: string
+        }[]
+      }
+      roster_members: {
+        Args: {
+          p_after?: string
+          p_chat?: string
+          p_community: string
+          p_limit?: number
+          p_query?: string
+        }
+        Returns: {
+          notes: string
+          real_name_1: string
+          real_name_2: string
+          state_1: number
+          state_2: number
+          state_3: number
+          status_id: string
+          user_id: string
+          username: string
+        }[]
+      }
       save_admin_record: {
         Args: { p_community: string; p_record: Json; p_user: string }
         Returns: undefined
@@ -1476,6 +1597,38 @@ export type Database = {
         Args: { p_community: string; p_field: Json; p_options?: Json }
         Returns: string
       }
+      save_search_filter: {
+        Args: { p_community: string; p_filter: Json }
+        Returns: undefined
+      }
+      scope_stats: {
+        Args: { p_chat?: string; p_community: string }
+        Returns: Json
+      }
+      search_filter: { Args: { p_community: string }; Returns: Json }
+      search_profiles: {
+        Args: {
+          p_after_score?: number
+          p_after_user?: string
+          p_community: string
+          p_limit?: number
+        }
+        Returns: {
+          ages: number[]
+          answers: Json
+          country_id: string
+          district_id: string
+          looking_for: string[]
+          photo_taken_in_app: boolean
+          photo_thumb: string
+          place: string
+          score: number
+          stars: number
+          status_id: string
+          user_id: string
+          username: string
+        }[]
+      }
       send_message: {
         Args: {
           p_body: string
@@ -1506,6 +1659,10 @@ export type Database = {
       }
       set_member_status: {
         Args: { p_community: string; p_status: string; p_user: string }
+        Returns: undefined
+      }
+      set_note: {
+        Args: { p_community: string; p_note: Json; p_subject: string }
         Returns: undefined
       }
       set_profile_link: {

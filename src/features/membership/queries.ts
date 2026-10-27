@@ -6,7 +6,9 @@ import { getGroupSettings } from '@/features/groups/queries'
 import { formatDay } from '@/lib/format'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import type { ApplicationImage, MemberRecord, Roster, Scope, ScopeKind, SentApplication } from './types'
+import { t } from '@/lib/i18n'
+import { fetchRosterPage, toScopeStats, type StatusLabels } from './rows'
+import type { ApplicationImage, MemberRecord, RosterMode, Scope, ScopeKind, ScopeStats, SentApplication } from './types'
 
 // Signed URLs for application images (private bucket) last this long; a page is read well within it.
 const SIGNED_URL_SECONDS = 60 * 60
@@ -33,38 +35,33 @@ export const getScope = cache(async (kind: ScopeKind, community: string, groupId
   }
 })
 
-// A20/A23 applications and A30/A31 members, with the scope's admin records, both lists at once:
-// the community's (admin_roster) or a group's (group_roster; the database checks the admin).
-// Takes the scope's kind and id only, so a page can load it at the same time as the scope itself.
-export const listRoster = cache(async (community: string, kind: ScopeKind, scopeId: string): Promise<Roster> => {
-  const info = await getCommunity(community)
-  if (!info) return { members: [], applications: [] }
-  const supabase = await createClient()
-  const list = (applications: boolean) =>
-    kind === 'group'
-      ? supabase.rpc('group_roster', { p_community: info.id, p_chat: scopeId, p_applications: applications })
-      : supabase.rpc('admin_roster', { p_community: info.id, p_applications: applications })
-  const [members, applications, schema] = await Promise.all([list(false), list(true), getProfileSchema(info.id)])
-  if (members.error) throw members.error
-  if (applications.error) throw applications.error
+// A20/A23 applications or A30/A31 members of the community or a group: the first page (the phone
+// loads the next ones and searches, features/membership/rows.ts). The database checks the admin.
+export type RosterStart = { communityId: string; rows: MemberRecord[]; labels: StatusLabels }
 
-  const statusName = new Map(schema.statuses.map((status) => [status.id, status.label]))
-  const toRecord = (row: (typeof members.data)[number], applied: boolean): MemberRecord => ({
-    userId: row.user_id,
-    username: row.username,
-    status: (row.status_id && statusName.get(row.status_id)) ?? '',
-    realNames: [row.real_name_1 ?? '', row.real_name_2 ?? ''],
-    state: [row.state_1, row.state_2, row.state_3].map((value) => (value === null ? '' : String(value))),
-    notes: row.notes ?? '',
-    image: null, // only on the A21/A22 view, where it is signed
-    idImage: null,
-    checked: null,
-    message: row.message ?? '',
-    applied,
-    applicationId: row.application_id,
-  })
-  return { members: members.data.map((row) => toRecord(row, false)), applications: applications.data.map((row) => toRecord(row, true)) }
-})
+export async function listRosterPage(community: string, scope: Pick<Scope, 'kind' | 'id'>, mode: RosterMode): Promise<RosterStart | null> {
+  const info = await getCommunity(community)
+  if (!info) return null
+  const [supabase, schema] = await Promise.all([createClient(), getProfileSchema(info.id)])
+  const labels = statusLabels(schema.statuses)
+  return { communityId: info.id, rows: await fetchRosterPage(supabase, info.id, scope, mode, '', undefined, labels), labels }
+}
+
+// A28/A33: counted in the database over the whole scope. Null when the viewer doesn't run it.
+export async function getScopeStats(community: string, scope: Pick<Scope, 'kind' | 'id'>): Promise<ScopeStats | null> {
+  const info = await getCommunity(community)
+  if (!info) return null
+  const supabase = await createClient()
+  const [{ data, error }, schema] = await Promise.all([
+    supabase.rpc('scope_stats', { p_community: info.id, p_chat: scope.kind === 'group' ? scope.id : undefined }),
+    getProfileSchema(info.id),
+  ])
+  if (error) throw error
+  if (!data) return null
+  return toScopeStats(data as unknown as Parameters<typeof toScopeStats>[0], statusLabels(schema.statuses), t.membership.noStatus)
+}
+
+const statusLabels = (statuses: readonly { id: string; label: string }[]): StatusLabels => Object.fromEntries(statuses.map((status) => [status.id, status.label]))
 
 // What admin_member() and group_member() return (supabase/migrations/20261019120000_real_members.sql,
 // 20261021120000_groups.sql). state: the community account's; member: in the group.
@@ -123,6 +120,7 @@ export async function getMemberRecord(community: string, scope: Scope, userId: s
     message: application?.message ?? '',
     applied: (scope.kind === 'group' ? row.member === false : row.state === 'applied') && (application?.status === 'pending' || application?.status === 'later'),
     applicationId: application && (application.status === 'pending' || application.status === 'later') ? application.id : null,
+    appliedAt: null,
   }
 }
 

@@ -19,6 +19,8 @@ The Next.js version in this repo differs from older training data. Before writin
 
 **Decided (Oct 2026, from Peter's answers, see `docs/backend-design.md` §2):** 3 bottom tabs (Chats / Profiles / Ads); path URLs (`/{community}`); separate account per community (one login per email, own username and profile per community); the Ads tab stays (not ads-as-posts); profile fields are built by the community admin, with Status and District as built-in lists.
 
+**Never (our team):** anything that touches the adult (swingers) communities, domains, data, content or adult-only features. Generic features stay. Check every task against `docs/scope-boundaries.md`.
+
 **Undecided, ask, do not guess:** user levels 1–3. The open questions Q1–Q8 in `docs/backend-design.md` §13 are built with their listed defaults.
 
 If two sources disagree, name the conflict. Do not pick a winner.

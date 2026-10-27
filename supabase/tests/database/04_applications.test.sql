@@ -158,7 +158,7 @@ select throws_ok(
 select pg_temp.as_user(erik) from ids;
 select is_empty($$ select 1 from public.applications $$, 'a member cannot read applications');
 select is_empty($$ select 1 from public.admin_records $$, 'a member cannot read real names or admin records');
-select throws_ok($$ select * from ids, public.admin_roster(ids.biking, true) $$, '42501', null, 'a member cannot open the admin queue');
+select throws_ok($$ select * from ids, public.roster_applications(ids.biking) $$, '42501', null, 'a member cannot open the admin queue');
 select throws_ok(
   $$ select public.decide_application((select a.id from public.applications a), 'approved') $$,
   '42501', null, 'a member cannot decide an application by id'
@@ -167,13 +167,13 @@ select throws_ok($$ select public.save_admin_record(biking, anna, '{"notes": "x"
 
 -- Dora, admin of another community ---------------------------------------------------------------------
 select pg_temp.as_user(dora) from ids;
-select throws_ok($$ select * from ids, public.admin_roster(ids.biking, true) $$, '42501', null, 'an admin elsewhere cannot open this queue');
+select throws_ok($$ select * from ids, public.roster_applications(ids.biking) $$, '42501', null, 'an admin elsewhere cannot open this queue');
 select is_empty($$ select 1 from public.applications a join ids on a.community_id = ids.biking $$, 'an admin elsewhere reads none of these applications');
 
 -- Carl, community admin ---------------------------------------------------------------------------------
 select pg_temp.as_user(carl) from ids;
 select results_eq(
-  $$ select r.username, r.message, r.real_name_1 from public.admin_roster((select biking from ids), true) as r
+  $$ select r.username, r.message, r.real_name_1 from public.roster_applications((select biking from ids), null, 'anna', null, null, 100) as r
      where r.user_id in (select unnest(array[anna, bert, fred]) from ids) order by r.username $$,
   $$ values ('Anna'::text, 'I ride gravel on Sundays.'::text, 'Anna Lind'::text), ('Bert', 'I ride gravel on Sundays.', 'Anna Lind'), ('Fred', 'I ride gravel on Sundays.', 'Anna Lind') $$,
   'the admin queue lists the applications with their message and real names'
@@ -194,11 +194,11 @@ select results_eq(
   'the real names are copied to the community''s admin record'
 );
 select ok(
-  (select bool_or(r.user_id = (select anna from ids)) from public.admin_roster((select biking from ids), false) as r),
+  (select bool_or(r.user_id = (select anna from ids)) from public.roster_members((select biking from ids), null, 'anna', null, 100) as r),
   'she is in the members list now'
 );
 select ok(
-  not (select coalesce(bool_or(r.user_id = (select anna from ids)), false) from public.admin_roster((select biking from ids), true) as r),
+  not (select coalesce(bool_or(r.user_id = (select anna from ids)), false) from public.roster_applications((select biking from ids), null, 'anna', null, null, 100) as r),
   '...and no longer in the queue'
 );
 select throws_ok(
@@ -211,7 +211,7 @@ select lives_ok(
 );
 select results_eq(
   $$ select (select state from public.members where user_id = ids.fred), coalesce(bool_or(r.user_id = ids.fred), false)
-     from ids left join public.admin_roster(ids.biking, true) as r on true group by ids.fred $$,
+     from ids left join public.roster_applications(ids.biking, null, 'anna', null, null, 100) as r on true group by ids.fred $$,
   $$ values ('applied'::text, true) $$,
   '"later" keeps him in the queue, still applied'
 );
@@ -227,7 +227,7 @@ select lives_ok(
   'the admin fills in profile states and notes'
 );
 select results_eq(
-  $$ select r.state_1, r.state_2, r.state_3, r.notes, r.real_name_1 from public.admin_roster((select biking from ids), false) as r
+  $$ select r.state_1, r.state_2, r.state_3, r.notes, r.real_name_1 from public.roster_members((select biking from ids), null, 'anna', null, 100) as r
      where r.user_id = (select anna from ids) $$,
   $$ values (300, 12, null::integer, 'Paid in cash'::text, 'Anna Lind'::text) $$,
   'the members list shows them; untouched fields keep their value'

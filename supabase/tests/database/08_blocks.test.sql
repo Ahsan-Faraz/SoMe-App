@@ -49,7 +49,7 @@ select lives_ok($$ select public.set_profile_link(biking, bert, true) from ids $
 select pg_temp.as_user(bert) from ids;
 select lives_ok($$ select public.set_profile_link(biking, anna, true) from ids $$, 'Bert links back');
 select isnt((select public.profile(biking, anna) from ids), null, 'Bert sees Anna''s profile');
-select is((select count(*)::int from public.profile_cards((select biking from ids), 100) where user_id = (select anna from ids)), 1, 'Anna is in Bert''s Profiles list');
+select is((select count(*)::int from public.search_profiles((select biking from ids), 100) where user_id = (select anna from ids)), 1, 'Anna is in Bert''s Profiles list');
 
 -- "Keep chat, block writing" -------------------------------------------------------------------
 select throws_ok($$ select public.leave_chat(biking, (select id from saved where name = 'ab'), 'later') from ids $$, '22023', null, 'an unknown way to leave is refused');
@@ -77,16 +77,16 @@ select throws_ok($$ select public.open_dm(biking, anna) from ids $$, '42501', nu
 
 -- Hidden from each other -----------------------------------------------------------------------
 select is((select public.profile(biking, anna) from ids), null, 'Bert no longer sees Anna''s profile');
-select is((select count(*)::int from public.profile_cards((select biking from ids), 100) where user_id = (select anna from ids)), 0, 'Anna is gone from Bert''s Profiles list');
+select is((select count(*)::int from public.search_profiles((select biking from ids), 100) where user_id = (select anna from ids)), 0, 'Anna is gone from Bert''s Profiles list');
 select is_empty($$ select 1 from public.member_names((select biking from ids), 'Test anna') $$, 'and from his name search');
 select throws_ok($$ select public.set_profile_link(biking, anna, true) from ids $$, '22023', null, 'he can''t link to her (answered like an unknown member)');
 select pg_temp.as_user(anna) from ids;
 select is((select public.profile(biking, bert) from ids), null, 'and Anna no longer sees Bert');
-select is((select count(*)::int from public.profile_cards((select biking from ids), 100) where user_id = (select bert from ids)), 0, 'nor lists him');
+select is((select count(*)::int from public.search_profiles((select biking from ids), 100) where user_id = (select bert from ids)), 0, 'nor lists him');
 select is((select jsonb_array_length(public.profile(biking, anna) -> 'links') from ids), 0, 'their profile links are removed');
 select pg_temp.as_user(fred) from ids;
 select isnt((select public.profile(biking, anna) from ids), null, 'others still see Anna');
-select is((select count(*)::int from public.profile_cards((select biking from ids), 100) where user_id in (select unnest(array[anna, bert]) from ids)), 2, 'and list both');
+select is((select count(*)::int from public.search_profiles((select biking from ids), 100) where user_id in (select unnest(array[anna, bert]) from ids)), 2, 'and list both');
 select pg_temp.as_user(erik) from ids;
 select isnt((select public.profile(biking, bert) from ids), null, 'the community admin still sees everyone');
 

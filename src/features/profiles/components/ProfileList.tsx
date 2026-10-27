@@ -1,34 +1,50 @@
 'use client'
 
 import Link from 'next/link'
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Avatar } from '@/components/ui/Avatar'
-import { readStars } from '@/features/notes/stars'
 import { t } from '@/lib/i18n'
-import { emptyFilter, filterCount, matchesProfile, watchFilter, type ProfileFilter } from '../filter'
 import type { Builtins } from '@/features/fields/types'
+import type { ProfileSearch } from '../cards'
+import { filterCount } from '../filter'
 import { MAX_STARS } from '../options'
 import type { ProfileCard } from '../types'
+import { useCardPages } from '../useCardPages'
 
 // Cards in the first screenful: their photos load eagerly (they are the LCP); the rest stay lazy.
 const ABOVE_FOLD = 4
+// Start loading the next page this far before the end of the list.
+const LOAD_AHEAD = '600px'
 
 const headerButton = 'relative inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover'
 
+// A5: search_profiles through the saved filter (G1), best score first, more pages on scroll.
 // builtins: the basic fields this community shows; the others are left off the cards.
-export function ProfileList({ community, viewerId, profiles, builtins }: { community: string; viewerId: string; profiles: ProfileCard[]; builtins: Builtins }) {
-  const [filter, setFilter] = useState<ProfileFilter>(emptyFilter)
-  const [stars, setStars] = useState<Record<string, number>>({})
-  const query = useDeferredValue(filter.text.trim().toLowerCase())
+export function ProfileList({ community, search, builtins }: { community: string; search: ProfileSearch; builtins: Builtins }) {
+  const router = useRouter()
+  const shown = useRef(false)
+  const end = useRef<HTMLDivElement>(null)
+  const { cards, done, loadMore } = useCardPages(search)
+  const active = filterCount(search.filter)
 
-  useEffect(() => watchFilter(community, setFilter), [community])
-  useEffect(() => setStars(readStars(community, viewerId, profiles.map((profile) => profile.id))), [community, viewerId, profiles])
+  // Pages stay alive between visits (Activity): shown again after a profile, swipe or the filter,
+  // the list reloads (stars, a new filter, someone's new score).
+  useEffect(() => {
+    if (shown.current) router.refresh()
+    shown.current = true
+  }, [router])
 
-  const visible = useMemo(() => profiles.filter((profile) => matchesProfile(profile, stars[profile.id] ?? 0, filter, query)), [profiles, stars, filter, query])
-  const active = filterCount(filter)
+  useEffect(() => {
+    const node = end.current
+    if (!node || done) return
+    const observer = new IntersectionObserver((entries) => entries.some((entry) => entry.isIntersecting) && void loadMore(), { rootMargin: LOAD_AHEAD })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [done, loadMore])
 
   return (
     <>
@@ -47,24 +63,26 @@ export function ProfileList({ community, viewerId, profiles, builtins }: { commu
           </span>
         }
       />
-      {visible.length === 0 ? (
+      {cards.length === 0 ? (
         <p className="px-6 py-10 text-center text-muted">{t.profiles.empty}</p>
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] p-1.5 sm:p-2">
-          {visible.map((profile, index) => (
+          {cards.map((profile, index) => (
             <li key={profile.id} className="[contain-intrinsic-size:auto_124px] [content-visibility:auto]">
-              <ProfileRow community={community} profile={profile} builtins={builtins} stars={stars[profile.id] ?? 0} eager={index < ABOVE_FOLD} />
+              <ProfileRow community={community} profile={profile} builtins={builtins} eager={index < ABOVE_FOLD} />
             </li>
           ))}
         </ul>
       )}
+      <div ref={end} aria-hidden />
     </>
   )
 }
 
-// Layout from the client: Username Age Status / District+Place / Profile score, My stars / Looking for.
-// Photo + Verified on the right. Kept to four short lines to fit more profiles per screen.
-function ProfileRow({ community, profile, builtins, stars, eager }: { community: string; profile: ProfileCard; builtins: Builtins; stars: number; eager: boolean }) {
+// Layout from the client: Username Age Status / District+Place / Profile score, My stars / Looking for,
+// then a line per field the admin marks "Shown on card". Photo + Verified on the right. Short lines
+// to fit more profiles per screen.
+function ProfileRow({ community, profile, builtins, eager }: { community: string; profile: ProfileCard; builtins: Builtins; eager: boolean }) {
   // "District, Place": the place once when it is the district's name.
   const district = builtins.district ? profile.district : ''
   const place = builtins.place && profile.place !== district ? profile.place : ''
@@ -87,13 +105,18 @@ function ProfileRow({ community, profile, builtins, stars, eager }: { community:
               {t.profiles.scoreShort} <span className="font-semibold text-ink">{profile.score}</span>
             </span>
           ) : null}
-          <Stars count={stars} />
+          <Stars count={profile.stars} />
         </span>
         {builtins.lookingFor && profile.lookingFor.length > 0 ? (
           <span className="truncate">
             {t.profiles.lookingFor}: <span className="font-semibold text-ink">{profile.lookingFor.join(', ')}</span>
           </span>
         ) : null}
+        {profile.answers.map((answer) => (
+          <span key={answer.label} className="truncate">
+            {answer.label}: <span className="font-semibold text-ink">{answer.text}</span>
+          </span>
+        ))}
       </span>
       <span className="grid shrink-0 content-start justify-items-end gap-1">
         {builtins.photo && profile.photo ? (

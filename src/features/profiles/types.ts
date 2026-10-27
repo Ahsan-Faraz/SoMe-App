@@ -11,18 +11,21 @@ export type ProfilePhoto = MainPhoto & { id: string; thumb: string; width?: numb
 export type ProfileCard = {
   id: string
   username: string
+  statusId: string | null
   status: string // label; '' = not chosen yet (a new profile)
   ages: number[] // one per person with a birth date, in the Status's order
   country: string
   district: string
   place: string
   score: number // 0–100, computed by the database on save
+  stars: number // my stars from my private note (0 = not rated)
   lookingFor: string[] // Status labels
   photo: MainPhoto | null // the profile image (thumbnail)
+  answers: CardAnswer[] // the fields marked "Shown on card", in the profile order
 }
 
-// A27: values stay empty until search_profiles returns answers (backend step 9).
-export type BrowseProfile = ProfileCard & { lastLogin: string; values: Record<string, FieldValue> }
+// One "Shown on card" field on a card: its label and the answer as text (each person's, joined).
+export type CardAnswer = { label: string; text: string }
 
 // icon = thumbnail URL. confirmed = both have linked to each other (D23). comment: the profile
 // owner's short note on the link ('' = none).
@@ -31,10 +34,9 @@ export type LinkedProfile = { id: string; username: string; icon: string | null;
 // One person of the profile's Status. birthDate ('YYYY-MM-DD' or '') only on your own profile.
 export type ProfilePerson = { substatusId: string | null; n: number; birthDate: string; age: number | null }
 
-export type Profile = Omit<ProfileCard, 'photo'> & {
+export type Profile = Omit<ProfileCard, 'photo' | 'stars' | 'answers'> & {
   own: boolean
   state: 'profile' | 'applied' | 'approved' | 'rejected' | 'removed'
-  statusId: string | null
   lookingForIds: string[]
   countryId: string | null
   districtId: string | null

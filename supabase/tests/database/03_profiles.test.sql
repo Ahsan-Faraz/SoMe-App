@@ -402,13 +402,13 @@ select throws_ok(
 select is((select public.profile(biking, bert) from ids), null, 'a member cannot see an applicant''s profile');
 select lives_ok($$ select public.save_profile(biking, jsonb_build_object('status_id', pg_temp.status('Man')), '[]') from ids $$, 'Erik sets his Status');
 select is(
-  (select array_agg(c.username order by c.score desc, c.user_id desc) from public.profile_cards((select biking from ids)) as c
+  (select array_agg(c.username order by c.score desc, c.user_id desc) from public.search_profiles((select biking from ids)) as c
    where c.user_id in (select unnest(array[anna, bert, carl, erik, fred, gina]) from ids)),
-  array['Anna', 'Gina', 'Erik', 'Carl'],
-  'the Profiles list: approved members visible in search, best score first'
+  array['Anna', 'Gina', 'Carl'],
+  'the Profiles list: approved members visible in search (not yourself), best score first'
 );
 select is(
-  (select ages from public.profile_cards((select biking from ids)) as c where c.user_id = (select anna from ids)),
+  (select ages from public.search_profiles((select biking from ids)) as c where c.user_id = (select anna from ids)),
   (select array(select (pe ->> 'age')::int from jsonb_array_elements(p -> 'people') as pe) from anna_profile),
   'a card has the age of each person'
 );
@@ -423,7 +423,7 @@ select is(
 select pg_temp.as_user(bert) from ids;
 select is((select public.profile(biking, anna) from ids), null, 'an applicant cannot see members'' profiles');
 select isnt((select public.profile(biking, bert) from ids), null, 'an applicant sees their own profile');
-select is_empty($$ select 1 from public.profile_cards((select biking from ids)) $$, 'an applicant gets no Profiles list');
+select is_empty($$ select 1 from public.search_profiles((select biking from ids)) $$, 'an applicant gets no Profiles list');
 select throws_ok($$ select public.set_profile_link(biking, erik, true) from ids $$, '42501', null, 'an applicant cannot link profiles');
 
 -- Basic fields switched off by the community admin ----------------------------------------------------
@@ -434,7 +434,7 @@ select lives_ok(
   'the admin switches off "visible in search", linked profiles, age and place'
 );
 select ok(
-  (select bool_or(c.user_id = (select fred from ids)) from public.profile_cards((select biking from ids)) as c),
+  (select bool_or(c.user_id = (select fred from ids)) from public.search_profiles((select biking from ids)) as c),
   'with the visibility choice off, every member is in the Profiles list'
 );
 

@@ -509,7 +509,7 @@ notes (
   updated_at timestamptz,
   primary key (community_id, author_id, subject_id)   -- "my stars" in search = one key lookup per profile
 )
-index notes_stars on notes (author_id, community_id, stars);   -- "My stars min–max" filter
+index notes_subject on notes (community_id, subject_id);       -- the cascade from the subject (a stars index wasn't needed: speed check, step 9)
 ```
 
 ### 4.9 Ads
@@ -645,6 +645,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
   - District + Place, with the main photo thumbnail + Taken in app
   - Profile score · My stars
   - Looking for
+  - a line per field the admin marks "Shown on card" (`on_card`), in the profile order
 - **Filter (G1), applied on "Show profiles":**
   - Text in a field
   - Status (multi)
@@ -727,11 +728,11 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 - **Add to groups (F1), by role:**
   - **community admin:** "Community member" (approve or remove), "Group create/admin rights" (`can_create_groups`), and tick any group;
   - **group admin:** tick only their own groups.
-- **Group admin assignment:** the community admin sets `chat_members.role = 'admin'` (one per group, D10).
+- **Group admin assignment:** the community admin picks it on F1 ("Make admin", `set_group_admin`): `chat_members.role = 'admin'`, one per group (D10); the admin until now stays a member.
 
 ### 6.12 Statistics (A28 group, A33 community)
 
-- **One RPC:** `scope_stats(scope)` returns member count, count per Status (e.g. Man 32, Woman 46, Couple MF 65) and the sums of `state_1..3` from `admin_records`, with labels. One aggregate query over indexed rows. Admins only.
+- **One RPC:** `scope_stats(community, group?)` returns member count, count per Status (e.g. Man 32, Woman 46, Couple MF 65) and the sums of `state_1..3` from `admin_records`. Counted in the database over the whole scope. Admins of that scope only.
 
 ### 6.13 Calendar
 
@@ -783,7 +784,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 
 - **Where a community lives:** at the platform path `platform.com/{slug}` (always works), or on its own domain when `communities.domain` is set.
 - **How a domain reaches its community:** each domain is added to the Vercel project (DNS at the registrar, HTTPS automatic). `src/proxy.ts` **rewrites** a known host to `/{slug}/…`, so `club-example.com/chats` serves the same `/[community]/chats` page. The host → slug map comes from a setting (`COMMUNITY_DOMAINS`), not a database query: the proxy only refreshes the session and rewrites (project rule).
-- **Links:** today links keep the `/{slug}` prefix everywhere; on an own domain the proxy lets a path that starts with the community's slug through, so they work. Later (cosmetic): one helper so links on an own domain drop the prefix.
+- **Links:** today links keep the `/{slug}` prefix everywhere; on an own domain the proxy lets a path that starts with the community's slug through, so they work. The prefix stays: a domain can host several communities at `/{slug}` (`docs/scope-boundaries.md`).
 - **Branding:** page titles, the iOS home-screen title, the manifest (`/{slug}/manifest.webmanifest`: name, start page) and the email sender name come from the community. Icons stay the platform's until communities have their own.
 - **Login:** Supabase Auth lists every domain in its redirect allow-list; each domain keeps its own login cookie.
 - **Emails:** the approval email links to the community's own domain; each domain gets its own verified sender in Brevo (DKIM + DMARC).
@@ -898,7 +899,7 @@ Each slice ships: migration + indexes + RLS, database tests (pgTAP via `supabase
 | 3 | Profiles | `profile` + `save_profile`, Status-driven fields, couples, photos (profile bucket), score, visibility, linked profiles |
 | 4 | Community approval | Applications, A25 form, A19/A20/A21, `admin_records`, approval email |
 | 5 | Chats core | Chats, members, messages, chat list, thread paging, send, mark-read, Realtime |
-| 5b | Own domains, real members, privacy basics | `communities.domain` + proxy rewrite + link helper; 18+ and identity check per community, identity material deleted after the decision; `member_consents`; no email probing on join |
+| 5b | Own domains, real members, privacy basics | `communities.domain` + proxy rewrite; 18+ and identity check per community, identity material deleted after the decision; `member_consents`; no email probing on join |
 | 6 | DMs + blocking | `open_dm`, leave options, blocks everywhere, admin "Add to groups" from a DM |
 | 7 | Groups | Create/edit with all settings, info posts, group info, group applications (A22/A23/A24), No-reply DM |
 | 8 | Post actions + images | Reactions (one per person), comments, edit/delete rules, chat images, Taken in app flag |

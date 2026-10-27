@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(60);
 
 -- Fixtures -------------------------------------------------------------------------------------
 create temp table ids as select
@@ -89,13 +89,13 @@ select lives_ok($$ select public.save_group(biking, (select id from saved where 
 -- Finding and joining ----------------------------------------------------------------------------
 select pg_temp.as_user(anna) from ids;
 select results_eq(
-  $$ select name, direct_join from public.group_directory((select biking from ids)) where chat_id in (select id from saved) $$,
-  $$ values ('Test Gravel Ride'::text, false), ('Test Open', true) $$,
+  $$ select name from public.find_new((select biking from ids), 'Test', false, true) where id in (select id from saved) $$,
+  $$ values ('Test Gravel Ride'::text), ('Test Open') $$,
   '"Find new group" lists the groups she is not in, by name'
 );
 select throws_ok($$ select public.join_group(biking, (select id from saved where name = 'gravel')) from ids $$, '42501', null, 'a group without direct join can''t be joined directly');
 select lives_ok($$ select public.join_group(biking, (select id from saved where name = 'open')) from ids $$, 'Anna joins the open group');
-select is((select count(*)::int from public.group_directory((select biking from ids)) where name = 'Test Open'), 0, 'it leaves her "Find new group"');
+select is((select count(*)::int from public.find_new((select biking from ids), 'Test', false, true) where name = 'Test Open'), 0, 'it leaves her "Find new group"');
 select is((select count(*)::int from public.chat_list((select biking from ids)) where name = 'Test Open'), 1, 'and is in her chats');
 select pg_temp.as_user(erik) from ids;
 select lives_ok($$ select public.join_group(biking, (select id from saved where name = 'open')) from ids $$, 'Erik joins too');
@@ -119,22 +119,22 @@ insert into saved select 'bert_app', public.apply_to_group(biking, (select id fr
 select isnt((select id from saved where name = 'bert_app'), null, 'Bert applies');
 select throws_ok($$ select public.apply_to_group(biking, (select id from saved where name = 'gravel'), '{"message": "again"}') from ids $$, '23505', null, 'once while it is open');
 select is((select (public.group_card(biking, (select id from saved where name = 'gravel')) ->> 'applied')::boolean from ids), true, 'the card now says he has applied');
-select is_empty($$ select 1 from public.group_roster((select biking from ids), (select id from saved where name = 'gravel'), true) $$, 'a member gets no application queue');
+select is_empty($$ select 1 from public.roster_applications((select biking from ids), (select id from saved where name = 'gravel')) $$, 'a member gets no application queue');
 select throws_ok($$ select public.decide_application((select id from saved where name = 'bert_app'), 'approved') $$, '42501', null, 'nor decides his own application');
 
 -- The group admin decides --------------------------------------------------------------------------
 select pg_temp.as_user(gina) from ids;
 select results_eq(
-  $$ select username, message, real_name_1 from public.group_roster((select biking from ids), (select id from saved where name = 'gravel'), true) $$,
+  $$ select username, message, real_name_1 from public.roster_applications((select biking from ids), (select id from saved where name = 'gravel')) $$,
   $$ values ('Test bert'::text, 'Test I ride gravel'::text, 'Bert Berg'::text) $$,
   'the group admin''s queue (A23) has the application, with the real name'
 );
 select is((select public.group_member(biking, (select id from saved where name = 'gravel'), bert) -> 'application' ->> 'message' from ids), 'Test I ride gravel',
   'A22 shows his application');
 select lives_ok($$ select public.decide_application((select id from saved where name = 'bert_app'), 'approved') $$, 'Gina approves');
-select is((select count(*)::int from public.group_roster((select biking from ids), (select id from saved where name = 'gravel'), false) where username = 'Test bert'), 1,
+select is((select count(*)::int from public.roster_members((select biking from ids), (select id from saved where name = 'gravel')) where username = 'Test bert'), 1,
   'Bert is a member now');
-select is((select real_name_1 from public.group_roster((select biking from ids), (select id from saved where name = 'gravel'), false) where username = 'Test bert'), 'Bert Berg',
+select is((select real_name_1 from public.roster_members((select biking from ids), (select id from saved where name = 'gravel')) where username = 'Test bert'), 'Bert Berg',
   'with his real name in the group''s record');
 select lives_ok($$ select public.save_group_record(biking, (select id from saved where name = 'gravel'), bert, '{"state_1": "150", "notes": "Paid cash"}') from ids $$,
   'the group admin keeps the group''s record of him');
@@ -201,6 +201,14 @@ select results_eq(
   'one admin per group: Gina stays a member'
 );
 select ok((select count(*) >= 2 from jsonb_array_elements((select public.group_assignments(biking, dina) -> 'groups' from ids))), 'F1 for the community admin: every group');
+select results_eq(
+  $$ select u.name, (g ->> 'member')::boolean, (g ->> 'admin')::boolean
+     from ids cross join lateral (values ('bert', ids.bert), ('gina', ids.gina)) as u (name, id)
+     cross join lateral jsonb_array_elements(public.group_assignments(ids.biking, u.id) -> 'groups') as g
+     where g ->> 'id' = (select id::text from saved where name = 'gravel') order by u.name $$,
+  $$ values ('bert'::text, true, true), ('gina', true, false) $$,
+  'F1 says who runs the group: Bert now, Gina a member'
+);
 
 -- Deleting -----------------------------------------------------------------------------------------
 select pg_temp.as_user(anna) from ids;

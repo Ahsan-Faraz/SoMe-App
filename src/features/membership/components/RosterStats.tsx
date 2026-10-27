@@ -1,36 +1,17 @@
-'use client'
-
-import { useMemo } from 'react'
 import { t } from '@/lib/i18n'
-import type { Roster, Scope } from '../types'
+import type { Scope, ScopeStats } from '../types'
 
 // A28 group / A33 community statistics: member count, members per status, and the sum of each
-// profile-state number (e.g. Paid 300, Attended 32), from the saved records.
-export function RosterStats({ scope, seed }: { scope: Pick<Scope, 'stateLabels'>; seed: Roster }) {
-  const { members } = seed
-
-  const { byStatus, sums } = useMemo(() => {
-    const counts = new Map<string, number>()
-    const totals = scope.stateLabels.map(() => 0)
-    for (const member of members) {
-      const status = member.status || t.membership.noStatus
-      counts.set(status, (counts.get(status) ?? 0) + 1)
-      member.state.forEach((value, index) => {
-        const number = Number.parseInt(value, 10)
-        if (Number.isFinite(number) && index < totals.length) totals[index] = (totals[index] ?? 0) + number
-      })
-    }
-    return { byStatus: [...counts].sort((a, b) => b[1] - a[1]), sums: totals }
-  }, [members, scope.stateLabels])
-
+// profile-state number (e.g. Paid 300, Attended 32). Counted in the database over the whole scope.
+export function RosterStats({ scope, stats }: { scope: Pick<Scope, 'stateLabels'>; stats: ScopeStats }) {
   return (
     <div className="mx-auto grid max-w-xl gap-6 px-4 py-6 sm:px-8">
       <dl className="flex items-baseline justify-between rounded-2xl bg-sunken px-4 py-4">
         <dt className="text-[17px] font-semibold">{t.membership.total}</dt>
-        <dd className="text-[28px] leading-none font-bold tabular-nums">{members.length}</dd>
+        <dd className="text-[28px] leading-none font-bold tabular-nums">{stats.members}</dd>
       </dl>
-      <Table title={t.membership.byStatus} rows={byStatus} />
-      <Table title={t.membership.sums} rows={scope.stateLabels.flatMap((label, index) => (label ? [[label, sums[index] ?? 0] as [string, number]] : []))} />
+      <Table title={t.membership.byStatus} rows={stats.byStatus} />
+      <Table title={t.membership.sums} rows={scope.stateLabels.flatMap((label, index) => (label ? [[label, stats.sums[index] ?? 0] as [string, number]] : []))} />
     </div>
   )
 }

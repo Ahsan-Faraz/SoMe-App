@@ -105,16 +105,6 @@ export async function getGroupCard(slug: string, chatId: string): Promise<GroupC
   }
 }
 
-// A2 "Find new group": visible groups the viewer is not in.
-export async function listGroupDirectory(slug: string): Promise<{ id: string; name: string; headline: string }[]> {
-  const community = await getCommunity(slug)
-  if (!community) return []
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('group_directory', { p_community: community.id })
-  if (error) throw error
-  return data.map((row) => ({ id: row.chat_id, name: row.name, headline: row.headline ?? '' }))
-}
-
 // F1: the groups the viewer may add this member to, and (community admin) their group-create rights.
 export async function listAssignments(slug: string, userId: string): Promise<GroupAssignments> {
   const community = await getCommunity(slug)
@@ -126,7 +116,18 @@ export async function listAssignments(slug: string, userId: string): Promise<Gro
   return {
     canCreateGroups: typeof data.can_create_groups === 'boolean' ? data.can_create_groups : null,
     groups: Array.isArray(data.groups)
-      ? data.groups.flatMap((item) => (isRecord(item) && typeof item.id === 'string' ? [{ id: item.id, name: text(item, 'name'), member: item.member === true }] : []))
+      ? data.groups.flatMap((item) => (isRecord(item) && typeof item.id === 'string' ? [{ id: item.id, name: text(item, 'name'), member: item.member === true, admin: item.admin === true }] : []))
       : [],
   }
+}
+
+// A30 "+": approved members not in the group yet, by name (group_candidates: its admins only, blocks
+// respected). The first ones to start with; typing searches the database (AddList).
+export async function listGroupCandidates(slug: string, groupId: string): Promise<{ id: string; username: string; icon: string | null }[]> {
+  const community = await getCommunity(slug)
+  if (!community || !isUuid(groupId)) return []
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('group_candidates', { p_community: community.id, p_chat: groupId })
+  if (error) throw error
+  return data.map((row) => ({ id: row.user_id, username: row.username, icon: row.icon ? profilePhotoUrl(row.icon) : null }))
 }

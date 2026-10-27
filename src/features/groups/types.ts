@@ -55,7 +55,7 @@ export type GroupCard = {
 // F1 "Add to groups" for one member.
 export type GroupAssignments = {
   canCreateGroups: boolean | null // shown to the community admin only
-  groups: { id: string; name: string; member: boolean }[]
+  groups: { id: string; name: string; member: boolean; admin: boolean }[] // admin: this member runs the group
 }
 
 export type GroupFlag = { [K in keyof GroupForm]: GroupForm[K] extends boolean ? K : never }[keyof GroupForm]

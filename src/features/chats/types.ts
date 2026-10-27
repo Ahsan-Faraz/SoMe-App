@@ -62,6 +62,7 @@ export type DirectoryEntry = {
   kind: 'user' | 'group'
   name: string
   detail: string
+  icon: string | null // a person's profile image (thumbnail)
   href: string
 }
 

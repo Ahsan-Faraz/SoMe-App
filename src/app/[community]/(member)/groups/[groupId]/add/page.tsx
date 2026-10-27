@@ -4,8 +4,8 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getViewer } from '@/features/auth/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { AddList } from '@/features/groups/components/AddList'
-import { getScope, listRoster } from '@/features/membership/queries'
-import { listProfiles } from '@/features/profiles/queries'
+import { listGroupCandidates } from '@/features/groups/queries'
+import { getScope } from '@/features/membership/queries'
 import { t } from '@/lib/i18n'
 import { RouteSkeleton } from '../../../../loading'
 
@@ -24,12 +24,7 @@ async function AddMembersContent({ params }: PageProps<'/[community]/groups/[gro
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const [scope, info, roster, cards] = await Promise.all([
-    getScope('group', community, groupId),
-    getCommunity(community),
-    listRoster(community, 'group', groupId),
-    listProfiles(community),
-  ])
+  const [scope, info, people] = await Promise.all([getScope('group', community, groupId), getCommunity(community), listGroupCandidates(community, groupId)])
   if (!scope || !info) notFound()
 
   return (
@@ -39,8 +34,7 @@ async function AddMembersContent({ params }: PageProps<'/[community]/groups/[gro
         community={community}
         communityId={info.id}
         groupId={scope.id}
-        people={cards.map((card) => ({ id: card.id, username: card.username, icon: card.photo?.src ?? null }))}
-        memberIds={roster.members.map((member) => member.userId)}
+        people={people}
       />
     </div>
   )

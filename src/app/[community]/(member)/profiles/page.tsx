@@ -5,7 +5,8 @@ import { getViewer } from '@/features/auth/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
 import { ProfileList } from '@/features/profiles/components/ProfileList'
-import { listProfiles } from '@/features/profiles/queries'
+import { filterKey } from '@/features/profiles/filter'
+import { searchProfiles } from '@/features/profiles/queries'
 import { RouteSkeleton } from '../../loading'
 
 export default function ProfilesPage(props: PageProps<'/[community]/profiles'>) {
@@ -24,12 +25,14 @@ async function ProfilesContent({ params }: PageProps<'/[community]/profiles'>) {
 
   const info = await getCommunity(community)
   if (!info) redirect(`/${community}/login`)
-  const [profiles, schema] = await Promise.all([listProfiles(community), getProfileSchema(info.id)])
+  const [search, schema] = await Promise.all([searchProfiles(community), getProfileSchema(info.id)])
+  if (!search) redirect(`/${community}/login`)
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
       <main className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <ProfileList community={community} viewerId={viewer.userId} profiles={profiles} builtins={schema.builtins} />
+        {/* A new saved filter starts the list over. */}
+        <ProfileList key={filterKey(search.filter)} community={community} search={search} builtins={schema.builtins} />
       </main>
       <BottomNav community={community} active="profiles" />
     </div>
