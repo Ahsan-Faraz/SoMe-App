@@ -2,160 +2,149 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState, useTransition } from 'react'
 import { buttonClass } from '@/components/ui/Button'
 import { MultiSelect } from '@/components/ui/MultiSelect'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
-import type { Album } from '@/features/albums/types'
+import { dmHref } from '@/features/chats/links'
+import type { Choice } from '@/features/fields/types'
 import type { MainPhoto } from '@/features/profiles/types'
 import { formatDay } from '@/lib/format'
 import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
-import { imageDataUrl } from '@/lib/image'
-import { loadAds, saveAds } from '../storage'
-import type { Ad } from '../types'
+import { imageDataUrl, type ResizedImage } from '@/lib/image'
+import { HEADLINE_MAX, LONG_TEXT_MAX, PLACE_MAX } from '@/lib/limits'
+import { deleteAdAction, saveAdAction } from '../actions'
+import type { AdDetail } from '../types'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
 const AlbumPhotos = dynamic(() => import('@/features/albums/components/AlbumPhotos').then((mod) => mod.AlbumPhotos), { ssr: false })
 const input = 'h-11 w-full rounded-xl border border-line bg-canvas px-3 text-[16px] font-normal outline-none focus:border-accent'
 
+// A new image for the ad, uploaded on Publish: a camera capture (Taken in app), a picked file, or a
+// profile/album photo (its signed link, fetched then). Always uploaded again as the ad's own copy.
+type Picked = { source: ResizedImage | Blob | string; verified: boolean }
+
+// D2 (your ad: publish, edit, delete) and D3 (someone else's: read, Profile, DM). ad: null for a new
+// one. Age, Status and Published come from the profile (author) and are never edited here.
 export function AdEditor({
   community,
-  seed,
-  adId,
-  own,
-  profileHref,
-  chatHref,
+  communityId,
+  viewerId,
+  ad,
   author,
-  albums = [],
   profilePhoto = null,
   statuses,
   districts,
 }: {
   community: string
-  seed: Ad[]
-  adId: string | null
-  own: boolean
-  profileHref: string | null
-  chatHref: string | null
-  author: { userId: string; username: string; status: string; age: number }
-  // Own ads only: the sources for "From profile/album".
-  albums?: Album[]
+  communityId: string
+  viewerId: string
+  ad: AdDetail | null
+  // A new ad shows your own Status and ages.
+  author: { status: string; ages: number[] }
   profilePhoto?: MainPhoto | null
   // The community's active lists (profile builder).
-  statuses: readonly string[]
-  districts: readonly string[]
+  statuses: readonly Choice[]
+  districts: readonly Choice[]
 }) {
   const goBack = useGoBack(community)
-  const seeded = adId ? (seed.find((item) => item.id === adId) ?? null) : null
-  const [ad, setAd] = useState<Ad | null>(seeded)
-  // Render the known ad straight away (first paint from the server); only wait when it may exist on this device only.
-  const [ready, setReady] = useState(!adId || seeded !== null)
+  const own = !ad || ad.own
   const [camera, setCamera] = useState(false)
-  const [picking, setPicking] = useState(false)
-  const [headline, setHeadline] = useState(seeded?.headline ?? '')
-  const [body, setBody] = useState(seeded?.body ?? '')
-  const [lookingFor, setLookingFor] = useState<string[]>(seeded?.lookingFor ?? [])
-  const [district, setDistrict] = useState<string>(seeded?.district ?? districts[0] ?? '')
-  const [place, setPlace] = useState(seeded?.place ?? '')
-  const [image, setImage] = useState(seeded?.image ?? '')
-  const [verified, setVerified] = useState(seeded?.verified ?? false)
+  const [choosing, setChoosing] = useState(false)
+  const [headline, setHeadline] = useState(ad?.headline ?? '')
+  const [body, setBody] = useState(ad?.body ?? '')
+  const [lookingFor, setLookingFor] = useState<string[]>(ad?.lookingForIds ?? [])
+  const [district, setDistrict] = useState(ad?.districtId ?? districts[0]?.id ?? '')
+  const [place, setPlace] = useState(ad?.place ?? '')
+  const [image, setImage] = useState<{ src: string; verified: boolean } | null>(ad?.image ? { src: ad.image, verified: ad.verified } : null)
+  const [picked, setPicked] = useState<Picked | null>(null)
   const [error, setError] = useState('')
+  const [pending, startTransition] = useTransition()
+  const names = Object.fromEntries([...statuses, ...districts].map((choice) => [choice.id, choice.label]))
+  const back = ad?.own ? `/${community}/profiles/${viewerId}/ads` : `/${community}/ads`
 
-  useEffect(() => {
-    const found = adId ? (loadAds(community, seed).find((item) => item.id === adId) ?? null) : null
-    setReady(true)
-    if (!found) return setAd(null)
-    setAd(found)
-    setHeadline(found.headline)
-    setBody(found.body)
-    setLookingFor(found.lookingFor)
-    setDistrict(found.district)
-    setPlace(found.place)
-    setImage(found.image)
-    setVerified(found.verified)
-  }, [community, seed, adId])
+  function pick(src: string, next: Picked) {
+    setImage({ src, verified: next.verified })
+    setPicked(next)
+    setError('')
+  }
 
-  if (!ready) return null
-  if (adId && !ad) return <p className="px-5 py-10 text-muted">{t.ads.empty}</p>
   if (camera) {
     return (
       <CameraCapture
         onClose={() => setCamera(false)}
-        onCapture={(src) => {
-          setImage(src)
-          setVerified(true)
+        onCapture={(src, resized) => {
+          pick(src, { source: resized, verified: true })
           setCamera(false)
         }}
       />
     )
   }
 
-  const locked = !own
-  const shown = ad ?? {
-    status: author.status,
-    age: author.age,
-    published: formatDay(),
-  }
+  const shown = ad ?? { status: author.status, ages: author.ages, published: formatDay() }
 
   return (
     <form
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault()
-        if (locked || !headline.trim()) return
+        if (!own || pending || !headline.trim()) return
         if (lookingFor.length === 0) return setError(t.ads.lookingForMissing)
-        const ads = loadAds(community, seed)
-        const next: Ad = {
-          id: ad?.id ?? `ad-${Date.now()}`,
-          userId: ad?.userId ?? author.userId,
-          username: ad?.username ?? author.username,
-          status: ad?.status ?? author.status,
-          age: ad?.age ?? author.age,
-          district,
-          place: place.trim(),
-          headline: headline.trim(),
-          body: body.trim(),
-          published: ad?.published ?? shown.published,
-          lookingFor,
-          image,
-          verified,
-        }
-        saveAds(community, ad ? ads.map((item) => (item.id === ad.id ? next : item)) : [next, ...ads])
-        goBack(own && ad ? `/${community}/profiles/${author.userId}/ads` : `/${community}/ads`)
+        setError('')
+        startTransition(async () => {
+          let photo = null
+          if (picked) {
+            try {
+              const source = typeof picked.source === 'string' ? await (await fetch(picked.source)).blob() : picked.source
+              const { uploadPhoto } = await import('@/features/profiles/upload')
+              const uploaded = await uploadPhoto('private', communityId, viewerId, source, picked.verified)
+              photo = { path: uploaded.path, thumb_path: uploaded.thumbPath, width: uploaded.width, height: uploaded.height, taken_in_app: uploaded.takenInApp }
+            } catch {
+              return setError(t.ads.imageFailed)
+            }
+          }
+          const result = await saveAdAction(community, ad?.id ?? null, { lookingFor, headline, body, districtId: district || null, place }, photo)
+          if ('error' in result) return setError(result.error)
+          // The image is saved now: a retry must not upload it again.
+          setPicked(null)
+          goBack(back)
+        })
       }}
     >
       <div className={scrollArea}>
         <div className="mx-auto grid max-w-lg gap-4 px-4 py-6 sm:px-8">
-          {locked ? (
+          {!own && ad ? (
             // Someone else's ad: plain text, no form controls (no drop-down arrows on fields you can't change).
             <dl className="grid gap-4">
-              <Fact label={t.ads.lookingFor} value={lookingFor.join(', ')} />
-              <Fact label={t.profiles.headline} value={headline} />
-              <Fact label={t.ads.text} value={body} />
-              <Fact label={t.profiles.district} value={district} />
-              <Fact label={t.profiles.place} value={place} />
+              <Fact label={t.ads.lookingFor} value={ad.lookingFor.join(', ')} />
+              <Fact label={t.profiles.headline} value={ad.headline} />
+              <Fact label={t.ads.text} value={ad.body} />
+              <Fact label={t.profiles.district} value={ad.district} />
+              <Fact label={t.profiles.place} value={ad.place} />
             </dl>
           ) : (
             <>
               <MultiSelect
                 label={t.ads.lookingFor}
-                options={statuses}
+                options={statuses.map((choice) => choice.id)}
                 value={lookingFor}
                 onChange={(value) => {
                   setLookingFor(value)
                   setError('')
                 }}
+                format={(id) => names[id] ?? ''}
                 placeholder={t.profiles.choose}
               />
               <label className="grid gap-1.5 text-[14px] font-semibold">
                 {t.profiles.headline}
-                <input required value={headline} onChange={(event) => setHeadline(event.target.value)} className={input} />
+                <input required maxLength={HEADLINE_MAX} value={headline} onChange={(event) => setHeadline(event.target.value)} className={input} />
               </label>
               <label className="grid gap-1.5 text-[14px] font-semibold">
                 {t.ads.text}
                 <textarea
                   required
+                  maxLength={LONG_TEXT_MAX}
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
                   rows={5}
@@ -165,24 +154,27 @@ export function AdEditor({
               <label className="grid gap-1.5 text-[14px] font-semibold">
                 {t.profiles.district}
                 <select value={district} onChange={(event) => setDistrict(event.target.value)} className={input}>
-                  {districts.map((item) => (
-                    <option key={item}>{item}</option>
+                  {districts.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="grid gap-1.5 text-[14px] font-semibold">
                 {t.profiles.place}
-                <input value={place} onChange={(event) => setPlace(event.target.value)} className={input} />
+                <input maxLength={PLACE_MAX} value={place} onChange={(event) => setPlace(event.target.value)} className={input} />
               </label>
             </>
           )}
           <div>
             <p className="text-[14px] font-semibold">{t.ads.image}</p>
             {image ? (
+              // A signed link from the private bucket, or a new picture not uploaded yet.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={image} alt="" className="mt-2 aspect-video w-full rounded-2xl object-cover" />
+              <img src={image.src} alt="" className="mt-2 aspect-video w-full rounded-2xl object-cover" />
             ) : null}
-            {verified ? <p className="mt-1 text-[13px] font-semibold text-accent">✓ {t.chats.takenInApp}</p> : null}
+            {image?.verified ? <p className="mt-1 text-[13px] font-semibold text-accent">✓ {t.chats.takenInApp}</p> : null}
             {own ? (
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => setCamera(true)} className="grid min-h-14 content-center rounded-xl bg-accent px-2 py-2 text-center text-white hover:bg-accent-hover">
@@ -198,12 +190,11 @@ export function AdEditor({
                     onChange={async (event) => {
                       const file = event.target.files?.[0]
                       if (!file) return
-                      setImage(await imageDataUrl(file, 1600))
-                      setVerified(false)
+                      pick(await imageDataUrl(file, 1600), { source: file, verified: false })
                     }}
                   />
                 </label>
-                <button type="button" onClick={() => setPicking(true)} className="grid min-h-14 place-items-center rounded-xl bg-soft px-2 text-center text-[15px] leading-tight font-semibold hover:bg-soft-hover">
+                <button type="button" onClick={() => setChoosing(true)} className="grid min-h-14 place-items-center rounded-xl bg-soft px-2 text-center text-[15px] leading-tight font-semibold hover:bg-soft-hover">
                   {t.chats.fromAlbum}
                 </button>
               </div>
@@ -212,7 +203,7 @@ export function AdEditor({
           <dl className="grid grid-cols-2 gap-3 rounded-2xl bg-sunken p-4 text-[15px]">
             <div>
               <dt className="text-muted">{t.profiles.age}</dt>
-              <dd className="font-semibold">{shown.age}</dd>
+              <dd className="font-semibold">{shown.ages.join(', ')}</dd>
             </div>
             <div>
               <dt className="text-muted">{t.profiles.status}</dt>
@@ -234,58 +225,52 @@ export function AdEditor({
         <div className="mx-auto max-w-lg">
           {own ? (
             <div className={ad ? 'grid grid-cols-2 gap-3' : undefined}>
-              <button type="submit" className={buttonClass('primary')}>
-                {t.ads.publishAction}
+              <button type="submit" disabled={pending} className={buttonClass('primary')}>
+                {pending ? t.ads.publishing : t.ads.publishAction}
               </button>
               {ad ? (
                 <button
                   type="button"
+                  disabled={pending}
                   className={buttonClass('secondary')}
-                  onClick={() => {
-                    saveAds(
-                      community,
-                      loadAds(community, seed).filter((item) => item.id !== ad.id),
-                    )
-                    goBack(`/${community}/ads`)
-                  }}
+                  onClick={() =>
+                    startTransition(async () => {
+                      const result = await deleteAdAction(community, ad.id)
+                      if (result) setError(result.error)
+                      else goBack(back)
+                    })
+                  }
                 >
                   {t.ads.delete}
                 </button>
               ) : null}
             </div>
-          ) : (
+          ) : ad ? (
             <div className="grid grid-cols-2 gap-3">
-              {profileHref ? (
-                <Link href={profileHref} className={buttonClass('secondary')}>
-                  {t.ads.profile}
-                </Link>
-              ) : null}
-              {chatHref ? (
-                <Link href={chatHref} className={buttonClass('primary')}>
-                  {t.profiles.dm}
-                </Link>
-              ) : null}
+              <Link href={`/${community}/profiles/${ad.userId}`} className={buttonClass('secondary')}>
+                {t.ads.profile}
+              </Link>
+              <Link href={dmHref(community, ad.userId)} className={buttonClass('primary')}>
+                {t.profiles.dm}
+              </Link>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
-      {picking ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 lg:items-stretch lg:justify-end" role="dialog" aria-modal="true" aria-label={t.chats.fromAlbum} onClick={() => setPicking(false)}>
+      {choosing ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 lg:items-stretch lg:justify-end" role="dialog" aria-modal="true" aria-label={t.chats.fromAlbum} onClick={() => setChoosing(false)}>
           <div className="max-h-[80dvh] w-full overflow-y-auto rounded-t-3xl bg-canvas pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none" onClick={(event) => event.stopPropagation()}>
             <p className="px-5 pt-4 text-[17px] font-bold">{t.chats.fromAlbum}</p>
             <AlbumPhotos
-              community={community}
-              viewerId={author.userId}
-              albums={albums}
+              communityId={communityId}
               profilePhoto={profilePhoto}
               onPick={(photo) => {
-                setImage(photo.src)
-                setVerified(photo.verified)
-                setPicking(false)
+                pick(photo.src, { source: photo.src, verified: photo.verified })
+                setChoosing(false)
               }}
             />
             <div className="px-4">
-              <button type="button" onClick={() => setPicking(false)} className={buttonClass('secondary')}>
+              <button type="button" onClick={() => setChoosing(false)} className={buttonClass('secondary')}>
                 {t.chats.cancel}
               </button>
             </div>

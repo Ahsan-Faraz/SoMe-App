@@ -1,31 +1,54 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useOptimistic, useState, useTransition } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { scrollArea } from '@/components/ui/Screen'
 import { t } from '@/lib/i18n'
-import { albumKey, loadAlbums, saveAlbums } from '../storage'
-import type { Album } from '../types'
+import { NAME_MAX } from '@/lib/limits'
+import { createAlbumAction, deleteAlbumAction } from '../actions'
+import type { AlbumCard } from '../types'
 
 const LONG_PRESS_MS = 450
 
-export function AlbumList({ community, userId, own, seed, startAdding }: { community: string; userId: string; own: boolean; seed: Album[]; startAdding: boolean }) {
-  const key = albumKey(community, userId)
-  const [albums, setAlbums] = useState(seed)
+type Change = { add: AlbumCard } | { remove: string }
+
+// B3: a member's albums (server data). The owner adds one with "+" and deletes one with a long press
+// (asked first); both show at once and go back if the database refuses them.
+export function AlbumList({ community, userId, own, albums, startAdding }: { community: string; userId: string; own: boolean; albums: AlbumCard[]; startAdding: boolean }) {
+  const [shown, change] = useOptimistic(albums, (current, next: Change) =>
+    'add' in next ? [...current, next.add] : current.filter((album) => album.id !== next.remove),
+  )
   const [adding, setAdding] = useState(startAdding)
   const [name, setName] = useState('')
   const [ask, setAsk] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [, startTransition] = useTransition()
 
-  useEffect(() => setAlbums(loadAlbums(key, seed)), [key, seed])
   // The header "+" links to ?add=1; open the form even when this page is already showing.
   useEffect(() => {
     if (startAdding) setAdding(true)
   }, [startAdding])
 
-  function commit(next: Album[]) {
-    setAlbums(next)
-    saveAlbums(key, next)
+  function create(trimmed: string) {
+    setError('')
+    setName('')
+    setAdding(false)
+    startTransition(async () => {
+      change({ add: { id: `new-${crypto.randomUUID()}`, name: trimmed, locked: false, photos: 0, cover: null } })
+      const result = await createAlbumAction(community, trimmed)
+      if (result) setError(result.error)
+    })
+  }
+
+  function remove(albumId: string) {
+    setAsk(null)
+    setError('')
+    startTransition(async () => {
+      change({ remove: albumId })
+      const result = await deleteAlbumAction(community, albumId, null)
+      if (result) setError(result.error)
+    })
   }
 
   return (
@@ -36,14 +59,12 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
           onSubmit={(event) => {
             event.preventDefault()
             const trimmed = name.trim()
-            if (!trimmed) return
-            commit([...albums, { id: `album-${Date.now()}`, name: trimmed, password: '', images: [] }])
-            setName('')
-            setAdding(false)
+            if (trimmed) create(trimmed)
           }}
         >
           <input
             value={name}
+            maxLength={NAME_MAX}
             onChange={(event) => setName(event.target.value)}
             placeholder={t.albums.name}
             aria-label={t.albums.name}
@@ -54,45 +75,60 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
           </button>
         </form>
       ) : null}
-      {albums.length === 0 ? <p className="py-10 text-center text-muted">{t.albums.empty}</p> : null}
+      {error ? (
+        <p role="alert" className="mb-4 text-[15px] text-danger">
+          {error}
+        </p>
+      ) : null}
+      {shown.length === 0 ? <p className="py-10 text-center text-muted">{t.albums.empty}</p> : null}
       <ul className="grid grid-cols-2 gap-4 min-[40rem]:grid-cols-3">
-        {albums.map((album) => {
-          // Locked albums never show a photo, only a folder, until the password is given.
-          const cover = album.password ? undefined : album.images[0]?.src
+        {shown.map((album) => {
+          // Not saved yet: shown, but not a link until the database gives it its id.
+          const saved = !album.id.startsWith('new-')
+          const body = (
+            <>
+              {album.cover ? (
+                // A signed thumbnail of an open album; a locked album never has a cover.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={album.cover} alt="" draggable={false} loading="lazy" decoding="async" className="aspect-square w-full rounded-2xl object-cover" />
+              ) : (
+                <span className="relative grid aspect-square w-full place-items-center rounded-2xl bg-rail text-muted">
+                  <Icon name={album.locked ? 'folder' : 'image'} className="size-12" />
+                  {album.locked ? (
+                    <span className="absolute right-3 bottom-3 grid size-8 place-items-center rounded-full bg-canvas text-ink" aria-label={t.albums.lockedLabel} title={t.albums.lockedLabel}>
+                      <Icon name="lock" className="size-4" />
+                    </span>
+                  ) : null}
+                </span>
+              )}
+              <span className="mt-2 block truncate text-[15px] font-semibold">{album.name}</span>
+            </>
+          )
           return (
-            <li key={album.id}>
-              <Link
-                href={`/${community}/profiles/${userId}/albums/${album.id}`}
-                // iOS: long-press is our delete; no text selection or Safari link/image menu (touch only).
-                className="block pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
-                onContextMenu={(event) => {
-                  if (!own) return
-                  event.preventDefault()
-                  setAsk(album.id)
-                }}
-                onPointerDown={(event) => {
-                  if (!own) return
-                  const timer = window.setTimeout(() => setAsk(album.id), LONG_PRESS_MS)
-                  const clear = () => window.clearTimeout(timer)
-                  event.currentTarget.addEventListener('pointerup', clear, { once: true })
-                  event.currentTarget.addEventListener('pointercancel', clear, { once: true })
-                }}
-              >
-                {cover ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={cover} alt="" draggable={false} className="aspect-square w-full rounded-2xl object-cover" />
-                ) : (
-                  <span className="relative grid aspect-square w-full place-items-center rounded-2xl bg-rail text-muted">
-                    <Icon name={album.password ? 'folder' : 'image'} className="size-12" />
-                    {album.password ? (
-                      <span className="absolute right-3 bottom-3 grid size-8 place-items-center rounded-full bg-canvas text-ink" aria-label={t.albums.lockedLabel} title={t.albums.lockedLabel}>
-                        <Icon name="lock" className="size-4" />
-                      </span>
-                    ) : null}
-                  </span>
-                )}
-                <span className="mt-2 block truncate text-[15px] font-semibold">{album.name}</span>
-              </Link>
+            <li key={album.id} className={saved ? undefined : 'opacity-60'}>
+              {saved ? (
+                <Link
+                  href={`/${community}/profiles/${userId}/albums/${album.id}`}
+                  // iOS: long-press is our delete; no text selection or Safari link/image menu (touch only).
+                  className="block pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
+                  onContextMenu={(event) => {
+                    if (!own) return
+                    event.preventDefault()
+                    setAsk(album.id)
+                  }}
+                  onPointerDown={(event) => {
+                    if (!own) return
+                    const timer = window.setTimeout(() => setAsk(album.id), LONG_PRESS_MS)
+                    const clear = () => window.clearTimeout(timer)
+                    event.currentTarget.addEventListener('pointerup', clear, { once: true })
+                    event.currentTarget.addEventListener('pointercancel', clear, { once: true })
+                  }}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <span className="block">{body}</span>
+              )}
             </li>
           )
         })}
@@ -101,14 +137,7 @@ export function AlbumList({ community, userId, own, seed, startAdding }: { commu
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-canvas p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <p className="text-[16px] font-semibold">{t.albums.deleteAsk}</p>
           <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              className="h-11 flex-1 rounded-xl bg-danger font-semibold text-white"
-              onClick={() => {
-                commit(albums.filter((album) => album.id !== ask))
-                setAsk(null)
-              }}
-            >
+            <button type="button" className="h-11 flex-1 rounded-xl bg-danger font-semibold text-white" onClick={() => remove(ask)}>
               {t.albums.confirm}
             </button>
             <button type="button" className="h-11 flex-1 rounded-xl bg-soft font-semibold" onClick={() => setAsk(null)}>

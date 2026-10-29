@@ -3,23 +3,18 @@
 import dynamic from 'next/dynamic'
 import { useRef, useState } from 'react'
 import { AlbumPhotos, type PickedPhoto } from '@/features/albums/components/AlbumPhotos'
-import { todayLabel } from '@/features/albums/storage'
-import type { Album } from '@/features/albums/types'
+import { formatDay } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { imageDataUrl } from '@/lib/image'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
 
 export function PictureSheet({
-  community,
-  viewerId,
-  albums,
+  communityId,
   onClose,
   onPick,
 }: {
-  community: string
-  viewerId: string
-  albums: Album[]
+  communityId: string
   onClose: () => void
   onPick: (shot: PickedPhoto) => void
 }) {
@@ -28,7 +23,7 @@ export function PictureSheet({
   const [picking, setPicking] = useState(false)
 
   if (camera) {
-    return <CameraCapture onClose={() => setCamera(false)} onCapture={(src) => onPick({ src, verified: true, date: todayLabel() })} />
+    return <CameraCapture onClose={() => setCamera(false)} onCapture={(src) => onPick({ src, verified: true, date: formatDay() })} />
   }
 
   return (
@@ -36,7 +31,7 @@ export function PictureSheet({
       <div className="max-h-[80dvh] w-full overflow-y-auto rounded-t-3xl bg-canvas pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl lg:h-full lg:max-w-md lg:rounded-none lg:pb-6" onClick={(event) => event.stopPropagation()}>
         <span className="mx-auto mt-2 block h-1 w-10 rounded-full bg-line-strong lg:hidden" />
         {picking ? (
-          <AlbumPhotos community={community} viewerId={viewerId} albums={albums} onPick={onPick} />
+          <AlbumPhotos communityId={communityId} onPick={onPick} />
         ) : (
           <ul className="mt-2 divide-y divide-line">
             <li>
@@ -65,7 +60,7 @@ export function PictureSheet({
           onChange={async (event) => {
             const file = event.target.files?.[0]
             if (!file) return
-            onPick({ src: await imageDataUrl(file, 1600), verified: false, date: todayLabel() })
+            onPick({ src: await imageDataUrl(file, 1600), verified: false, date: formatDay() })
           }}
         />
       </div>

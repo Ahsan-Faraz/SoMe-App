@@ -11,7 +11,13 @@ export function LogoutButton({ community, className, withLabel = false }: { comm
   return (
     <button
       type="button"
-      onClick={() => startTransition(() => signOutAction(community))}
+      onClick={() =>
+        startTransition(async () => {
+          await signOutAction()
+          // A full page load: the pages kept alive in the browser (yours) are dropped.
+          window.location.replace(`/${community}`)
+        })
+      }
       disabled={pending}
       aria-label={withLabel ? undefined : t.common.logout}
       className={className}

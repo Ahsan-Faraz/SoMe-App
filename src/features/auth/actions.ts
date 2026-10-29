@@ -6,6 +6,7 @@ import { getCommunity } from '@/features/communities/queries'
 import { sendEmail } from '@/lib/email'
 import { t } from '@/lib/i18n'
 import { OTP_PATTERN, PASSWORD_MIN, USERNAME_MAX, USERNAME_MIN } from '@/lib/limits'
+import { refundAttempt, takeAttempt, waitMinutes } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -38,17 +39,25 @@ export async function signInAction(_: AuthState, form: FormData): Promise<AuthSt
   if (!login || !password) return { error: t.login.missing }
 
   const community = await getCommunity(slug)
-  const email = community ? await emailFor(community.id, login) : null
-  if (!community || !email) return { error: t.login.failed }
+  if (!community) return { error: t.login.failed }
+  const email = await emailFor(community.id, login)
+  // Counted per login (the email, or the typed username when there is none) and per IP, also for a
+  // username that doesn't exist, so the limit tells nothing about which accounts exist.
+  const attempt = await takeAttempt('password', email ?? `${community.id}:${login}`)
+  if (attempt.wait > 0) return { error: t.common.tooMany(waitMinutes(attempt.wait)) }
+  if (!email) return { error: t.login.failed }
 
   const supabase = await createClient()
   const { data: auth, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error?.code === 'email_not_confirmed') {
-    // The password is right, so it is safe to show the email and send a fresh code.
-    await supabase.auth.resend({ type: 'signup', email })
+    // The password is right, so it is safe to show the email and send a fresh code, unless this
+    // email had its share of emails this hour (the code sent earlier still works).
+    await refundAttempt('password', attempt)
+    if ((await takeAttempt('email', email)).wait === 0) await supabase.auth.resend({ type: 'signup', email })
     return { verifyEmail: email }
   }
   if (error) return { error: t.login.failed }
+  await refundAttempt('password', attempt)
 
   const { data: member } = await supabase
     .from('members')
@@ -99,6 +108,11 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
   if (text(form, 'privacyVersion') !== community.privacyVersion) return { error: t.join.consentChanged }
   const consents = { privacy: community.privacyVersion, ...(community.requireAge18 ? { age_18: true } : {}) }
 
+  // Every join makes Supabase send an email (a code, or the notice below): limited per email and IP,
+  // the same for a new email and one with a login, so the answer still tells nothing (D32).
+  const sends = await takeAttempt('email', email)
+  if (sends.wait > 0) return { error: t.common.tooMany(waitMinutes(sends.wait)) }
+
   const { data: check, error: checkError } = await createAdminClient()
     .rpc('join_check', { p_community: community.id, p_username: username, p_email: email })
     .single()
@@ -118,9 +132,14 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
     return { verifyEmail: email }
   }
 
+  // A password guess against an existing login: the same limit as logging in. Over it, the answer is
+  // the same "enter the code" step as for a new email, and no notice email goes out.
+  const attempt = await takeAttempt('password', email)
+  if (attempt.wait > 0) return { verifyEmail: email }
   const { data: auth, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error?.code === 'email_not_confirmed') {
-    await supabase.auth.resend({ type: 'signup', email })
+    await refundAttempt('password', attempt)
+    await supabase.auth.resend({ type: 'signup', email }) // counted by this join's email limit above
     return { verifyEmail: email }
   }
   if (error) {
@@ -133,6 +152,7 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
     return { verifyEmail: email }
   }
 
+  await refundAttempt('password', attempt)
   const { error: joinError } = await supabase.rpc('join_community', { p_community: community.id, p_username: username, p_consents: consents })
   if (joinError) {
     await supabase.auth.signOut({ scope: 'local' })
@@ -150,10 +170,14 @@ export async function verifyEmailAction(_: AuthState, form: FormData): Promise<A
   const email = text(form, 'email').toLowerCase()
   const token = code(form)
   if (!OTP_PATTERN.test(token)) return { verifyEmail: email, error: t.verify.badCode }
+  // Codes can be guessed: 5 tries per email (and 30 per IP) in 15 minutes.
+  const attempt = await takeAttempt('code', email)
+  if (attempt.wait > 0) return { verifyEmail: email, error: t.common.tooMany(waitMinutes(attempt.wait)) }
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
   if (error) return { verifyEmail: email, error: t.verify.badCode }
+  await refundAttempt('code', attempt)
   const community = await getCommunity(slug)
   if (community && data.user) recordLogin(supabase, community.id, data.user.id)
   redirect(`/${slug}/pending`)
@@ -161,6 +185,8 @@ export async function verifyEmailAction(_: AuthState, form: FormData): Promise<A
 
 export async function resendCodeAction(_: AuthState, form: FormData): Promise<AuthState> {
   const email = text(form, 'email').toLowerCase()
+  const sends = await takeAttempt('email', email)
+  if (sends.wait > 0) return { verifyEmail: email, error: t.verify.wait }
   const supabase = await createClient()
   const { error } = await supabase.auth.resend({ type: 'signup', email })
   // Only the rate limit is told apart: any other failure (e.g. an email that already has a
@@ -177,6 +203,9 @@ export async function forgotPasswordAction(_: AuthState, form: FormData): Promis
 
   const community = await getCommunity(slug)
   const email = community ? await emailFor(community.id, login) : null
+  // Limited per login whether or not it exists, so the answer still tells nothing.
+  const sends = await takeAttempt('email', email ?? `${slug}:${login}`)
+  if (sends.wait > 0) return { error: t.common.tooMany(waitMinutes(sends.wait)) }
   if (email) {
     const supabase = await createClient()
     await supabase.auth.resetPasswordForEmail(email)
@@ -196,11 +225,14 @@ export async function resetPasswordAction(_: AuthState, form: FormData): Promise
 
   const community = await getCommunity(slug)
   const email = community ? await emailFor(community.id, login) : null
+  const attempt = await takeAttempt('code', email ?? `${slug}:${login}`)
+  if (attempt.wait > 0) return { resetFor: login, error: t.common.tooMany(waitMinutes(attempt.wait)) }
   if (!email) return { resetFor: login, error: t.verify.badCode }
 
   const supabase = await createClient()
   const { error } = await supabase.auth.verifyOtp({ email, token, type: 'recovery' })
   if (error) return { resetFor: login, error: t.verify.badCode }
+  await refundAttempt('code', attempt)
 
   const { data, error: updateError } = await supabase.auth.updateUser({ password })
   if (updateError) return { resetFor: login, error: updateError.code === 'same_password' ? t.reset.samePassword : t.join.failed }
@@ -208,8 +240,9 @@ export async function resetPasswordAction(_: AuthState, form: FormData): Promise
   redirect(`/${slug}/chats`)
 }
 
-export async function signOutAction(slug: string) {
+// Log out on this device. The button then loads the start page in full (not a soft navigation), so
+// no page of this person's stays in the browser's memory for the next one to open with Back.
+export async function signOutAction() {
   const supabase = await createClient()
   await supabase.auth.signOut({ scope: 'local' })
-  redirect(`/${slug}`)
 }

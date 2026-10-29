@@ -6,9 +6,9 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { PublishAdLink } from '@/features/ads/components/PublishAdLink'
 import { AdsFilterButton } from '@/features/ads/components/AdFilterForm'
 import { AdList } from '@/features/ads/components/AdList'
-import { listAds } from '@/features/ads/queries'
+import { adFilterCount, adFilterKey } from '@/features/ads/filter'
+import { searchAds } from '@/features/ads/queries'
 import { getViewer } from '@/features/auth/queries'
-import { getProfile } from '@/features/profiles/queries'
 import { t } from '@/lib/i18n'
 import { RouteSkeleton } from '../../loading'
 
@@ -25,9 +25,9 @@ async function AdsContent({ params }: PageProps<'/[community]/ads'>) {
   const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
-  // Ads stay on this device until step 14, so their only real author is you: your score for the filter.
-  const [ads, own] = await Promise.all([listAds(), getProfile(community, viewer.userId)])
-  const scores = own ? { [own.id]: own.score } : {}
+  // A6: the first page through the saved filter (search_ads), its thumbnails signed.
+  const search = await searchAds(community)
+  if (!search) redirect(`/${community}/login`)
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
@@ -37,12 +37,13 @@ async function AdsContent({ params }: PageProps<'/[community]/ads'>) {
           right={
             <span className="flex">
               <ThemeToggle className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover rail:hidden" />
-              <AdsFilterButton community={community} />
+              <AdsFilterButton community={community} count={adFilterCount(search.filter)} />
               <PublishAdLink community={community} />
             </span>
           }
         />
-        <AdList community={community} seed={ads} onlyUserId={null} scores={scores} />
+        {/* A new saved filter starts the list over. */}
+        <AdList key={adFilterKey(search.filter)} community={community} cards={search.cards} paged />
       </main>
       <BottomNav community={community} active="ads" />
     </div>

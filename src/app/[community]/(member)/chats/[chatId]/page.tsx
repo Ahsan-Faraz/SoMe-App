@@ -7,7 +7,6 @@ import { getViewer } from '@/features/auth/queries'
 import { ChatThread } from '@/features/chats/components/ChatThread'
 import { getAdminChatId, getChatPage, getStatusLabels } from '@/features/chats/queries'
 import type { ChatRules } from '@/features/chats/types'
-import { listAlbums } from '@/features/albums/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { t } from '@/lib/i18n'
 import { RouteSkeleton } from '../../../loading'
@@ -29,14 +28,12 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
   if (!viewer) redirect(`/${community}/login`)
   const pending = viewer.role === 'pending'
 
-  const [chat, info, statuses, adminChatId, albums] = await Promise.all([
+  const [chat, info, statuses, adminChatId] = await Promise.all([
     getChatPage(community, chatId, viewer.userId),
     getCommunity(community),
     getStatusLabels(community),
     // An applicant may only open their conversation with the admin ("Chat with admin" on A25).
     pending ? getAdminChatId(community) : null,
-    // "From profile/album" for pictures: albums are on this device until backend step 13.
-    listAlbums(viewer.userId),
   ])
   if (pending && chatId !== adminChatId) redirect(`/${community}/pending`)
   if (!chat || !info) notFound()
@@ -113,7 +110,6 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
         viewerId={viewer.userId}
         isAdmin={chat.manage}
         rules={rules}
-        albums={albums}
         backHref={base}
       />
     </div>

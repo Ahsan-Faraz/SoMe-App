@@ -374,10 +374,14 @@ Browser-tested 2026-10-27 (admin + a group admin): a row edit survives a reload,
 
 ## Step 12 — Calendar
 
-- [ ] `events`: month view with marked dates
-- [ ] Group admin: add, edit, delete (with a confirm)
-- [ ] "DM Admin" on an event opens a DM with its creator
-- [ ] Hidden when the group's calendar is off
+- [x] `events`: month view with marked dates
+- [x] Group admin: add, edit, delete (with a confirm)
+- [x] "DM Admin" on an event opens a DM with its creator
+- [x] Hidden when the group's calendar is off
+
+Built with: migration `20261028120000_calendar.sql`: `events` (group, date, headline 1–120, text up to 4,000, creator; the group's delete removes them, a deleted account leaves them without a creator); no client grants. `calendar_month` reads one month by date (the marked dates are its dates; its admins always, its approved members while the calendar is on; `created_by` only when "DM Admin" can open: someone else, still approved, no block either way, checked once per creator). `save_event` / `delete_event` for the group's admins only (group admin or community admin), while the calendar is on; the date must be YYYY-MM-DD (a cast alone takes 'tomorrow'); the creator stays the one who added it; at most 20 events a day, so a month is a bounded read on one index. The app: the server reads the month the calendar opens on, the phone reads each other month once when it is opened and again when the page is shown after a change; add, edit and delete go straight to the database (delete asks first, on the calendar and in the form); `features/calendar/storage.ts` (device-only events) is deleted. Tests `16_calendar.test.sql` (35). Speed (`scripts/speed/14_calendar.sql`: 2,000 members, 200 groups, 130,952 events, one group with 20 a day for three years): a full month (600 events) 4.5 ms (10.5 before "DM Admin" was worked out per creator, not per event), a normal month 2.0 ms, an empty one 2.4, not a member 2.8; add 1.5, edit 1.3, delete 1.3.
+
+Browser-tested 2026-10-28 as a member (173): no "+", /calendar/new sends a member back, months read once each from the phone, an event with "DM Admin" opening a DM with its creator (no edit or delete for members). Still to do as the group admin: add, edit, delete (asked first), the calendar switched off.
 
 **Test it:**
 - A member can't add an event.
@@ -388,10 +392,14 @@ Browser-tested 2026-10-27 (admin + a group admin): a row edit survives a reload,
 
 ## Step 13 — Albums
 
-- [ ] `albums`, `album_photos`
-- [ ] + menu: Camera (Taken in app) / Upload image / Delete album; 🗑 on each photo
-- [ ] Password: set it, and open only after the server checks it (signed links valid 1 hour)
-- [ ] Locked albums show a folder icon, never a photo
+- [x] `albums`, `album_photos`
+- [x] + menu: Camera (Taken in app) / Upload image / Delete album; 🗑 on each photo
+- [x] Password: set it, and open only after the server checks it (signed links valid 1 hour)
+- [x] Locked albums show a folder icon, never a photo
+
+Built with: migration `20261029120000_albums.sql`: `albums` (name 1–80, `password_hash` = bcrypt cost 10, null = open), `album_photos` (a photo in one album, in order), `album_grants` (opened with the password: open for that person for an hour, the life of the signed links; a new password removes them), `album_attempts` (5 wrong passwords per album and person in 15 minutes, then "wait", checked before bcrypt runs). No client grants on the four tables: every read and write is an RPC that checks the caller, so the hash is never read by anyone. Albums are seen by their owner, and by approved members with no block either way (the community admin needs the password too). Reads: `album_list` (a locked album never has a cover, not even for its owner), `album_view` (photos only when the album is open to the caller), `my_album_photos` (your own, for "From profile/album"). Writes (owner, approved): `create_album` (at most 50), `add_album_photo` (at most 200 an album; your folder, both files uploaded; the album row is locked so uploads number in turn), `remove_album_photo` / `delete_album` (return the files), `set_album_password` (4–72 characters, or '' to remove), `open_album` ('open', 'wrong' or 'wait'). Files: no Storage policy lets other members read album files; the server signs an album's files with the service role right after `album_view` checked, once, that it is open to the caller (a per-file policy took 188 ms for 200 thumbnails); owners read their own folder through the existing own-folder policy. Also: `private.insert_photo` (every photo row: profile, application, chat, album) now finds the uploaded files through Storage's index (names are indexed in the "C" collation; the default one read every object: 13 ms, growing with Storage); same arguments and result. The app: list and album from the server (covers and photos signed there, one call each); create, delete, add, remove, set and open are Server Actions that send the updated page back in the same round trip, shown at once on screen; photos are resized on the phone and uploaded straight to your folder first. "From profile/album" (chat picture sheet, ad editor) reads your album photos when the picker opens, not on every chat page (`listAlbums` used to run on each chat, DM and ad page); the picked photo is copied. `features/albums/storage.ts` (device albums) and the mock albums are deleted; `todayLabel` became `formatDay()`. Tests `17_albums.test.sql` (46). Speed (`scripts/speed/15_albums.sql`: 1,000 members, 2,050 albums, 29,985 photos; one member with 50 albums of 200): list 3.8 ms, open album (200 photos) 4.3, locked 1.3, your 10,000 photos (newest 200) 6.6, signing 200 of your own thumbnails 10, add a photo 3.1 (18.8 before the index fix), create 2.0; a password check (bcrypt) 74–77 ms on purpose, an album already open 0.7.
+
+Browser-tested 2026-10-28 as the owner (173): create, add a photo (preview, then the signed photo), set a password (stored as a bcrypt hash; the list then shows a locked folder with no photo), "From profile/album" in a group chat. Still to do as another member: the password form (wrong, right, 5 wrong then wait).
 
 **Test it:**
 - A wrong password returns no photos.
@@ -402,10 +410,14 @@ Browser-tested 2026-10-27 (admin + a group admin): a row edit survives a reload,
 
 ## Step 14 — Ads
 
-- [ ] `ads`: looking for (multi), headline, text, district, place, image (camera / upload / from profile/album)
-- [ ] Age, status and score come from the author's profile
-- [ ] `search_ads` + filter (same engine as profiles), saved on the account
-- [ ] My ads; edit; delete; Profile and DM buttons on others' ads
+- [x] `ads`: looking for (multi), headline, text, district, place, image (camera / upload / from profile/album)
+- [x] Age, status and score come from the author's profile
+- [x] `search_ads` + filter (same engine as profiles), saved on the account
+- [x] My ads; edit; delete; Profile and DM buttons on others' ads
+
+Built with: migration `20261030120000_ads.sql`: `ads` (Looking for = 1 or more Status ids, headline 1–120, text up to 4,000, district, place up to 80, an image row, published / updated; `search_text` = headline, text and place lower-cased once when saved); no client grants. Age, Status and score are never on the ad: every read takes them from the author's profile. `members.ad_filter` (written only by `save_ad_filter`, which keeps known ids; read with `ad_filter`). `search_ads` (the Ads tab, newest first, keyset on published at + id, 30 a page, 100 at most): approved authors only, no block either way, members hidden from search left out (your own ads stay in); filters text (headline, text, place, author, district name), the author's Status, age (a couple matches when either person is in range) and score (age and score only while the community shows them), the ad's Looking for, district and place, my stars. The allowed authors are one hashed set worked out once; the ads are then read newest first until the page is full. `member_ads` (My ads and a profile's Ads: themselves, or approved with no block; a hidden member's ads stay on their profile), `ad_view` (one ad with its text and full image; null across a block or for a removed author). `save_ad` (publish or edit, yours only, approved, at most 20 each; Looking for and district must be the community's; a new image replaces the old one and its files are returned) and `delete_ad` (returns the image's files); the files are removed after the response. Images: always a new copy in your folder of the private bucket ("From profile/album" is fetched and uploaded again). The server signs a page's images with the service role right after the RPC checked access, like albums: a Storage policy would check each file again (30 thumbnails 8.4 ms, and `photos` has no index on its paths); signing on the server checks none. The app: the Ads tab's first page from the server, the next pages through `moreAdsAction` (signed in the same round trip), reloaded when the page is shown again; the filter is saved from the phone (`save_ad_filter`) and starts the list over; publish uploads the image first, then `saveAdAction`; the editor and filter work with ids. `features/ads/storage.ts` (device-only ads and the localStorage filter), the mock ads and `getChoiceLabels` are deleted. Tests `18_ads.test.sql` (65). Speed (`scripts/speed/16_ads.sql`: 5,000 members, 3 Statuses with birth dates, 10,000 ads, half with an image, 1,000 notes, 400 blocks): first page 18 ms, Status 17, three filters 16, age 30, score 16, my stars 26, text 31, text that matches nobody (every ad checked) 28, a page 4,000 ads deep 20; one ad 1.5, a member's ads 1.9; publish 1.7, edit with a new image 2.1, delete 0.8. Before the speed fixes: the first page 46 ms (all ads joined to their authors before the sort) and a text search 74 ms (lower() of every ad per search).
+
+Still to do: the browser checks (after step 15, as agreed).
 
 **Test it:**
 - Changing your age updates it on your ads.
@@ -416,19 +428,27 @@ Browser-tested 2026-10-27 (admin + a group admin): a row edit survives a reload,
 
 ## Step 15 — Launch checks
 
-- [ ] Cookie notice + privacy page link on the start page
-- [ ] Delete my account (removes data and files)
-- [ ] EU email provider live (custom SMTP); Auth rate limits set (login runs on the server, so Supabase sees the server's IP for every user: raise the sign-in limit or add our own per-IP limit)
+Sorted (2026-10-28): what is code (done here), and what is an account, billing, DNS or legal step for you or the client (not done by us; each one is asked first).
+
+**Code**
+- [x] Cookie notice + privacy page link on the start page (already there: the banner is in the root layout, so it shows on every page including the start page; the start page links the privacy terms on phone and desktop. Only the privacy text changed: you can delete your account yourself)
+- [x] Delete my account (removes data and files)
+- [x] Our own rate limit on the sign-in steps (login runs on the server, so Supabase sees the server's IP for every user)
+- [x] Every main query checked with `EXPLAIN ANALYZE` against the targets (`node scripts/speed-all.mjs`)
+- [x] Load test plan: 100 users online sending messages (`docs/load-test-plan.md`); the run waits for the decisions in its section 6
+
+**Yours or the client's (accounts, billing, DNS, legal)**
+- [ ] EU email provider live (custom SMTP); Supabase Auth rate limits checked (our own limit now protects each sign-in step, but Supabase's per-IP limits still see one IP: raise them so they don't stop everyone together)
 - [ ] Leaked password protection on (Auth settings)
 - [ ] Sender on our own domain, authenticated in Brevo (DKIM + DMARC); not a Gmail address (one per community domain, see below)
-- [ ] Load test: 100 users online sending messages; check Realtime and query speed
-- [ ] Every main query checked with `EXPLAIN ANALYZE` against the targets
 - [ ] Switch Supabase to the **Pro** plan before real users
 - [ ] Back up the database
-- [ ] Each community domain added to the Vercel project (DNS records at the registrar, HTTPS automatic)
-- [ ] Supabase Auth: Site URL and redirect allow-list list every domain; `COMMUNITY_DOMAINS` set on Vercel
-- [ ] Vercel **Pro** (Hobby is non-commercial only)
-- [ ] Legal, by the client (not code): data processing agreement with each community admin, privacy policy naming Supabase/Vercel/Brevo and the transfer basis, breach runbook (IMY within 72 hours), contact point + report flow (DSA)
+- [ ] Hosting, domains and HTTPS: **conflict, waiting for your answer.** This plan says each domain goes to the Vercel project, `COMMUNITY_DOMAINS` on Vercel, and Vercel **Pro** (Hobby is non-commercial only). `docs/scope-boundaries.md` says we now deploy to one Hostinger domain. Which one holds decides these items (and the rate limit needs the host to pass the visitor's IP in `x-real-ip` or `x-forwarded-for`)
+- [ ] Supabase Auth: Site URL and redirect allow-list list every domain
+- [ ] Load test run (where, which plan, and the 100 test accounts: `docs/load-test-plan.md` section 6)
+- [ ] Legal, by the client (not code): data processing agreement with each community admin, privacy policy naming Supabase/the host/Brevo and the transfer basis, breach runbook (IMY within 72 hours), contact point + report flow (DSA)
+
+Built with: migration `20261031120000_launch.sql`, only adding. **Rate limits:** `rate_limits` (bucket, SHA-256 of the key, hits, since; no client grants) with `rate_limit_take` (takes one attempt for every key or says how many seconds to wait; the rows are locked in order, so attempts sent at once can't all pass) and `rate_limit_refund`, for the service role only. `src/lib/rate-limit.ts` counts per login and per IP (IPv6 per /64; no IP header = only the login limit, never one key for everyone; a failed check refuses the attempt): passwords 5 per login / 30 per IP in 15 minutes (log in, join with an existing login, delete my account), codes the same (sign-up code, reset code), emails 3 per email / 10 per IP an hour (join, resend, forgot password, the code re-sent at login). A success gives the attempt back, so people who get it right never wait. The answers still tell nothing about which accounts exist. **Delete my account:** `delete_my_account` in one transaction: the community's last admin can't; every file in your folders of both buckets (also uploads that never got a row, through Storage's index); other people's photos that lose their post with it (in your DMs, comments on your posts) are deleted too; the member row and everything below it (cascades); the login itself (email, password, sessions) when no account is left and you are not a platform admin. The server asks for your password again (limited like logging in, checked on a client that keeps nothing), removes the returned files after the response in batches of 1,000, and logs you out. A link "Delete my account" under Log out on your profile (members and applicants); the page lists what goes. Tests `19_launch.test.sql` (34). Speed (`scripts/speed/17_launch.sql`): a rate limit check 0.6 ms per login; deleting the heaviest account (50 albums of 200 photos = 20,000 files, 4,000 posts, 20 DMs) 1.3–1.7 s, all of it the per-row checks of 10,000 photo rows (no index missing). `scripts/speed-all.mjs` runs every speed script and prints one table: all within target (chat list 2.6 ms, chat page 2.3, profile search 9–32, ad search 16–38).
 
 **Test it:** a full run-through as a new user (sign up → apply → approved → profile → chat → group → album → ad), on a real iPhone and a real Android phone.
 

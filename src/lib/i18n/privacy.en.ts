@@ -40,7 +40,7 @@ export const privacyEn: PrivacyText = {
     },
     {
       title: 'Your rights',
-      body: 'You can ask to see the data we hold about you, have it corrected, or have it deleted. Ask a community admin. You can also complain to the Swedish Authority for Privacy Protection (IMY).',
+      body: 'You can ask to see the data we hold about you, have it corrected, or have it deleted: ask a community admin, or delete your account yourself at the bottom of your profile. You can also complain to the Swedish Authority for Privacy Protection (IMY).',
     },
   ],
 }

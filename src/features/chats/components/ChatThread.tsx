@@ -8,8 +8,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon } from '@/components/ui/Icon'
 import { scrollArea } from '@/components/ui/Screen'
-import type { PickedPhoto } from '@/features/albums/components/AlbumPhotos'
-import type { Album } from '@/features/albums/types'
+import type { PickedPhoto } from '@/features/albums/types'
 import type { UploadedPhoto } from '@/features/profiles/photo'
 import { formatPostTime } from '@/lib/format'
 import { t } from '@/lib/i18n'
@@ -63,7 +62,6 @@ export function ChatThread({
   viewerId,
   isAdmin,
   rules,
-  albums,
   backHref,
 }: {
   community: string
@@ -78,7 +76,6 @@ export function ChatThread({
   viewerId: string
   isAdmin: boolean // runs this group: may delete any post
   rules: ChatRules
-  albums: Album[] // "From profile/album" (on this device until backend step 13)
   backHref: string
 }) {
   const router = useRouter()
@@ -639,7 +636,7 @@ export function ChatThread({
         />
       ) : null}
 
-      {picture ? <PictureSheet community={community} viewerId={viewerId} albums={albums} onClose={() => setPicture(false)} onPick={(shot) => void sendPicture(shot)} /> : null}
+      {picture ? <PictureSheet communityId={communityId} onClose={() => setPicture(false)} onPick={(shot) => void sendPicture(shot)} /> : null}
       {viewing ? <ImageViewer {...viewing} onClose={() => setViewing(null)} /> : null}
     </>
   )

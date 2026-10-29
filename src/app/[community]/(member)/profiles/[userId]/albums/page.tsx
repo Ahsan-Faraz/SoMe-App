@@ -18,14 +18,16 @@ export default function AlbumsPage(props: PageProps<'/[community]/profiles/[user
   )
 }
 
+// B3: the profile and its albums in one round trip (covers signed on the server).
 async function AlbumsContent({ params, searchParams }: PageProps<'/[community]/profiles/[userId]/albums'>) {
   const { community, userId } = await params
   const requested = (await searchParams).add
   const adding = requested === '1' || (Array.isArray(requested) && requested[0] === '1')
   const viewer = await getViewer(community)
   if (!viewer) redirect(`/${community}/login`)
+  if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const [profile, albums] = await Promise.all([getProfile(community, userId), listAlbums(userId)])
+  const [profile, albums] = await Promise.all([getProfile(community, userId), listAlbums(community, userId)])
   if (!profile) notFound()
 
   return (
@@ -41,7 +43,7 @@ async function AlbumsContent({ params, searchParams }: PageProps<'/[community]/p
           ) : undefined
         }
       />
-      <AlbumList community={community} userId={profile.id} own={profile.own} seed={albums} startAdding={adding} />
+      <AlbumList community={community} userId={profile.id} own={profile.own} albums={albums} startAdding={adding && profile.own} />
     </div>
   )
 }

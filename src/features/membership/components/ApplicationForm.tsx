@@ -6,7 +6,7 @@ import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { buttonClass } from '@/components/ui/Button'
 import { GrowingTextarea } from '@/components/ui/GrowingTextarea'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
-import { todayLabel } from '@/features/albums/storage'
+import { formatDay } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { blobDataUrl, resizeImage, type ResizedImage } from '@/lib/image'
 import { IMAGE_FULL_PX } from '@/lib/limits'
@@ -63,7 +63,7 @@ export function ApplicationForm({
 
   async function pick(slot: Slot, file: Blob, verified: boolean) {
     const resized = await resizeImage(file, IMAGE_FULL_PX)
-    setSlot(slot)({ src: await blobDataUrl(resized.blob), verified, date: todayLabel(), file: resized })
+    setSlot(slot)({ src: await blobDataUrl(resized.blob), verified, date: formatDay(), file: resized })
   }
 
   // The picked image in the private bucket (once: a refused try keeps the upload for the next).
@@ -107,7 +107,7 @@ export function ApplicationForm({
       <CameraCapture
         onClose={() => setCamera(null)}
         onCapture={(src, file) => {
-          setSlot(camera)({ src, verified: true, date: todayLabel(), file })
+          setSlot(camera)({ src, verified: true, date: formatDay(), file })
           setCamera(null)
         }}
       />

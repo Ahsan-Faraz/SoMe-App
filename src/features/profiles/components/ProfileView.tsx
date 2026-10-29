@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ThemePicker } from '@/components/ThemePicker'
 import { LogoutButton } from '@/features/auth/components/LogoutButton'
@@ -97,6 +98,11 @@ export function ProfileView({
               withLabel
               className="mt-5 flex h-14 w-full items-center gap-3 rounded-2xl border border-line px-4 text-left text-[16px] font-semibold text-danger hover:bg-hover sm:max-w-xs"
             />
+          ) : null}
+          {profile.own ? (
+            <Link href={`/${community}/account/delete`} className="mt-3 block w-fit text-[15px] font-semibold text-muted underline hover:text-danger">
+              {t.account.title}
+            </Link>
           ) : null}
         </div>
       ) : null}

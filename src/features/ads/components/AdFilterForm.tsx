@@ -1,22 +1,22 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ChipSelect, FilterSection, NumberInput, NumberRange, filterInput } from '@/components/ui/FilterFields'
 import { Icon } from '@/components/ui/Icon'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
+import type { Builtins, Choice } from '@/features/fields/types'
 import { MAX_SCORE, MAX_STARS } from '@/features/profiles/options'
 import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
-import { adFilterCount, readAdFilter, watchAdFilter, writeAdFilter } from '../storage'
+import { FILTER_TEXT_MAX } from '@/lib/limits'
+import { createClient } from '@/lib/supabase/browser'
+import { toSavedAdFilter } from '../filter'
 import { emptyAdFilter, type AdFilter } from '../types'
 
-export function AdsFilterButton({ community }: { community: string }) {
-  const [count, setCount] = useState(0)
-
-  useEffect(() => watchAdFilter(community, (filter) => setCount(adFilterCount(filter))), [community])
-
+// count: how many filters the saved one sets (the server read it with the first page).
+export function AdsFilterButton({ community, count }: { community: string; count: number }) {
   return (
     <Link href={`/${community}/ads/filter`} aria-label={t.ads.filter} className="relative inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover">
       <Icon name="filter" />
@@ -25,61 +25,90 @@ export function AdsFilterButton({ community }: { community: string }) {
   )
 }
 
-// statuses / districts: the community's active lists (profile builder).
-export function AdFilterForm({ community, statuses, districts }: { community: string; statuses: readonly string[]; districts: readonly string[] }) {
-  const [filter, setFilter] = useState<AdFilter>(emptyAdFilter)
+// statuses / districts: the community's active lists (profile builder). builtins: age and score
+// filters only while the community shows them (search_ads ignores them otherwise).
+export function AdFilterForm({
+  community,
+  communityId,
+  saved,
+  statuses,
+  districts,
+  builtins,
+}: {
+  community: string
+  communityId: string
+  saved: AdFilter
+  statuses: readonly Choice[]
+  districts: readonly Choice[]
+  builtins: Builtins
+}) {
+  const [filter, setFilter] = useState<AdFilter>(saved)
+  const [error, setError] = useState('')
+  const [pending, startTransition] = useTransition()
   const goBack = useGoBack(community)
   const set = <K extends keyof AdFilter>(name: K) => (value: AdFilter[K]) => setFilter((current) => ({ ...current, [name]: value }))
+  const names = Object.fromEntries(statuses.map((choice) => [choice.id, choice.label]))
+  const name = (id: string) => names[id] ?? ''
+  const statusIds = statuses.map((choice) => choice.id)
 
-  // D1: edit freely here; the search runs once on Show. Saved between sessions.
-  useEffect(() => setFilter(readAdFilter(community)), [community])
-
+  // D1: edit freely here; the search runs once on Show. Saved on the account (save_ad_filter), so it
+  // is the same on every device.
   return (
     <form
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault()
-        writeAdFilter(community, filter)
-        goBack(`/${community}/ads`)
+        setError('')
+        startTransition(async () => {
+          const { error } = await createClient().rpc('save_ad_filter', { p_community: communityId, p_filter: toSavedAdFilter(filter) })
+          if (error) setError(t.common.error)
+          else goBack(`/${community}/ads`)
+        })
       }}
     >
       <div className={scrollArea}>
         <div className="mx-auto grid max-w-lg gap-6 px-4 py-6 sm:px-8">
           <FilterSection label={t.profiles.substring}>
-            <input value={filter.text} onChange={(event) => set('text')(event.target.value)} aria-label={t.profiles.substring} className={filterInput} />
+            <input value={filter.text} onChange={(event) => set('text')(event.target.value)} aria-label={t.profiles.substring} maxLength={FILTER_TEXT_MAX} className={filterInput} />
           </FilterSection>
           <FilterSection label={t.profiles.status}>
-            <ChipSelect options={statuses} value={filter.statuses} onChange={set('statuses')} />
+            <ChipSelect options={statusIds} value={filter.statuses} onChange={set('statuses')} format={name} />
           </FilterSection>
-          <FilterSection label={t.profiles.age}>
-            <NumberRange
-              label={t.profiles.age}
-              from={filter.minAge}
-              to={filter.maxAge}
-              onFrom={set('minAge')}
-              onTo={set('maxAge')}
-              fromLabel={t.profiles.ageFrom}
-              toLabel={t.profiles.ageTo}
-              max={120}
-            />
-          </FilterSection>
+          {builtins.age ? (
+            <FilterSection label={t.profiles.age}>
+              <NumberRange
+                label={t.profiles.age}
+                from={filter.minAge}
+                to={filter.maxAge}
+                onFrom={set('minAge')}
+                onTo={set('maxAge')}
+                fromLabel={t.profiles.ageFrom}
+                toLabel={t.profiles.ageTo}
+                max={120}
+              />
+            </FilterSection>
+          ) : null}
           <FilterSection label={t.ads.lookingFor}>
-            <ChipSelect options={statuses} value={filter.lookingFor} onChange={set('lookingFor')} />
+            <ChipSelect options={statusIds} value={filter.lookingFor} onChange={set('lookingFor')} format={name} />
           </FilterSection>
           <FilterSection label={t.profiles.district}>
             <select value={filter.district} onChange={(event) => set('district')(event.target.value)} aria-label={t.profiles.district} className={filterInput}>
               <option value=""> </option>
-              {districts.map((item) => (
-                <option key={item}>{item}</option>
+              {districts.map((choice) => (
+                <option key={choice.id} value={choice.id}>
+                  {choice.label}
+                </option>
               ))}
             </select>
           </FilterSection>
           <FilterSection label={t.profiles.place}>
-            <input value={filter.place} onChange={(event) => set('place')(event.target.value)} aria-label={t.profiles.place} className={filterInput} />
+            <input value={filter.place} onChange={(event) => set('place')(event.target.value)} aria-label={t.profiles.place} maxLength={FILTER_TEXT_MAX} className={filterInput} />
           </FilterSection>
-          <FilterSection label={t.profiles.scoreMin(MAX_SCORE)}>
-            <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin(MAX_SCORE)} max={MAX_SCORE} />
-          </FilterSection>
+          {builtins.score ? (
+            <FilterSection label={t.profiles.scoreMin(MAX_SCORE)}>
+              <NumberInput value={filter.minScore} onChange={set('minScore')} placeholder={t.profiles.min} label={t.profiles.scoreMin(MAX_SCORE)} max={MAX_SCORE} />
+            </FilterSection>
+          ) : null}
           <FilterSection label={t.profiles.starsRange(MAX_STARS)}>
             <NumberRange
               label={t.profiles.stars}
@@ -92,6 +121,11 @@ export function AdFilterForm({ community, statuses, districts }: { community: st
               max={MAX_STARS}
             />
           </FilterSection>
+          {error ? (
+            <p role="alert" className="text-[15px] font-semibold text-danger">
+              {error}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className={bottomBar}>
@@ -99,7 +133,7 @@ export function AdFilterForm({ community, statuses, districts }: { community: st
           <button type="button" onClick={() => setFilter(emptyAdFilter)} className="text-[15px] font-semibold text-accent">
             {t.profiles.clear}
           </button>
-          <Button type="submit" className="flex-1">
+          <Button type="submit" className="flex-1" disabled={pending}>
             {t.ads.show}
           </Button>
         </div>

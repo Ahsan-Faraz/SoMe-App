@@ -1,146 +1,201 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { scrollArea } from '@/components/ui/Screen'
 import { t } from '@/lib/i18n'
-import { imageDataUrl } from '@/lib/image'
-import { albumKey, loadAlbums, saveAlbums, todayLabel } from '../storage'
-import type { Album, AlbumImage } from '../types'
+import type { ResizedImage } from '@/lib/image'
+import { addAlbumPhotoAction, deleteAlbumAction, openAlbumAction, removeAlbumPhotoAction, setAlbumPasswordAction } from '../actions'
+import type { AlbumDetail, AlbumPhoto } from '../types'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
 const LONG_PRESS_MS = 450
 
-export function AlbumView({ community, userId, albumId, own, seed }: { community: string; userId: string; albumId: string; own: boolean; seed: Album[] }) {
-  const key = albumKey(community, userId)
+// A password for the album actions, inside a FormData so no server log shows it.
+function secret(password: string) {
+  const form = new FormData()
+  form.set('password', password)
+  return form
+}
+
+type Change = { add: AlbumPhoto } | { remove: string }
+
+// B4: one album (server data; photos are signed links). Locked: the password form, checked in the
+// database (open for an hour when right). The owner adds photos (camera = Taken in app, or upload:
+// resized on the phone, uploaded to their folder, then added), deletes them and the album (asked
+// first), and sets or removes the password. Changes show at once; the page then comes back saved.
+export function AlbumView({
+  community,
+  communityId,
+  viewerId,
+  album,
+  listHref,
+}: {
+  community: string
+  communityId: string
+  viewerId: string
+  album: AlbumDetail
+  listHref: string
+}) {
+  const own = album.access === 'owner'
   const fileRef = useRef<HTMLInputElement>(null)
-  const initial = seed.find((item) => item.id === albumId) ?? null
-  const [album, setAlbum] = useState<Album | null>(initial)
+  const [photos, change] = useOptimistic(album.photos, (current, next: Change) =>
+    'add' in next ? [...current, next.add] : current.filter((photo) => photo.id !== next.remove),
+  )
   const [password, setPassword] = useState('')
-  const [unlocked, setUnlocked] = useState(Boolean(initial && (!initial.password || own)))
-  const [wrong, setWrong] = useState(false)
+  const [error, setError] = useState('')
   const [camera, setCamera] = useState(false)
   const [ask, setAsk] = useState<string | null>(null)
-  const [lock, setLock] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
   const [askAlbum, setAskAlbum] = useState(false)
-  const router = useRouter()
+  const [pending, startTransition] = useTransition()
 
-  useEffect(() => {
-    const found = loadAlbums(key, seed).find((item) => item.id === albumId) ?? null
-    setAlbum(found)
-    if (found && (!found.password || own || sessionStorage.getItem(`some:album-open:${found.id}`) === '1')) setUnlocked(true)
-  }, [key, seed, albumId, own])
-
-  function commit(next: Album) {
-    const albums = loadAlbums(key, seed).map((item) => (item.id === next.id ? next : item))
-    saveAlbums(key, albums)
-    setAlbum(next)
+  const run = (work: () => Promise<{ error: string } | undefined>) => {
+    setError('')
+    startTransition(async () => {
+      const result = await work()
+      if (result) setError(result.error)
+    })
   }
 
-  function addImage(src: string, verified: boolean) {
-    if (!album) return
-    const image: AlbumImage = { id: `img-${Date.now()}`, src, date: todayLabel(), verified }
-    commit({ ...album, images: [...album.images, image] })
+  function addPhoto(source: Blob | ResizedImage, verified: boolean) {
     setCamera(false)
+    const preview = URL.createObjectURL(source instanceof Blob ? source : source.blob)
+    run(async () => {
+      change({ add: { id: `new-${preview}`, src: preview, width: null, height: null, verified, date: t.albums.uploading } })
+      try {
+        const { uploadPhoto } = await import('@/features/profiles/upload')
+        const photo = await uploadPhoto('private', communityId, viewerId, source, verified)
+        return await addAlbumPhotoAction(community, album.id, { path: photo.path, thumb_path: photo.thumbPath, width: photo.width, height: photo.height, taken_in_app: photo.takenInApp })
+      } catch {
+        return { error: t.albums.notSaved }
+      } finally {
+        // Kept until the saved photo has replaced the preview.
+        window.setTimeout(() => URL.revokeObjectURL(preview), 30_000)
+      }
+    })
   }
 
-  if (!album) return <p className="px-5 py-10 text-muted">{t.albums.empty}</p>
-
-  if (!unlocked) {
+  if (album.access === 'locked') {
     return (
       <form
         className="mx-auto grid max-w-sm gap-3 px-5 py-8"
         onSubmit={(event) => {
           event.preventDefault()
-          if (password === album.password) {
-            sessionStorage.setItem(`some:album-open:${album.id}`, '1')
-            setUnlocked(true)
-            setWrong(false)
-          } else setWrong(true)
+          if (password) run(() => openAlbumAction(community, album.id, secret(password)))
         }}
       >
         <p className="text-[16px] text-ink-soft">{t.albums.locked}</p>
         <input
           type="password"
           value={password}
+          maxLength={72}
+          autoComplete="off"
           onChange={(event) => setPassword(event.target.value)}
           placeholder={t.albums.password}
           aria-label={t.albums.password}
           className="h-11 rounded-xl border border-line px-3 text-[16px] outline-none focus:border-accent"
         />
-        {wrong ? <p className="text-[14px] text-danger">{t.albums.wrong}</p> : null}
-        <button type="submit" className="h-12 rounded-xl bg-accent font-semibold text-white">
+        {error ? (
+          <p role="alert" className="text-[14px] text-danger">
+            {error}
+          </p>
+        ) : null}
+        <button type="submit" disabled={pending} className="h-12 rounded-xl bg-accent font-semibold text-white disabled:opacity-50">
           {t.albums.unlock}
         </button>
       </form>
     )
   }
 
-  if (camera) return <CameraCapture onClose={() => setCamera(false)} onCapture={(src) => addImage(src, true)} />
+  if (camera) return <CameraCapture onClose={() => setCamera(false)} onCapture={(_src, image) => addPhoto(image, true)} />
 
   return (
     <div className={`${scrollArea} px-4 py-5 pb-24 sm:px-8`}>
       {own ? (
         <form
-          className="mb-5 flex gap-2"
+          className="mb-5 grid gap-2"
           onSubmit={(event) => {
             event.preventDefault()
-            commit({ ...album, password: lock ?? album.password })
+            if (!password) return
+            const next = password
+            setPassword('')
+            run(() => setAlbumPasswordAction(community, album.id, secret(next)))
           }}
         >
-          <input
-            type="password"
-            value={lock ?? album.password}
-            onChange={(event) => setLock(event.target.value)}
-            placeholder={album.password ? t.albums.setPassword : t.albums.password}
-            aria-label={t.albums.setPassword}
-            className="h-11 min-w-0 flex-1 rounded-xl border border-line px-3 text-[16px] outline-none focus:border-accent"
-          />
-          <button type="submit" className="h-11 rounded-xl bg-soft px-4 font-semibold">
-            {t.albums.setPassword}
-          </button>
+          {album.locked ? <p className="text-[14px] text-muted">{t.albums.passwordOn}</p> : null}
+          <span className="flex gap-2">
+            <input
+              type="password"
+              value={password}
+              maxLength={72}
+              autoComplete="new-password"
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder={t.albums.password}
+              aria-label={t.albums.setPassword}
+              className="h-11 min-w-0 flex-1 rounded-xl border border-line px-3 text-[16px] outline-none focus:border-accent"
+            />
+            <button type="submit" disabled={pending} className="h-11 rounded-xl bg-soft px-4 font-semibold disabled:opacity-50">
+              {t.albums.setPassword}
+            </button>
+          </span>
+          {album.locked ? (
+            <button type="button" disabled={pending} onClick={() => run(() => setAlbumPasswordAction(community, album.id, secret('')))} className="justify-self-start text-[15px] font-semibold text-accent disabled:opacity-50">
+              {t.albums.removePassword}
+            </button>
+          ) : null}
         </form>
       ) : null}
+      {error ? (
+        <p role="alert" className="mb-4 text-[15px] text-danger">
+          {error}
+        </p>
+      ) : null}
+      {photos.length === 0 ? <p className="py-10 text-center text-muted">{t.albums.noPhotos}</p> : null}
       <ul className="grid gap-4">
-        {album.images.map((image) => (
-          <li
-            key={image.id}
-            // iOS: long-press is our delete; no text selection or Safari image menu (touch only).
-            className="pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
-            onContextMenu={(event) => {
-              if (!own) return
-              event.preventDefault()
-              setAsk(image.id)
-            }}
-            onPointerDown={(event) => {
-              if (!own) return
-              const timer = window.setTimeout(() => setAsk(image.id), LONG_PRESS_MS)
-              const clear = () => window.clearTimeout(timer)
-              event.currentTarget.addEventListener('pointerup', clear, { once: true })
-              event.currentTarget.addEventListener('pointercancel', clear, { once: true })
-            }}
-          >
-            <span className="relative block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image.src} alt="" draggable={false} className="aspect-video w-full rounded-2xl object-cover" />
-              {own ? (
-                <button
-                  type="button"
-                  aria-label={t.albums.deleteImage}
-                  title={t.albums.deleteImage}
-                  onClick={() => setAsk(image.id)}
-                  className="absolute top-2 right-2 grid size-10 place-items-center rounded-full bg-black/55 text-white backdrop-blur hover:bg-black/70"
-                >
-                  <Icon name="trash" className="size-5" />
-                </button>
+        {photos.map((photo) => {
+          const saved = !photo.id.startsWith('new-')
+          return (
+            <li
+              key={photo.id}
+              // iOS: long-press is our delete; no text selection or Safari image menu (touch only).
+              className={`pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none] ${saved ? '' : 'opacity-60'}`}
+              onContextMenu={(event) => {
+                if (!own || !saved) return
+                event.preventDefault()
+                setAsk(photo.id)
+              }}
+              onPointerDown={(event) => {
+                if (!own || !saved) return
+                const timer = window.setTimeout(() => setAsk(photo.id), LONG_PRESS_MS)
+                const clear = () => window.clearTimeout(timer)
+                event.currentTarget.addEventListener('pointerup', clear, { once: true })
+                event.currentTarget.addEventListener('pointercancel', clear, { once: true })
+              }}
+            >
+              <span className="relative block">
+                {/* A signed link (an hour), or the photo being added. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo.src} alt="" draggable={false} loading="lazy" decoding="async" className="aspect-video w-full rounded-2xl bg-sunken object-cover" />
+                {own && saved ? (
+                  <button
+                    type="button"
+                    aria-label={t.albums.deleteImage}
+                    title={t.albums.deleteImage}
+                    onClick={() => setAsk(photo.id)}
+                    className="absolute top-2 right-2 grid size-10 place-items-center rounded-full bg-black/55 text-white backdrop-blur hover:bg-black/70"
+                  >
+                    <Icon name="trash" className="size-5" />
+                  </button>
+                ) : null}
+              </span>
+              {photo.verified || photo.date ? (
+                <p className="mt-1 text-[14px] text-muted">{photo.verified ? `✓ ${t.chats.takenInApp} · ${photo.date}` : photo.date}</p>
               ) : null}
-            </span>
-            <p className="mt-1 text-[14px] text-muted">{image.verified ? `✓ ${t.chats.takenInApp} · ${image.date}` : image.date}</p>
-          </li>
-        ))}
+            </li>
+          )
+        })}
       </ul>
       {own ? (
         <button
@@ -158,9 +213,10 @@ export function AlbumView({ community, userId, albumId, own, seed }: { community
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={async (event) => {
+        onChange={(event) => {
           const file = event.target.files?.[0]
-          if (file) addImage(await imageDataUrl(file, 1600), false)
+          event.target.value = ''
+          if (file) addPhoto(file, false)
         }}
       />
       {menu ? (
@@ -188,10 +244,11 @@ export function AlbumView({ community, userId, albumId, own, seed }: { community
           <div className="mt-3 flex gap-2">
             <button
               type="button"
-              className="h-11 flex-1 rounded-xl bg-danger font-semibold text-white"
+              disabled={pending}
+              className="h-11 flex-1 rounded-xl bg-danger font-semibold text-white disabled:opacity-50"
               onClick={() => {
-                saveAlbums(key, loadAlbums(key, seed).filter((item) => item.id !== album.id))
-                router.replace(`/${community}/profiles/${userId}/albums`)
+                setAskAlbum(false)
+                run(() => deleteAlbumAction(community, album.id, listHref))
               }}
             >
               {t.albums.confirm}
@@ -210,8 +267,12 @@ export function AlbumView({ community, userId, albumId, own, seed }: { community
               type="button"
               className="h-11 flex-1 rounded-xl bg-danger font-semibold text-white"
               onClick={() => {
-                commit({ ...album, images: album.images.filter((image) => image.id !== ask) })
+                const photoId = ask
                 setAsk(null)
+                run(async () => {
+                  change({ remove: photoId })
+                  return removeAlbumPhotoAction(community, photoId)
+                })
               }}
             >
               {t.albums.confirm}

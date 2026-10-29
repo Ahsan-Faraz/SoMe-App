@@ -61,6 +61,199 @@ export type Database = {
           },
         ]
       }
+      ads: {
+        Row: {
+          body: string
+          community_id: string
+          district_id: string | null
+          headline: string
+          id: string
+          looking_for: string[]
+          photo_id: string | null
+          place: string
+          published_at: string
+          search_text: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          community_id: string
+          district_id?: string | null
+          headline: string
+          id?: string
+          looking_for: string[]
+          photo_id?: string | null
+          place?: string
+          published_at?: string
+          search_text?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          community_id?: string
+          district_id?: string | null
+          headline?: string
+          id?: string
+          looking_for?: string[]
+          photo_id?: string | null
+          place?: string
+          published_at?: string
+          search_text?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_community_id_district_id_fkey"
+            columns: ["community_id", "district_id"]
+            isOneToOne: false
+            referencedRelation: "community_options"
+            referencedColumns: ["community_id", "id"]
+          },
+          {
+            foreignKeyName: "ads_community_id_photo_id_fkey"
+            columns: ["community_id", "photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["community_id", "id"]
+          },
+          {
+            foreignKeyName: "ads_community_id_user_id_fkey"
+            columns: ["community_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+        ]
+      }
+      album_attempts: {
+        Row: {
+          album_id: string
+          failures: number
+          since: string
+          user_id: string
+        }
+        Insert: {
+          album_id: string
+          failures: number
+          since: string
+          user_id: string
+        }
+        Update: {
+          album_id?: string
+          failures?: number
+          since?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_attempts_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      album_grants: {
+        Row: {
+          album_id: string
+          until: string
+          user_id: string
+        }
+        Insert: {
+          album_id: string
+          until: string
+          user_id: string
+        }
+        Update: {
+          album_id?: string
+          until?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_grants_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      album_photos: {
+        Row: {
+          album_id: string
+          community_id: string
+          photo_id: string
+          position: number
+        }
+        Insert: {
+          album_id: string
+          community_id: string
+          photo_id: string
+          position: number
+        }
+        Update: {
+          album_id?: string
+          community_id?: string
+          photo_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_photos_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "album_photos_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: true
+            referencedRelation: "photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      albums: {
+        Row: {
+          community_id: string
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          password_hash: string | null
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          password_hash?: string | null
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          password_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "albums_community_id_owner_id_fkey"
+            columns: ["community_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           chat_id: string | null
@@ -481,6 +674,57 @@ export type Database = {
           },
         ]
       }
+      events: {
+        Row: {
+          body: string
+          chat_id: string
+          community_id: string
+          created_at: string
+          created_by: string | null
+          headline: string
+          id: string
+          on_date: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          chat_id: string
+          community_id: string
+          created_at?: string
+          created_by?: string | null
+          headline: string
+          id?: string
+          on_date: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          chat_id?: string
+          community_id?: string
+          created_at?: string
+          created_by?: string | null
+          headline?: string
+          id?: string
+          on_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_community_id_chat_id_fkey"
+            columns: ["community_id", "chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["community_id", "id"]
+          },
+          {
+            foreignKeyName: "events_community_id_created_by_fkey"
+            columns: ["community_id", "created_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["community_id", "user_id"]
+          },
+        ]
+      }
       group_info_posts: {
         Row: {
           body: string
@@ -547,6 +791,7 @@ export type Database = {
       }
       members: {
         Row: {
+          ad_filter: Json
           can_create_groups: boolean
           community_id: string
           country_id: string | null
@@ -568,6 +813,7 @@ export type Database = {
           visible_in_search: boolean
         }
         Insert: {
+          ad_filter?: Json
           can_create_groups?: boolean
           community_id: string
           country_id?: string | null
@@ -589,6 +835,7 @@ export type Database = {
           visible_in_search?: boolean
         }
         Update: {
+          ad_filter?: Json
           can_create_groups?: boolean
           community_id?: string
           country_id?: string | null
@@ -1156,6 +1403,27 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          bucket: string
+          hits: number
+          key_hash: string
+          since: string
+        }
+        Insert: {
+          bucket: string
+          hits: number
+          key_hash: string
+          since: string
+        }
+        Update: {
+          bucket?: string
+          hits?: number
+          key_hash?: string
+          since?: string
+        }
+        Relationships: []
+      }
       reactions: {
         Row: {
           chat_id: string
@@ -1242,6 +1510,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ad_filter: { Args: { p_community: string }; Returns: Json }
+      ad_view: { Args: { p_ad: string; p_community: string }; Returns: Json }
+      add_album_photo: {
+        Args: { p_album: string; p_community: string; p_photo: Json }
+        Returns: Json
+      }
       add_profile_photo: {
         Args: { p_community: string; p_photo: Json; p_slot: Json }
         Returns: Json
@@ -1251,9 +1525,33 @@ export type Database = {
         Args: { p_community: string; p_user: string }
         Returns: Json
       }
+      album_list: {
+        Args: { p_community: string; p_owner: string }
+        Returns: {
+          cover: string
+          id: string
+          locked: boolean
+          name: string
+          photos: number
+        }[]
+      }
+      album_view: {
+        Args: { p_album: string; p_community: string }
+        Returns: Json
+      }
       apply_to_group: {
         Args: { p_application: Json; p_chat: string; p_community: string }
         Returns: string
+      }
+      calendar_month: {
+        Args: { p_chat: string; p_community: string; p_month: string }
+        Returns: {
+          body: string
+          created_by: string
+          headline: string
+          id: string
+          on_date: string
+        }[]
       }
       chat_header: {
         Args: { p_chat: string; p_community: string }
@@ -1288,9 +1586,22 @@ export type Database = {
           unread: number
         }[]
       }
+      create_album: {
+        Args: { p_community: string; p_name: string }
+        Returns: string
+      }
       decide_application: {
         Args: { p_application: string; p_decision: string }
         Returns: Json
+      }
+      delete_ad: { Args: { p_ad: string; p_community: string }; Returns: Json }
+      delete_album: {
+        Args: { p_album: string; p_community: string }
+        Returns: Json
+      }
+      delete_event: {
+        Args: { p_chat: string; p_community: string; p_event: string }
+        Returns: undefined
       }
       delete_group: {
         Args: { p_chat: string; p_community: string }
@@ -1300,6 +1611,7 @@ export type Database = {
         Args: { p_chat: string; p_community: string; p_seq: number }
         Returns: Json
       }
+      delete_my_account: { Args: { p_community: string }; Returns: Json }
       edit_message: {
         Args: {
           p_body: string
@@ -1415,6 +1727,26 @@ export type Database = {
         Args: { p_chat: string; p_community: string; p_seq: number }
         Returns: undefined
       }
+      member_ads: {
+        Args: { p_community: string; p_user: string }
+        Returns: {
+          ages: number[]
+          district_id: string
+          headline: string
+          id: string
+          looking_for: string[]
+          photo_path: string
+          photo_taken_in_app: boolean
+          photo_thumb: string
+          place: string
+          published_at: string
+          score: number
+          stars: number
+          status_id: string
+          user_id: string
+          username: string
+        }[]
+      }
       member_email: {
         Args: { p_community: string; p_username: string }
         Returns: string
@@ -1427,12 +1759,39 @@ export type Database = {
           username: string
         }[]
       }
+      my_album_photos: {
+        Args: { p_community: string; p_limit?: number }
+        Returns: {
+          id: string
+          path: string
+          taken_at: string
+          taken_in_app: boolean
+          thumb_path: string
+        }[]
+      }
       my_application: { Args: { p_community: string }; Returns: Json }
+      open_album: {
+        Args: { p_album: string; p_community: string; p_password: string }
+        Returns: string
+      }
       open_dm: {
         Args: { p_community: string; p_user: string }
         Returns: string
       }
       profile: { Args: { p_community: string; p_user: string }; Returns: Json }
+      rate_limit_refund: {
+        Args: { p_bucket: string; p_keys: string[] }
+        Returns: undefined
+      }
+      rate_limit_take: {
+        Args: {
+          p_bucket: string
+          p_keys: string[]
+          p_max: number[]
+          p_window_seconds: number
+        }
+        Returns: number
+      }
       reaction_details: {
         Args: { p_chat: string; p_community: string; p_seq: number }
         Returns: {
@@ -1440,6 +1799,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      remove_album_photo: {
+        Args: { p_community: string; p_photo: string }
+        Returns: Json
       }
       remove_member: {
         Args: { p_community: string; p_user: string }
@@ -1497,6 +1860,23 @@ export type Database = {
           username: string
         }[]
       }
+      save_ad: {
+        Args: {
+          p_ad: string
+          p_body: string
+          p_community: string
+          p_district: string
+          p_headline: string
+          p_looking_for: string[]
+          p_photo?: Json
+          p_place: string
+        }
+        Returns: Json
+      }
+      save_ad_filter: {
+        Args: { p_community: string; p_filter: Json }
+        Returns: undefined
+      }
       save_admin_record: {
         Args: { p_community: string; p_record: Json; p_user: string }
         Returns: undefined
@@ -1509,6 +1889,15 @@ export type Database = {
           p_parent?: string
         }
         Returns: undefined
+      }
+      save_event: {
+        Args: {
+          p_chat: string
+          p_community: string
+          p_data: Json
+          p_event: string
+        }
+        Returns: string
       }
       save_group: {
         Args: { p_chat: string; p_community: string; p_group: Json }
@@ -1542,6 +1931,31 @@ export type Database = {
       scope_stats: {
         Args: { p_chat?: string; p_community: string }
         Returns: Json
+      }
+      search_ads: {
+        Args: {
+          p_after_id?: string
+          p_after_published?: string
+          p_community: string
+          p_limit?: number
+        }
+        Returns: {
+          ages: number[]
+          district_id: string
+          headline: string
+          id: string
+          looking_for: string[]
+          photo_path: string
+          photo_taken_in_app: boolean
+          photo_thumb: string
+          place: string
+          published_at: string
+          score: number
+          stars: number
+          status_id: string
+          user_id: string
+          username: string
+        }[]
       }
       search_filter: { Args: { p_community: string }; Returns: Json }
       search_profiles: {
@@ -1577,6 +1991,10 @@ export type Database = {
           p_reply_to?: number
         }
         Returns: Json
+      }
+      set_album_password: {
+        Args: { p_album: string; p_community: string; p_password: string }
+        Returns: undefined
       }
       set_group_admin: {
         Args: { p_chat: string; p_community: string; p_user: string }

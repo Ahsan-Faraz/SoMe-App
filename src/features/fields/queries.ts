@@ -3,7 +3,6 @@ import { cacheLife, cacheTag } from 'next/cache'
 import { locale } from '@/lib/i18n'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Json } from '@/lib/supabase/database.types'
-import { activeLabels } from './schema'
 import { FIELD_KINDS, LAYOUT_BUILTINS, type FieldKind, type LayoutBuiltin, type ProfileSchema } from './types'
 
 // Bounds from the migrations: at most 200 choices per list (4 lists), positions 0–999.
@@ -102,12 +101,6 @@ export async function getProfileSchema(communityId: string): Promise<ProfileSche
       .sort((a, b) => a.position - b.position || a.first - b.first)
       .map(({ item }) => item),
   }
-}
-
-// The active Status and District names, for pickers and filters that still work with names.
-export async function getChoiceLabels(communityId: string): Promise<{ statuses: string[]; districts: string[] }> {
-  const schema = await getProfileSchema(communityId)
-  return { statuses: activeLabels(schema.statuses), districts: activeLabels(schema.districts) }
 }
 
 // {"en": "Bike type"} -> the label in the current language, else any language it has (ADR 0001).

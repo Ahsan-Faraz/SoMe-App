@@ -34,3 +34,24 @@ Committed with the step 9–11 code (4985c5b) and pushed 2026-10-27. Types regen
 ## 3. Known before this file
 
 Steps 5b–8 were pushed while the live site ran an older build. Sign-up on the live site needs the step 5b code (it sends the consents that `handle_new_user` now requires), so the live site can't sign anyone up until that code is deployed too.
+
+## 4. Steps 12–15
+
+The live site runs 09d272b (steps 0–11). Before each push: every function that build calls (`git grep "rpc('" 09d272b -- src`, 57 of them) was checked against the migration, `db push --dry-run` showed only the new file, and every test file ran with the migration in rolled-back `zz_` copies.
+
+### Already in the database (nothing to run)
+
+| Step | Migration | What it adds or changes |
+|---|---|---|
+| 12 | `20261028120000_calendar.sql` | `events` (no client grants), `calendar_month`, `save_event`, `delete_event`. |
+| 13 | `20261029120000_albums.sql` | `albums`, `album_photos`, `album_grants`, `album_attempts` (no client grants) and their RPCs. `private.insert_photo` replaced with the same arguments and result (finds the uploaded files through Storage's index), which the old build's profile, application and chat photo saves keep using. |
+| 14 | `20261030120000_ads.sql` | `ads` (no client grants), `members.ad_filter` (default `{}`, no column grant), `save_ad_filter`, `ad_filter`, `search_ads`, `member_ads`, `ad_view`, `save_ad`, `delete_ad`. |
+| 15 | `20261031120000_launch.sql` | `rate_limits` (no client grants) with `rate_limit_take` and `rate_limit_refund` (service role only); `delete_my_account` and `private.folder_files`. |
+
+All four only add. The old build never selects `*` from `members`, so the new column is invisible to it.
+
+### Waiting in `supabase/deferred/` (to run after the deploy)
+
+Nothing. Steps 12–15 removed nothing the old build uses, so there is nothing to run after the deploy, and `supabase/deferred/` doesn't exist.
+
+After the deploy the old build's login keeps working on this database (it never calls the new functions); the rate limits and "Delete my account" start with the new code.

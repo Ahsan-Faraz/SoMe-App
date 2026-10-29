@@ -6,7 +6,6 @@ import { getViewer } from '@/features/auth/queries'
 import { ChatThread } from '@/features/chats/components/ChatThread'
 import { findDm } from '@/features/chats/queries'
 import type { ChatRules } from '@/features/chats/types'
-import { listAlbums } from '@/features/albums/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfile } from '@/features/profiles/queries'
 
@@ -26,7 +25,7 @@ async function NewDmContent({ params }: PageProps<'/[community]/chats/dm/[userId
   if (!viewer) redirect(`/${community}/login`)
   if (viewer.role === 'pending' || userId === viewer.userId) redirect(`/${community}/chats`)
 
-  const [existing, profile, info, albums] = await Promise.all([findDm(community, userId), getProfile(community, userId), getCommunity(community), listAlbums(viewer.userId)])
+  const [existing, profile, info] = await Promise.all([findDm(community, userId), getProfile(community, userId), getCommunity(community)])
   if (existing) redirect(`/${community}/chats/${existing}`)
   if (!profile || !info) notFound()
 
@@ -49,7 +48,6 @@ async function NewDmContent({ params }: PageProps<'/[community]/chats/dm/[userId
         viewerId={viewer.userId}
         isAdmin={false}
         rules={rules}
-        albums={albums}
         backHref={`/${community}/chats/dm/${userId}`}
       />
     </div>

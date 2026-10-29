@@ -1,14 +1,13 @@
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { RouteSkeleton } from '@/app/[community]/loading'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { AdEditor } from '@/features/ads/components/AdEditor'
-import { listAds } from '@/features/ads/queries'
-import { listAlbums } from '@/features/albums/queries'
+import { getAd } from '@/features/ads/queries'
 import { getViewer } from '@/features/auth/queries'
 import { getCommunity } from '@/features/communities/queries'
-import { getChoiceLabels } from '@/features/fields/queries'
-import { dmHref } from '@/features/chats/links'
+import { getProfileSchema } from '@/features/fields/queries'
+import { activeChoices } from '@/features/fields/schema'
 import { getProfile } from '@/features/profiles/queries'
 import { t } from '@/lib/i18n'
 
@@ -26,31 +25,25 @@ async function AdContent({ params }: PageProps<'/[community]/ads/[adId]'>) {
   if (!viewer || !info) redirect(`/${community}/login`)
   if (viewer.role === 'pending') redirect(`/${community}/pending`)
 
-  const [ads, me, albums, lists] = await Promise.all([
-    listAds(),
-    getProfile(community, viewer.userId),
-    listAlbums(viewer.userId),
-    getChoiceLabels(info.id),
-  ])
-  const ad = ads.find((item) => item.id === adId)
-  const own = !ad || ad.userId === viewer.userId
+  // ad_view decides: null when there is no such ad or the viewer may not see it (a block, a removed author).
+  const [ad, me, schema] = await Promise.all([getAd(community, adId), getProfile(community, viewer.userId), getProfileSchema(info.id)])
+  if (!ad) notFound()
   if (!me) redirect(`/${community}/ads`)
 
   return (
     <div className="flex h-app w-full flex-col bg-canvas">
-      <ScreenHeader title={own ? t.ads.publish : t.ads.title} backHref={`/${community}/ads`} />
+      <ScreenHeader title={ad.own ? t.ads.publish : t.ads.title} backHref={ad.own ? `/${community}/profiles/${viewer.userId}/ads` : `/${community}/ads`} />
+      {/* Keyed by the saved ad: an edit saved elsewhere seeds the form again. */}
       <AdEditor
+        key={`${ad.id}:${ad.headline}:${ad.body}:${ad.place}:${ad.districtId}:${ad.lookingForIds.join()}`}
         community={community}
-        seed={ads}
-        adId={adId}
-        own={own}
-        profileHref={ad && !own ? `/${community}/profiles/${ad.userId}` : null}
-        chatHref={ad && !own ? dmHref(community, ad.userId) : null}
-        author={{ userId: me.id, username: me.username, status: me.status, age: me.ages[0] ?? 0 }}
-        albums={own ? albums : []}
+        communityId={info.id}
+        viewerId={viewer.userId}
+        ad={ad}
+        author={{ status: me.status, ages: me.ages }}
         profilePhoto={me.photo}
-        statuses={lists.statuses}
-        districts={lists.districts}
+        statuses={activeChoices(schema.statuses)}
+        districts={activeChoices(schema.districts)}
       />
     </div>
   )

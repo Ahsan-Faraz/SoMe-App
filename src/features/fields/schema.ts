@@ -2,7 +2,8 @@ import type { Builtins, Choice, FieldDef, LayoutBuiltin, LayoutItem, StatusChoic
 
 // Pure helpers, shared by server and client.
 
-export const activeLabels = (choices: readonly Choice[]): string[] => choices.filter((choice) => choice.active).map((choice) => choice.label)
+// The choices still offered (a retired one stays on the profiles that have it).
+export const activeChoices = <T extends Choice>(choices: readonly T[]): T[] => choices.filter((choice) => choice.active)
 
 // One person of a Status: (substatus, n), labelled "The Man", or "The Woman 2" when there are two.
 // key is how answers and birth dates of this person are addressed on the client.

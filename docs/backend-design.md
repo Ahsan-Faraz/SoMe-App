@@ -385,7 +385,7 @@ album_photos (
 )
 ```
 
-Locked albums never show a cover photo in the list (Peter: "folder icon"). The list query returns `has_password` and no photo for them.
+Locked albums never show a cover photo in the list (Peter: "folder icon"). The list query returns `locked` and no photo for them, not even for the owner. Built (step 13) with two more tables: `album_grants (album_id, user_id, until)` (opened with the password: open for an hour) and `album_attempts (album_id, user_id, failures, since)` (5 wrong in 15 minutes, then wait). Limits: 50 albums each, 200 photos an album.
 
 ### 4.7 Chats, groups and messages
 
@@ -519,19 +519,23 @@ index notes_subject on notes (community_id, subject_id);       -- the cascade fr
 ```sql
 ads (
   id uuid pk, community_id uuid not null, user_id uuid not null,
-  looking_for uuid[] not null default '{}',             -- status option ids (multi)
-  headline text not null check (char_length(headline) <= 120),
-  body text check (char_length(body) <= 4000),
-  district_id uuid references community_options,
-  place text check (char_length(place) <= 80),
-  photo_id uuid references photos on delete set null,   -- camera, upload, or "From profile/album" (copied)
+  looking_for uuid[] not null,                          -- status option ids (1 or more)
+  headline text not null check (char_length(headline) between 1 and 120),
+  body text not null default '' check (char_length(body) <= 4000),
+  district_id uuid,                                     -- (community_id, district_id) → community_options, set null
+  place text not null default '' check (char_length(place) <= 80),
+  photo_id uuid,                                        -- (community_id, photo_id) → photos, set null; always the ad's own copy
   published_at timestamptz not null default now(), updated_at timestamptz,
+  search_text text generated always as (lower(headline || ' ' || body || ' ' || place)) stored,
   foreign key (community_id, user_id) references members on delete cascade
 )
-index ads_recent  on ads (community_id, published_at desc);
-index ads_looking on ads using gin (looking_for);
-index ads_district on ads (community_id, district_id);
+index ads_recent   on ads (community_id, published_at desc, id desc);   -- the Ads tab, keyset
+index ads_user     on ads (community_id, user_id, published_at desc, id desc);
+index ads_photo    on ads (community_id, photo_id) where photo_id is not null;
+index ads_district on ads (community_id, district_id) where district_id is not null;
 ```
+
+Built (step 14) without the planned GIN index on `looking_for`: the speed check didn't need it (three filters 16 ms on 10,000 ads). No client grants: reads and writes are RPCs. At most 20 ads each.
 
 ### 4.10 How the tables connect
 
@@ -548,7 +552,7 @@ chats(group) 1─3 group_info_posts ; chats(group) 1─* events
 albums 1─* album_photos *─1 photos
 ```
 
-Deleting a member or a community removes everything below it (cascades). That is the GDPR "delete my account" path. Storage files are removed right after (§7).
+Deleting a member or a community removes everything below it (cascades). That is the GDPR "delete my account" path: `delete_my_account` (step 15) deletes the member row, the other people's photos that lose their post with it (in the DMs, comments on the member's posts), and the login when no account is left; it returns every file in the member's folders of both buckets, which the server removes right after (§7). The community's last admin can't delete their account.
 
 ---
 
@@ -567,20 +571,21 @@ Deleting a member or a community removes everything below it (cascades). That is
 | Group settings, info posts | Members of the community (headline/info for discovery), full settings to the group admin | Group admin, community admin |
 | Calendar events | Group members (if calendar on) | Group admin |
 | Notes and stars | **Only the author** (no admin override) | Only the author |
-| Albums | Owner. Others see the name; photos only through `openAlbum` after the password | Owner |
+| Albums | Owner, and approved members with no block either way. A locked album: name and a folder only, photos after `open_album` (open for an hour); the community admin needs the password too | Owner |
 | Photos | Profile bucket: public but unguessable URLs. Private bucket: signed URLs only, issued to people allowed to see the row that uses the photo | Owner |
-| Ads | Approved members (minus blocks) | Author |
+| Ads | Approved members, no block either way, never a removed member's; the Ads tab also leaves out members hidden from search. Images signed by the server after the read | Author |
 
 Extra protections:
 
 - **Cross-community:** every policy checks `community_id` via `is_member()`.
 - **No email probing:** joining with an email that already has a login answers exactly like a new email, so nobody can find out where someone is registered (D32).
 - **Own domains:** each domain keeps its own login cookie; being logged in on one community's domain never logs you in on another's.
-- **Album passwords:** `password_hash` is revoked from client roles. Only the server checks it and then signs URLs.
+- **Album passwords:** no client role can read the album tables at all; the database checks the password (bcrypt) and the server signs the files only after `album_view` says the album is open to the caller. Wrong guesses are limited (5 per 15 minutes).
 - **Columns clients may not change** (role, state, score, username after sign-up) are protected with column grants and a trigger. Profile edits go through `save_profile`.
 - **"Taken in app" photos:** the label is the app's claim that the in-app camera took the photo. We never claim it can't be faked.
 - **Re-encoding** every photo on the phone strips EXIF location data.
-- **Service-role key:** only in `src/lib/supabase/admin.ts` (server-only), used for the username→email login lookup, album URL signing and system DMs.
+- **Sign-in rate limits (step 15):** login, join, email codes and password resets run on our server, so Supabase Auth sees one IP for everyone. Our own limits (`rate_limits`, `src/lib/rate-limit.ts`) count per login and per IP: 5 password or code tries per login (30 per IP) in 15 minutes, 3 emails per address (10 per IP) an hour. Keys are stored as SHA-256 hashes; a success gives the attempt back; the answers still tell nothing about which accounts exist.
+- **Service-role key:** only in `src/lib/supabase/admin.ts` (server-only), used for the username→email login lookup, the sign-in rate limits, signing album and ad files, removing deleted files, and system DMs.
 
 ---
 
@@ -736,18 +741,20 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 
 ### 6.13 Calendar
 
-- **Month view:** `events where chat_id = $1 and on_date between $start and $end`, plus the dates that have events. One query per month.
+- **Month view:** `calendar_month(community, group, month)`: that month's events by date; their dates are the marked dates. One call per month; the server reads the first, the phone the others. A day holds at most 20 events.
 - **Group admin:** add, edit ✏️, delete 🗑 (with a confirm).
-- **Everyone:** "DM Admin" on each event opens a DM with `created_by`.
+- **Everyone:** "DM Admin" on each event opens a DM with `created_by` (left off when that DM can't open: your own event, a block, or a creator who left).
+- **Built (step 12):** `events`, `calendar_month`, `save_event`, `delete_event`; the group's admins write, its approved members read while the calendar is on.
 
 ### 6.14 Albums
 
 - **List:** your albums (name, cover thumbnail, or a folder icon if locked).
 - **Inside (owner):** **+** menu with Camera (Taken in app) / Upload image / Delete album, and 🗑 on each photo.
 - **Password:**
-  - **S** `setAlbumPassword` stores a bcrypt hash;
-  - **S** `openAlbum(album, password)` checks it on the server and returns signed URLs valid for 1 hour;
+  - **S** `setAlbumPasswordAction` → `set_album_password` stores a bcrypt hash (a new one locks it again for everyone);
+  - **S** `openAlbumAction` → `open_album` checks it in the database: right = open for that person for an hour, then the page signs the photos (links valid 1 hour); 5 wrong in 15 minutes = wait;
   - a wrong password never returns photos.
+- **Built (step 13):** `album_list`, `album_view`, `my_album_photos`, `create_album`, `delete_album`, `add_album_photo`, `remove_album_photo`, `set_album_password`, `open_album`. The server signs album files with the service role after `album_view` (no per-file Storage policy); "From profile/album" reads your own photos when the picker opens.
 
 ### 6.15 Ads
 
@@ -769,6 +776,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
   - Age, Status and Published are shown from the profile, not editable
   - Publish, Delete
 - **View someone's ad (D3):** Profile, DM.
+- **Built (step 14):** `search_ads`, `save_ad_filter` / `ad_filter`, `member_ads` (My ads, a profile's Ads), `ad_view`, `save_ad`, `delete_ad`. Blocked people's ads never show either way; removed members' ads are gone; hidden members' ads stay off the Ads tab but on their profile. The server signs ad images with the service role after the RPC (no per-file Storage policy); deleting or replacing an image removes its files after the response.
 
 ### 6.16 Find new user/group (A2)
 

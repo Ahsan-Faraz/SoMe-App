@@ -28,7 +28,8 @@ export function TabRail({
 }) {
   const path = usePathname()
   const [open, setOpen] = useState(true)
-  const active = path.includes('/profiles') ? 'profiles' : path.includes('/ads') ? 'ads' : 'chats'
+  // Account pages (delete my account) open from your own profile.
+  const active = path.includes('/profiles') || path.includes('/account/') ? 'profiles' : path.includes('/ads') ? 'ads' : 'chats'
   const row = `flex h-10 items-center gap-3 rounded-lg text-[15px] font-semibold ${open ? 'px-3' : 'w-11 justify-center'}`
 
   return (
