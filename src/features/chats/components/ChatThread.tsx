@@ -31,6 +31,8 @@ const OLDER_AT_PX = 600
 const NEAR_BOTTOM_PX = 150
 // A picture in the chat is at most this tall; it keeps its own shape (no cropping).
 const IMAGE_MAX_HEIGHT_PX = 320
+// An empty new DM looks this often for the DM the other person may have made (one indexed lookup).
+const NEW_DM_CHECK_MS = 3000
 
 // After the next render: stick to the bottom, keep this distance from the bottom (an older page was
 // added above), or leave the scroll where it is.
@@ -227,6 +229,32 @@ export function ChatThread({
       void markRead().then(() => router.refresh())
     }
   }, [chatId, markRead, router])
+
+  // A new DM has no channel yet: the other person's first message makes the DM. Look for it while the
+  // screen shows (every few seconds, and at once when the app comes back), then open it. Not once a
+  // post is on screen here: sending opens the DM itself.
+  useEffect(() => {
+    if (chatId || !dmUserId) return
+    const supabase = createClient()
+    let done = false
+    const look = async () => {
+      if (done || document.visibilityState !== 'visible' || latest.current.length > 0) return
+      const { data } = await supabase.rpc('find_dm', { p_community: communityId, p_user: dmUserId })
+      if (!data || done || latest.current.length > 0) return
+      done = true
+      router.replace(`/${community}/chats/${data}`)
+    }
+    const onBack = () => void look()
+    const timer = setInterval(onBack, NEW_DM_CHECK_MS)
+    document.addEventListener('visibilitychange', onBack)
+    window.addEventListener('online', onBack)
+    return () => {
+      done = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onBack)
+      window.removeEventListener('online', onBack)
+    }
+  }, [chatId, dmUserId, communityId, community, router])
 
   // The page before the oldest message on screen, kept in place: the view stays where it was.
   const loadOlder = useCallback(async () => {
