@@ -13,11 +13,11 @@ One-time setup of the prod server, and how deploys, rollbacks and settings work 
 
 Work goes to `dev` and is tested on Vercel. Then a pull request merges `dev` into `main`. The merge runs the pipeline:
 
-1. **Build** the new commit on the VPS, in its own folder. The live site keeps running.
-2. **Push migrations** to the prod database.
+1. **Push migrations** to the prod database. They go first because `next build` prerenders pages that read the database.
+2. **Build** the new commit on the VPS, in its own folder. The live site keeps running.
 3. **Release**: point the live folder at the new build and restart the app (a couple of seconds). If the new build doesn't answer within a minute, the server switches back to the old one by itself.
 
-If the build fails, nothing changed. If the migrations fail, the old app stays live. Migrations stay additive, because the old app runs on the new database for those few seconds.
+If any step fails, the old app stays live. Migrations stay additive, because the old app runs on the new database until the switch, or for longer if the build fails.
 
 Our terminal stays linked to dev. Nobody runs `supabase link` against prod.
 
@@ -234,8 +234,8 @@ ssh some-prod
    | `SUPABASE_SECRET_KEY` | same page, **Secret keys** → new key named `vps` (`sb_secret_…`) |
    | `BREVO_API_KEY` | client's Brevo → SMTP & API → API keys |
    | `EMAIL_FROM` | a sender address verified in Brevo, e.g. `no-reply@theirl.net` |
-   | `DEFAULT_COMMUNITY` | slug of the community shown at `/`. Fill it in once that community exists in prod |
-   | `COMMUNITY_DOMAINS` | empty for now |
+   | `DEFAULT_COMMUNITY` | slug of the community shown at `/`. **Leave the line commented out (`#`) until it has a value.** An empty `DEFAULT_COMMUNITY=` makes `/` redirect to itself. Unset, it's `biking-stockholm` |
+   | `COMMUNITY_DOMAINS` | leave it commented out for now |
 
    Save with Ctrl+O, Enter, then Ctrl+X.
 
