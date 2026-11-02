@@ -1,7 +1,8 @@
 # Prod deploy: every push to main (normally a merge from dev after testing), or by hand from the
-# Actions tab. Order: build on the VPS (the live site is untouched) -> push migrations to the prod
-# database -> switch the VPS to the new build. A failed build changes nothing; a failed migration
-# leaves the old app live. Migrations must stay additive, since the old app briefly runs on them.
+# Actions tab. Order: push migrations to the prod database -> build on the VPS (the live site is
+# untouched) -> switch the VPS to the new build. Migrations go first because `next build`
+# prerenders pages that read the database, so the build needs the new schema. A failed step leaves
+# the old app live; migrations must stay additive, since the old app runs on them until the switch.
 # Setup and secrets: docs/vps-setup.md.
 name: Deploy to prod
 
@@ -44,15 +45,15 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
-      - name: Build on the VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "deploy@$VPS_HOST" "build $GITHUB_SHA"
-
       - name: Push migrations to the prod database
         env:
           PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
         run: supabase db push --db-url "$PROD_DB_URL" --yes
+
+      - name: Build on the VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "deploy@$VPS_HOST" "build $GITHUB_SHA"
 
       - name: Release on the VPS
         env:
