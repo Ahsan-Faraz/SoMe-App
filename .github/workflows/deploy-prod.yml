@@ -1,0 +1,64 @@
+# Prod deploy: every push to main (normally a merge from dev after testing), or by hand from the
+# Actions tab. Order: build on the VPS (the live site is untouched) -> push migrations to the prod
+# database -> switch the VPS to the new build. A failed build changes nothing; a failed migration
+# leaves the old app live. Migrations must stay additive, since the old app briefly runs on them.
+# Setup and secrets: docs/vps-setup.md.
+name: Deploy to prod
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time; a newer push waits rather than cancelling one halfway.
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      # Actions pinned to a commit, so a moved tag can't change what runs with prod secrets.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.120.0 # same as package.json
+
+      - name: Prepare SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Build on the VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "deploy@$VPS_HOST" "build $GITHUB_SHA"
+
+      - name: Push migrations to the prod database
+        env:
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+        run: supabase db push --db-url "$PROD_DB_URL" --yes
+
+      - name: Release on the VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "deploy@$VPS_HOST" "release $GITHUB_SHA"
+
+      - name: Remove the SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
