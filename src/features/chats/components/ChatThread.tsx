@@ -90,9 +90,10 @@ export function ChatThread({
   const [picture, setPicture] = useState(false)
   const [viewing, setViewing] = useState<{ src: string; verified: boolean; date: string | null } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  // Blocked while open (the other person left with "Keep chat"); the server's value covers the rest.
-  const [blockedHere, setBlockedHere] = useState(false)
-  const blocked = blockedOnServer || blockedHere
+  // Blocked or unblocked while open (the other person left with "Keep chat", or unblocked you);
+  // the server's value covers the rest. An unblock also reloads the header for the writing rules.
+  const [blockedHere, setBlockedHere] = useState<boolean | null>(null)
+  const blocked = blockedHere ?? blockedOnServer
   const scroller = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
   const latest = useRef(items) // the messages on screen, for callbacks that outlive a render
@@ -192,6 +193,10 @@ export function ChatThread({
   })
   const onCatchUp = useEffectEvent(() => void catchUp())
   const onDeleted = useEffectEvent(() => router.replace(`/${community}/chats`))
+  const onUnblocked = useEffectEvent(() => {
+    setBlockedHere(null)
+    router.refresh()
+  })
 
   // The open chat: join its live channel (the database lets members only), mark it read, and catch
   // up whenever the channel (re)joins, the app comes back, or the phone is back online. Leaving
@@ -212,6 +217,7 @@ export function ChatThread({
         .on('broadcast', { event: 'edited' }, ({ payload }) => onEdited(payload))
         .on('broadcast', { event: 'removed' }, ({ payload }) => onRemoved(payload))
         .on('broadcast', { event: 'blocked' }, () => setBlockedHere(true))
+        .on('broadcast', { event: 'unblocked' }, () => onUnblocked())
         .on('broadcast', { event: 'deleted' }, () => onDeleted())
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') onCatchUp()

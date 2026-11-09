@@ -3,6 +3,7 @@ import { RouteSkeleton } from '@/app/[community]/loading'
 import { BigLink } from '@/components/ui/BigLink'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { requireAdmin } from '@/features/auth/queries'
+import { isPlatformAdmin } from '@/features/platform/queries'
 import { t } from '@/lib/i18n'
 
 // A19: community admin menu.
@@ -16,7 +17,7 @@ export default function CommunityAdminPage(props: PageProps<'/[community]/admin'
 
 async function CommunityAdminContent({ params }: PageProps<'/[community]/admin'>) {
   const { community } = await params
-  await requireAdmin(community)
+  const [, platformAdmin] = await Promise.all([requireAdmin(community), isPlatformAdmin()])
   const base = `/${community}/admin`
 
   return (
@@ -27,6 +28,8 @@ async function CommunityAdminContent({ params }: PageProps<'/[community]/admin'>
         <BigLink href={`${base}/members`} icon="users" label={t.admin.members} />
         <BigLink href={`${base}/stats`} icon="chart" label={t.admin.statistics} />
         <BigLink href={`${base}/fields`} icon="pencil" label={t.admin.builder} />
+        <BigLink href={`${base}/settings`} icon="info" label={t.admin.settings} />
+        {platformAdmin ? <BigLink href="/platform" icon="shield" label={t.admin.platform} /> : null}
         <p className="mt-2 px-1 text-[14px] text-muted">{t.admin.more}</p>
       </nav>
     </div>

@@ -12,7 +12,7 @@ export async function getCommunity(slug: string): Promise<Community | null> {
 
   const { data, error } = await createPublicClient()
     .from('communities')
-    .select('id, slug, name, headline, about, hero_path, about_path, application_text, require_app_image, require_app_text, require_app_names, require_identity, require_age_18, privacy_version, domain, state_label_1, state_label_2, state_label_3')
+    .select('id, slug, name, headline, about, hero_path, about_path, application_text, require_app_image, require_app_text, require_app_names, require_identity, require_age_18, direct_join, privacy_version, domain, state_label_1, state_label_2, state_label_3')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw error
@@ -28,6 +28,7 @@ export async function getCommunity(slug: string): Promise<Community | null> {
     aboutSrc: data.about_path ?? '/community/ride.png',
     applicationText: data.application_text ?? '',
     requires: { image: data.require_app_image, text: data.require_app_text, names: data.require_app_names, identity: data.require_identity },
+    directJoin: data.direct_join,
     requireAge18: data.require_age_18,
     privacyVersion: data.privacy_version,
     domain: data.domain,
