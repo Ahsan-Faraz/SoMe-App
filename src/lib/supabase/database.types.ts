@@ -537,6 +537,7 @@ export type Database = {
           application_text: string | null
           created_at: string
           default_locale: string
+          direct_join: boolean
           domain: string | null
           headline: string
           hero_path: string | null
@@ -568,6 +569,7 @@ export type Database = {
           application_text?: string | null
           created_at?: string
           default_locale?: string
+          direct_join?: boolean
           domain?: string | null
           headline: string
           hero_path?: string | null
@@ -599,6 +601,7 @@ export type Database = {
           application_text?: string | null
           created_at?: string
           default_locale?: string
+          direct_join?: boolean
           domain?: string | null
           headline?: string
           hero_path?: string | null
@@ -1590,6 +1593,10 @@ export type Database = {
         Args: { p_community: string; p_name: string }
         Returns: string
       }
+      create_community: {
+        Args: { p_headline: string; p_name: string; p_slug: string }
+        Returns: string
+      }
       decide_application: {
         Args: { p_application: string; p_decision: string }
         Returns: Json
@@ -1770,6 +1777,15 @@ export type Database = {
         }[]
       }
       my_application: { Args: { p_community: string }; Returns: Json }
+      my_blocks: {
+        Args: { p_community: string }
+        Returns: {
+          created_at: string
+          icon: string
+          user_id: string
+          username: string
+        }[]
+      }
       open_album: {
         Args: { p_album: string; p_community: string; p_password: string }
         Returns: string
@@ -1777,6 +1793,17 @@ export type Database = {
       open_dm: {
         Args: { p_community: string; p_user: string }
         Returns: string
+      }
+      platform_communities: {
+        Args: never
+        Returns: {
+          admins: string[]
+          direct_join: boolean
+          id: string
+          members: number
+          name: string
+          slug: string
+        }[]
       }
       profile: { Args: { p_community: string; p_user: string }; Returns: Json }
       rate_limit_refund: {
@@ -1890,6 +1917,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_community_settings: {
+        Args: { p_community: string; p_settings: Json }
+        Returns: undefined
+      }
       save_event: {
         Args: {
           p_chat: string
@@ -1996,6 +2027,10 @@ export type Database = {
         Args: { p_album: string; p_community: string; p_password: string }
         Returns: undefined
       }
+      set_community_admin: {
+        Args: { p_admin: boolean; p_community: string; p_username: string }
+        Returns: Json
+      }
       set_group_admin: {
         Args: { p_chat: string; p_community: string; p_user: string }
         Returns: undefined
@@ -2041,6 +2076,10 @@ export type Database = {
       submit_application: {
         Args: { p_application: Json; p_community: string }
         Returns: string
+      }
+      unblock: {
+        Args: { p_community: string; p_user: string }
+        Returns: undefined
       }
     }
     Enums: {

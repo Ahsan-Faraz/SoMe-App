@@ -92,7 +92,7 @@ Phone (PWA)
 
 | Role | How you get it | Can do |
 |---|---|---|
-| **Platform admin** (Peter) | Row in `platform_admins` | Create communities, appoint community admins. Uses the in-app admin screens or the Supabase dashboard. |
+| **Platform admin** (Peter) | Row in `platform_admins` | Create communities, appoint community admins (the only one who does, 261102). In-app screen `/platform`. |
 | **Community admin** | `members.role = 'admin'` | Everything in the community: field builder, Status/District lists, approve members, all groups, give group rights, statistics, delete any post |
 | **Group admin** | `chat_members.role = 'admin'` on a group | Edit their group and its settings, approve group applications, member list + admin data for their group, calendar, delete posts in their group, "Add to groups" for their own groups only |
 | **Member (approved)** | `members.state = 'approved'` | Everything a normal user does. Create groups only if `can_create_groups`. |
@@ -571,9 +571,9 @@ Deleting a member or a community removes everything below it (cascades). That is
 | Group settings, info posts | Members of the community (headline/info for discovery), full settings to the group admin | Group admin, community admin |
 | Calendar events | Group members (if calendar on) | Group admin |
 | Notes and stars | **Only the author** (no admin override) | Only the author |
-| Albums | Owner, and approved members with no block either way. A locked album: name and a folder only, photos after `open_album` (open for an hour); the community admin needs the password too | Owner |
+| Albums | Owner, and approved members with no block either way (the community admin despite a block, 261102). A locked album: name and a folder only, photos after `open_album` (open for an hour); the community admin needs the password too | Owner |
 | Photos | Profile bucket: public but unguessable URLs. Private bucket: signed URLs only, issued to people allowed to see the row that uses the photo | Owner |
-| Ads | Approved members, no block either way, never a removed member's; the Ads tab also leaves out members hidden from search. Images signed by the server after the read | Author |
+| Ads | Approved members, no block either way (on a profile, the community admin despite a block, 261102), never a removed member's; the Ads tab also leaves out members hidden from search. Images signed by the server after the read | Author |
 
 Extra protections:
 
@@ -607,6 +607,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 1. **Applicant (state `profile`):** edits own profile only (A25 "Create/edit profile").
 2. **Application form (A25):** community `application_text` at the top, application image (camera = Taken in app, or upload), message, real name 1/2. Which ones are required comes from `communities.require_app_*`. When `require_identity` is on, an **ID photo** too (camera or upload, private bucket).
 3. **Apply:** **B** insert into `applications` (`chat_id = null`) and set `members.state = 'applied'`. The Apply button is dimmed while an application is open (unique index).
+   **Direct join (261102):** when the community admin turns it on (Community settings), the application is approved as it's sent; no picture or ID photo is asked for or kept.
 4. **"Chat with admin":** shown only if there is an ongoing conversation: a DM with the admin that has messages, i.e. the admin wrote first. Otherwise there is no button at all, not even a dimmed one. Applicants can't open new DMs (`open_dm` refuses); the admin can always start one from the applicant's profile (DM button on A21).
 5. **Admin queue (A19 → A20):** list of `applications where chat_id is null and status in ('pending','later')`.
 6. **Admin view (A21):** profile + DM button + linked profiles + application image (Taken in app + date) + Status (editable here, community admin only) + message + real names + 3 profile states + notes (from `admin_records`, community scope).
@@ -706,7 +707,8 @@ Each feature lists: what the user sees, which tables it uses, and where the work
 - **Leave a DM (D12):**
   - **"Keep chat, block writing":** adds a `blocks` row. The chat stays for both, and nobody can write.
   - **"Delete chat, block user":** deletes the DM (messages cascade, gone for both) and adds the `blocks` row.
-- **A block also hides your profile** from that person, and theirs from you: search, profile view, Profiles list, name search, linked profiles, member lists, ads (D13). The community admin still sees everyone. Unblocking is not in the spec yet.
+- **A block also hides your profile** from that person, and theirs from you: search, profile view, Profiles list, name search, linked profiles, member lists, ads (D13). The community admin still sees everyone, including a blocked person's ads and albums on their profile (261102).
+- **Unblock (261102):** "Blocked people" on your own profile; `unblock` removes your own block only. A kept DM opens for writing again when no block is left (Realtime `unblocked`).
 - **Live:** leaving a DM tells the other person's open chat at once (Realtime events `blocked` / `deleted`): the box is replaced by "Writing is blocked in this chat.", or the chat closes.
 - **Admin in a DM:** "Add to groups" for the other person (§6.11).
 
@@ -938,6 +940,10 @@ The app stays usable after every slice.
 | Q9 | Profile photos visible to logged-in members only? | Public bucket, unguessable URLs | Private bucket + batched signed URLs |
 | Q10 | Identity check: ID card photo, a photo of the person, or both? | One ID photo, the admin decides what to ask for in the application text | A second photo slot |
 | Q11 | BankID later: who pays per check, members or community admins? | Not built yet | A per-community setting |
+| Q12 | **Pending (261102).** One login per domain: the same email is a separate account on theirl.net and aiproduktion.se, with one shared database. Supabase Auth allows one account per email in a project. Options: (a) one login per email, separate accounts and profiles per domain (looks separate; same password everywhere); (b) truly separate logins, with our own sign-in on top of Supabase; (c) one Supabase project per domain (separate databases, which the client doesn't want) | Not built: one login per email, as D17 | Decide (a)/(b)/(c) with the client first: it changes sign-up, login and memberships |
+| Q13 | **Pending (261102).** After login, pick one of your communities on this domain or apply to another; a direct link skips the picker; a community can be hidden from the list | Not built: `/` opens the default community; login is per community | Needs Q12, and a way to group communities by domain (`communities.domain` is one unique domain per community today) |
+| Q14 | **Pending (261102).** Confirm the sign-up email by a link or by a code? | A code (today) | Supabase Auth email template + `/auth/confirm` |
+| Q15 | **Pending (261102).** VIP members: groups of "max 10 profiles", edit and run the calendar of their own group. Is that at most 10 members? | Not built | A role flag on `members`, a member cap in `add_group_member` |
 
 Also to pick before launch (technical, not for Peter): the EU email provider, and `MAX_IMAGE_BYTES` (default 5 MB).
 

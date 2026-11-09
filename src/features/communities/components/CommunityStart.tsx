@@ -19,6 +19,7 @@ export function CommunityStart({ community }: { community: Community }) {
   const login = `/${community.slug}/login`
   const join = `/${community.slug}/join`
   const privacy = `/${community.slug}/privacy`
+  const terms = `/${community.slug}/terms`
 
   return (
     <main className="relative min-h-app w-full bg-canvas px-5 pt-8 pb-16 sm:px-8 min-[52rem]:pt-0 min-[52rem]:pb-0 lg:px-16 xl:px-24">
@@ -86,9 +87,12 @@ export function CommunityStart({ community }: { community: Community }) {
         {rest.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
-        <p className="border-t border-line pt-5 text-center text-[14px]">
+        <p className="flex justify-center gap-6 border-t border-line pt-5 text-[14px]">
           <Link href={privacy} className="font-semibold text-accent hover:underline">
             {t.start.privacy}
+          </Link>
+          <Link href={terms} className="font-semibold text-accent hover:underline">
+            {t.start.terms}
           </Link>
         </p>
       </section>
@@ -177,6 +181,9 @@ export function CommunityStart({ community }: { community: Community }) {
           <span className="flex items-center gap-6">
             <Link href={privacy} className="font-semibold text-accent hover:underline">
               {t.start.privacy}
+            </Link>
+            <Link href={terms} className="font-semibold text-accent hover:underline">
+              {t.start.terms}
             </Link>
             {t.start.footer}
           </span>

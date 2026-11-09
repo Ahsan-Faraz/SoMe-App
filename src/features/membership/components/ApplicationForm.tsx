@@ -40,7 +40,7 @@ export function ApplicationForm({
 }: {
   community: string
   communityId: string // where the images are uploaded
-  scope: Pick<Scope, 'kind' | 'id' | 'applicationText' | 'requires'> // a group: id is its chat id
+  scope: Pick<Scope, 'kind' | 'id' | 'applicationText' | 'requires' | 'directJoin'> // a group: id is its chat id
   applicantId: string
   applied?: boolean // already applied (community: members.state; group: an open application)
   sent?: SentApplication | null // community, once applied: what was sent
@@ -200,7 +200,7 @@ export function ApplicationForm({
             </Link>
           ) : null}
           <button type="submit" disabled={applied || pending} className={`${buttonClass('primary')} disabled:opacity-50`}>
-            {applied ? t.apply.applied : pending ? t.apply.sending : t.apply.submit}
+            {applied ? t.apply.applied : pending ? t.apply.sending : scope.directJoin ? t.apply.join : t.apply.submit}
           </button>
         </div>
       </div>

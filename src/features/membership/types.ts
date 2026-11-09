@@ -13,6 +13,7 @@ export type Scope = {
   stateLabels: string[] // 3 labels; '' = that profile-state field is not used
   applicationText: string
   requires: Requirements
+  directJoin?: boolean // community: approved as it's sent, so no images are asked for (client 261102)
 }
 
 export type ApplicationImage = { src: string; verified: boolean; date: string }

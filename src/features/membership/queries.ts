@@ -18,9 +18,10 @@ const SIGNED_URL_SECONDS = 60 * 60
 export const getScope = cache(async (kind: ScopeKind, community: string, groupId = ''): Promise<Scope | null> => {
   if (kind === 'community') {
     const found = await getCommunity(community)
-    return found
-      ? { kind, id: 'community', name: found.name, stateLabels: found.stateLabels, applicationText: found.applicationText, requires: found.requires }
-      : null
+    if (!found) return null
+    // Direct join: nobody reviews the application, so it asks for no images (the database ignores them).
+    const requires = found.directJoin ? { ...found.requires, image: false, identity: false } : found.requires
+    return { kind, id: 'community', name: found.name, stateLabels: found.stateLabels, applicationText: found.applicationText, requires, directJoin: found.directJoin }
   }
   const settings = await getGroupSettings(community, groupId)
   if (!settings) return null

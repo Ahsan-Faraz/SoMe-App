@@ -100,6 +100,11 @@ export function ProfileView({
             />
           ) : null}
           {profile.own ? (
+            <Link href={`/${community}/account/blocked`} className="mt-3 block w-fit text-[15px] font-semibold text-muted underline hover:text-ink">
+              {t.blocked.title}
+            </Link>
+          ) : null}
+          {profile.own ? (
             <Link href={`/${community}/account/delete`} className="mt-3 block w-fit text-[15px] font-semibold text-muted underline hover:text-danger">
               {t.account.title}
             </Link>
