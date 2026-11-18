@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { CookieSettingsButton } from '@/components/CookieConsent'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { getCommunity } from '@/features/communities/queries'
+import { backFrom } from '@/lib/back'
 import { privacyEn } from '@/lib/i18n/privacy.en'
 import { RouteSkeleton } from '../loading'
 
@@ -15,14 +16,15 @@ export default function PrivacyPage(props: PageProps<'/[community]/privacy'>) {
   )
 }
 
-async function PrivacyContent({ params }: PageProps<'/[community]/privacy'>) {
+async function PrivacyContent({ params, searchParams }: PageProps<'/[community]/privacy'>) {
   const { community: slug } = await params
+  const back = backFrom((await searchParams).back, slug, `/${slug}`)
   const community = await getCommunity(slug)
   if (!community) notFound()
 
   return (
     <div className="min-h-app w-full bg-canvas">
-      <ScreenHeader title={privacyEn.title} backHref={`/${slug}`} />
+      <ScreenHeader title={privacyEn.title} backHref={back} />
       <main className="mx-auto grid max-w-2xl gap-6 px-5 py-6 pb-16 text-[16px] leading-relaxed sm:px-8">
         <p className="text-ink-soft">{privacyEn.intro(community.name)}</p>
         {privacyEn.sections.map((section) => (

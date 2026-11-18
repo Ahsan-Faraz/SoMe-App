@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useOptimistic, useState, useTransition } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { scrollArea } from '@/components/ui/Screen'
@@ -24,6 +25,8 @@ export function AlbumList({ community, userId, own, albums, startAdding }: { com
   const [ask, setAsk] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [, startTransition] = useTransition()
+  const router = useRouter()
+  const pathname = usePathname()
 
   // The header "+" links to ?add=1; open the form even when this page is already showing.
   useEffect(() => {
@@ -34,6 +37,8 @@ export function AlbumList({ community, userId, own, albums, startAdding }: { com
     setError('')
     setName('')
     setAdding(false)
+    // Without this, coming back to the list would open the form again.
+    if (startAdding) router.replace(pathname, { scroll: false })
     startTransition(async () => {
       change({ add: { id: `new-${crypto.randomUUID()}`, name: trimmed, locked: false, photos: 0, cover: null } })
       const result = await createAlbumAction(community, trimmed)

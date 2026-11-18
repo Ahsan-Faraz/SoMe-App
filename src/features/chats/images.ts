@@ -17,10 +17,22 @@ export async function signPaths(client: Signer, paths: string[]): Promise<Map<st
   return new Map((data ?? []).flatMap((item) => (item.path && item.signedUrl ? [[item.path, item.signedUrl] as const] : [])))
 }
 
-// These messages with their thumbnails signed (one call for all of them).
+// These messages with their thumbnails signed, and those of the posts they comment on (one call for all of them).
 export async function withThumbnails(client: Signer, messages: ChatMessage[]): Promise<ChatMessage[]> {
-  const wanted = messages.flatMap((message) => (message.photo && !message.imageSrc ? [message.photo.thumbPath] : []))
+  const own = (message: ChatMessage) => (message.photo && !message.imageSrc ? message.photo.thumbPath : null)
+  const quoted = (message: ChatMessage) => (message.replyTo?.photo && !message.replyTo.photo.src ? message.replyTo.photo.thumbPath : null)
+  const wanted = messages.flatMap((message) => [own(message), quoted(message)].filter((path) => path !== null))
   if (wanted.length === 0) return messages
   const urls = await signPaths(client, wanted)
-  return messages.map((message) => (message.photo && !message.imageSrc ? { ...message, imageSrc: urls.get(message.photo.thumbPath) ?? null } : message))
+  return messages.map((message) => {
+    const mine = own(message)
+    const theirs = quoted(message)
+    if (!mine && !theirs) return message
+    return {
+      ...message,
+      imageSrc: mine ? (urls.get(mine) ?? null) : message.imageSrc,
+      // A commented post the viewer can't see (history off) gets no link: the quote stays text only.
+      replyTo: message.replyTo && theirs ? { ...message.replyTo, photo: { thumbPath: theirs, src: urls.get(theirs) ?? null } } : message.replyTo,
+    }
+  })
 }

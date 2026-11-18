@@ -8,23 +8,25 @@ import { RouteSkeleton } from '../[community]/loading'
 
 // The platform admin's screen (client feedback 261102): every community, creating one, and
 // appointing its admins. 'platform' is a reserved community address (private.reserved_slug).
-export default function PlatformPage() {
+export default function PlatformPage(props: PageProps<'/platform'>) {
   return (
     <Suspense fallback={<RouteSkeleton />}>
-      <PlatformContent />
+      <PlatformContent {...props} />
     </Suspense>
   )
 }
 
-async function PlatformContent() {
+async function PlatformContent({ searchParams }: PageProps<'/platform'>) {
   // Anyone but the platform admin, logged out too, gets a plain "not found": the screen's existence
   // isn't advertised. The platform admin logs in to a community and comes here from its admin menu.
   if (!(await isPlatformAdmin())) notFound()
-  const communities = await getPlatformCommunities()
+  const [communities, query] = await Promise.all([getPlatformCommunities(), searchParams])
+  // Opened from a community's admin menu (?back=); a path on this site only, never another site.
+  const back = Array.isArray(query.back) ? query.back[0] : query.back
 
   return (
     <div className="min-h-app w-full bg-canvas">
-      <ScreenHeader title={t.platform.title} />
+      <ScreenHeader title={t.platform.title} backHref={back?.startsWith('/') && !back.startsWith('//') ? back : '/'} />
       <PlatformCommunities communities={communities} />
     </div>
   )

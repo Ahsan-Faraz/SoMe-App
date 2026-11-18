@@ -26,7 +26,7 @@ export function EventForm({
   event: CalEvent | null
   date: string
 }) {
-  const goBack = useGoBack(community)
+  const goBack = useGoBack()
   const router = useRouter()
   const [when, setWhen] = useState(event?.date ?? date)
   const [headline, setHeadline] = useState(event?.headline ?? '')

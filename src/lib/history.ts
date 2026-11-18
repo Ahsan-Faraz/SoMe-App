@@ -2,27 +2,50 @@
 
 import { useRouter } from 'next/navigation'
 
+// Back goes up one logical level: to the screen's parent (group info → the group's chat, an album →
+// the albums list), never back into a form that was just saved (client feedback 261111).
+// When the parent is already in this tab's history, the browser steps back to it, so that screen
+// comes back as it was left (scroll position, what was typed in a search). Otherwise the parent is
+// opened.
+
 // The Navigation API (Chrome, Edge, Safari 26+, Firefox 147+). entries() only lists this site's pages.
 type NavigationLike = { currentEntry: { index: number } | null; entries(): { url: string | null }[] }
 
-// Back means back: go to the page the user came from, when that page is part of this community.
-// Not when the screen was opened from outside (a link, a fresh app start, a reload of a deep page):
-// then there is nothing to go back to, and the screen's own parent is used instead.
-export function canGoBack(community: string): boolean {
-  const inCommunity = (url: string | null | undefined) => {
-    if (!url) return false
-    const { origin, pathname } = new URL(url, location.href)
-    return origin === location.origin && (pathname === `/${community}` || pathname.startsWith(`/${community}/`))
-  }
+const MAX_STEPS = 20 // never jump further back than this many screens
+
+// How many steps back the nearest earlier screen with the parent's path is; 0 when it isn't in the
+// history, or the browser can't tell (then the parent is opened instead).
+function stepsBackTo(parent: string): number {
   const navigation = (window as { navigation?: NavigationLike }).navigation
-  if (navigation?.currentEntry) return inCommunity(navigation.entries()[navigation.currentEntry.index - 1]?.url)
-  // Older browsers: if this tab has moved since the page loaded, the previous entry is in the app.
-  const loaded = performance.getEntriesByType('navigation')[0]?.name
-  return Boolean(loaded) && loaded !== location.href && inCommunity(loaded)
+  const index = navigation?.currentEntry?.index
+  if (!navigation || index == null) return 0
+  const { origin, pathname } = new URL(parent, location.href)
+  const entries = navigation.entries()
+  for (let i = index - 1; i >= 0 && index - i <= MAX_STEPS; i--) {
+    const url = entries[i]?.url
+    if (!url) continue
+    const entry = new URL(url)
+    if (entry.origin === origin && entry.pathname === pathname) return index - i
+  }
+  return 0
 }
 
-// After a form is done (save, show, delete): return to where it was opened from.
-export function useGoBack(community: string) {
+type Router = ReturnType<typeof useRouter>
+
+// The header's back arrow: step back to the parent, or open it.
+export function goUp(router: Router, parent: string) {
+  const steps = stepsBackTo(parent)
+  if (steps > 0) history.go(-steps)
+  else router.push(parent)
+}
+
+// After a form is done (save, show, delete): the same, but when the parent has to be opened it takes
+// the form's place in the history, so Back never returns to the form.
+export function useGoBack() {
   const router = useRouter()
-  return (fallback: string) => (canGoBack(community) ? router.back() : router.replace(fallback))
+  return (parent: string) => {
+    const steps = stepsBackTo(parent)
+    if (steps > 0) history.go(-steps)
+    else router.replace(parent)
+  }
 }

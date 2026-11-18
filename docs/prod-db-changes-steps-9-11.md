@@ -55,3 +55,43 @@ All four only add. The old build never selects `*` from `members`, so the new co
 Nothing. Steps 12–15 removed nothing the old build uses, so there is nothing to run after the deploy, and `supabase/deferred/` doesn't exist.
 
 After the deploy the old build's login keeps working on this database (it never calls the new functions); the rate limits and "Delete my account" start with the new code.
+
+## 5. Step 17: sites (addresses and logins per domain)
+
+> **WARNING: update every deployment before two communities share an address.**
+> From step 17 a community's address is unique per site (domain), not across the whole app, so
+> `theirl.net/demo` and `aiproduktion.se/demo` can both exist. A build older than step 17 finds a
+> community by its address alone. Once two communities share an address, that older build fails on
+> **both** of them (the lookup returns two rows).
+>
+> This applies to every deployment that uses the same database, also ones we don't run: for example
+> a domain the client deploys himself from GitHub (`docs/scope-boundaries.md`).
+>
+> Before creating a second community with an address that already exists on another site:
+> 1. Deploy the step 17 build (or newer) to every domain on that database.
+> 2. Set `SITE_HOSTS` on each deployment (`src/lib/sites.ts`), so each domain maps to its site.
+>    A domain missing from `SITE_HOSTS` is served as the default site, `main`.
+> 3. Only then create the community.
+
+### Already in the database (dev only so far; nothing to run)
+
+| Step | Migration | What it adds or changes |
+|---|---|---|
+| 17a | `20261110120000_sites.sql` | `communities.site` (default `main`); unique index on (site, slug) replaces the unique constraint on slug alone; `platform_communities(p_site)` and `create_community(p_site, …)` next to the old versions. |
+| 17b | `20261110130000_logins.sql` | `logins` (filled from the existing logins) and `private.login_codes` (no client grants); trigger `members_check_site`; `handle_new_user` and `decide_application` replaced with the same arguments and results; the login functions (service role only). |
+| 17c | `20261110140000_reset_steps.sql` | `reset_finish`; `reset_confirm` keeps the code until then. |
+| 17d | `20261110150000_login_speed.sql` | `login_lookup` and `join_prepare` read their indexes (same arguments and results). |
+| 18 | `20261112120000_feedback_261111.sql` | `list_messages`, `search_ads`, `member_ads` return extra columns (dropped and created in one transaction); `message_json` and every photo JSON gain keys; `save_community_settings` takes optional `state_labels`. An older build ignores the additions. |
+| 19a | `20261117120000_feedback_261115.sql` | `communities.keep_application_images` and `chats.keep_application_images` (default false = today's behaviour); `private.decision_media`; `decide_application` swapped in place (one call), `close_group_applications`, `set_group_member`, `remove_member`, `save_group`, `group_settings`, `save_community_settings` replaced with the same arguments and results (new settings keys optional); `search_ads` no longer leaves out members hidden from search (one condition taken out in place). |
+| 19b | `20261117130000_leave_group_images.sql` | `leave_chat`'s group branch also returns the kept application image's files (swapped in place; same arguments and result). |
+
+Safe for the old build while no two sites share an address: it still finds every community by slug, and its `create_community` puts new communities on `main`.
+
+### Waiting in `supabase/deferred/` (to run after the deploy)
+
+| File | What it does |
+|---|---|
+| `20261110_drop_siteless_platform.sql` | Drops `platform_communities()` and `create_community(text, text, text)`, which only a build older than step 17 calls. |
+| `20261110_drop_siteless_logins.sql` | Drops `member_email` and `join_check`, the lookups by Auth email of a build older than step 17. |
+
+An older build on this database keeps working for logins made before step 17 (their Auth email is still the real one). It can't log in a login made by the step 17 build with its email (only with its username), and its join form doesn't know such an email already has a login. So deploy the step 17 build to every domain together.

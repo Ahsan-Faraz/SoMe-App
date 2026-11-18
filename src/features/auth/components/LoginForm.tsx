@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { PasswordField } from '@/components/ui/PasswordField'
 import { TextField } from '@/components/ui/TextField'
 import { t } from '@/lib/i18n'
 import { PASSWORD_MIN } from '@/lib/limits'
@@ -23,7 +24,7 @@ export function LoginForm({ community }: { community: string }) {
       <form action={signIn} onSubmit={submitWith(signIn)} onChange={clear} noValidate className="grid gap-4">
         <input type="hidden" name="community" value={community} />
         <TextField id="login" name="login" label={t.login.username} autoComplete="username" autoCapitalize="none" />
-        <TextField id="password" name="password" type="password" label={t.login.password} autoComplete="current-password" />
+        <PasswordField id="password" name="password" label={t.login.password} autoComplete="current-password" />
 
 {error ? (
           <p role="alert" className="text-sm text-danger">
@@ -62,8 +63,8 @@ function ForgotPassword({ community, onCancel }: { community: string; onCancel: 
         <input type="hidden" name="login" value={login} />
         <p className="text-ink-soft">{t.reset.body}</p>
         <CodeField />
-        <TextField id="password" name="password" type="password" label={t.reset.password} autoComplete="new-password" minLength={PASSWORD_MIN} required />
-        <TextField id="repeatPassword" name="repeatPassword" type="password" label={t.reset.repeatPassword} autoComplete="new-password" required />
+        <PasswordField id="password" name="password" label={t.reset.password} hint={t.join.passwordHint} autoComplete="new-password" minLength={PASSWORD_MIN} required />
+        <PasswordField id="repeatPassword" name="repeatPassword" label={t.reset.repeatPassword} autoComplete="new-password" required />
 {resetError.error ? (
           <p role="alert" className="text-sm text-danger">
             {resetError.error}

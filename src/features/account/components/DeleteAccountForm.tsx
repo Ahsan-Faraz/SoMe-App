@@ -1,10 +1,10 @@
 'use client'
 
 import { useActionState, useEffect } from 'react'
+import { PasswordField } from '@/components/ui/PasswordField'
 import { t } from '@/lib/i18n'
 import { deleteAccountAction } from '../actions'
 
-const input = 'h-12 w-full rounded-xl border border-line bg-canvas px-3 text-[16px] outline-none focus:border-accent'
 
 // Delete my account: what goes, then the password again and one button.
 export function DeleteAccountForm({ community, communityName }: { community: string; communityName: string }) {
@@ -26,10 +26,7 @@ export function DeleteAccountForm({ community, communityName }: { community: str
       </ul>
       <p className="text-ink-soft">{t.account.login}</p>
       <p className="font-semibold">{t.account.final}</p>
-      <label className="grid gap-1.5 text-[14px] font-semibold">
-        {t.login.password}
-        <input name="password" type="password" required autoComplete="current-password" className={input} />
-      </label>
+      <PasswordField id="password" name="password" label={t.login.password} autoComplete="current-password" required />
       {state?.error ? (
         <p role="alert" className="text-[15px] font-semibold text-danger">
           {state.error}

@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { getCommunity } from '@/features/communities/queries'
+import { profilePhotoUrl } from '@/features/profiles/photo'
 import { getUserId } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import type { Viewer } from './types'
@@ -13,17 +14,14 @@ export const getViewer = cache(async (community: string): Promise<Viewer | null>
   if (!userId || !info) return null
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('members')
-    .select('username, role, state, can_create_groups')
-    .eq('community_id', info.id)
-    .eq('user_id', userId)
-    .maybeSingle()
+  // One query: the account and its profile image (my_account; clients can't read `photos` themselves).
+  const { data, error } = await supabase.rpc('my_account', { p_community: info.id }).maybeSingle()
   if (error) throw error
   if (!data) return null
+  const icon = data.icon ? profilePhotoUrl(data.icon) : null
 
-  if (data.state === 'approved') return { userId, username: data.username, role: data.role === 'admin' ? 'admin' : 'member', canCreateGroups: data.can_create_groups }
-  if (data.state === 'profile' || data.state === 'applied') return { userId, username: data.username, role: 'pending', canCreateGroups: false }
+  if (data.state === 'approved') return { userId, username: data.username, icon, role: data.role === 'admin' ? 'admin' : 'member', canCreateGroups: data.can_create_groups }
+  if (data.state === 'profile' || data.state === 'applied') return { userId, username: data.username, icon, role: 'pending', canCreateGroups: false }
   return null
 })
 

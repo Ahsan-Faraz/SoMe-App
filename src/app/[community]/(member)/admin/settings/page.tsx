@@ -32,6 +32,9 @@ async function CommunitySettingsContent({ params }: PageProps<'/[community]/admi
           text: info.requires.text,
           names: info.requires.names,
           directJoin: info.directJoin,
+          age18: info.requireAge18,
+          keepImages: info.keepApplicationImages,
+          stateLabels: info.stateLabels,
         }}
       />
     </div>

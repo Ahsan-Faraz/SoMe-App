@@ -13,11 +13,13 @@ import type { UploadedPhoto } from '@/features/profiles/photo'
 import { formatPostTime } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { MESSAGE_MAX } from '@/lib/limits'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 import { createClient } from '@/lib/supabase/browser'
 import { deleteMessageAction } from '../actions'
 import { signPaths, withThumbnails } from '../images'
 import { CATCH_UP_LIMIT, isMessageRow, MESSAGE_PAGE, mergeMessages, newestSeq, pickReaction, toMessage, toReactions, type MessageRow } from '../messages'
 import type { ChatMessage, ChatRules } from '../types'
+import { useStickToBottom } from '../useStickToBottom'
 import type { ReactionDetail } from './PostSheet'
 
 const PostSheet = dynamic(() => import('./PostSheet').then((mod) => mod.PostSheet), { ssr: false })
@@ -62,6 +64,7 @@ export function ChatThread({
   blocked: blockedOnServer = false,
   statuses,
   viewerId,
+  viewerIcon = null,
   isAdmin,
   rules,
   backHref,
@@ -76,6 +79,7 @@ export function ChatThread({
   blocked?: boolean // a DM where one of the two blocked the other
   statuses: Record<string, string> // Status id → label, for live group posts
   viewerId: string
+  viewerIcon?: string | null // the viewer's profile image, for posts while they are being sent
   isAdmin: boolean // runs this group: may delete any post
   rules: ChatRules
   backHref: string
@@ -95,6 +99,8 @@ export function ChatThread({
   const [blockedHere, setBlockedHere] = useState<boolean | null>(null)
   const blocked = blockedHere ?? blockedOnServer
   const scroller = useRef<HTMLDivElement>(null)
+  const list = useRef<HTMLOListElement>(null)
+  useStickToBottom(scroller, list, NEAR_BOTTOM_PX)
   const input = useRef<HTMLTextAreaElement>(null)
   const latest = useRef(items) // the messages on screen, for callbacks that outlive a render
   const anchor = useRef<Anchor>('bottom')
@@ -340,6 +346,7 @@ export function ChatThread({
       clientId,
       author: t.chats.you,
       authorId: null,
+      authorIcon: viewerIcon,
       authorStatus: null,
       mine: true,
       system: false,
@@ -348,12 +355,14 @@ export function ChatThread({
       state: 'sending',
       reactions: [],
       edited: false,
-      replyTo: replying?.seq ? { seq: replying.seq, author: replying.author, body: replying.body || t.chats.picture } : null,
+      replyTo: replying?.seq
+        ? { seq: replying.seq, author: replying.author, body: replying.body || t.chats.picture, photo: replying.photo ? { thumbPath: replying.photo.thumbPath, src: replying.imageSrc } : null }
+        : null,
       image: image !== null,
       photo: null,
       imageSrc: image?.src ?? null,
       verified: image?.verified ?? false,
-      verifiedDate: image?.verified ? image.date : null,
+      photoDate: image?.date ?? null,
     }
     anchor.current = 'bottom'
     setItems((current) => [...current, message])
@@ -379,8 +388,8 @@ export function ChatThread({
   async function sendPicture(shot: PickedPhoto) {
     setPicture(false)
     try {
-      // A capture or upload (data URL), or an album / profile photo: copied into the chat.
-      const blob = await (await fetch(shot.src)).blob()
+      // A capture or upload (its file), or an album / profile photo (its address): copied into the chat.
+      const blob = shot.blob ?? (await (await fetch(shot.src)).blob())
       post('', shot, blob)
     } catch {
       setNotice(t.chats.pictureFailed)
@@ -471,12 +480,12 @@ export function ChatThread({
   // The full picture, signed when tapped.
   async function openImage(message: ChatMessage) {
     if (!message.photo) {
-      if (message.imageSrc) setViewing({ src: message.imageSrc, verified: message.verified, date: message.verifiedDate })
+      if (message.imageSrc) setViewing({ src: message.imageSrc, verified: message.verified, date: message.photoDate })
       return
     }
     const urls = await signPaths(createClient(), [message.photo.path])
     const src = urls.get(message.photo.path)
-    if (src) setViewing({ src, verified: message.verified, date: message.verifiedDate })
+    if (src) setViewing({ src, verified: message.verified, date: message.photoDate })
   }
 
   function press(message: ChatMessage, event: PointerEvent<HTMLElement>) {
@@ -498,7 +507,7 @@ export function ChatThread({
         }}
       >
         {older ? <p className="pt-4 text-center text-[13px] text-muted">{t.chats.loadingOlder}</p> : null}
-        <ol className="flex flex-col gap-5 px-4 py-4 sm:px-8 lg:px-10">
+        <ol ref={list} className="flex flex-col gap-5 px-4 py-4 sm:px-8 lg:px-10">
           {items.map((message) => (
             <li
               key={message.id}
@@ -512,10 +521,10 @@ export function ChatThread({
             >
               {message.authorId ? (
                 <Link href={profileHref(message.authorId)} aria-label={message.author}>
-                  <Avatar name={message.author} seed={message.authorId} />
+                  <Avatar name={message.author} seed={message.authorId} src={message.authorIcon} />
                 </Link>
               ) : (
-                <Avatar name={message.author} seed={message.mine ? 'me' : message.author} />
+                <Avatar name={message.author} seed={message.mine ? 'me' : message.author} src={message.authorIcon} />
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-[16px]">
@@ -533,9 +542,16 @@ export function ChatThread({
                   </span>
                 </p>
                 {message.replyTo ? (
-                  <p className="mt-1 truncate border-l-2 border-line-strong pl-2.5 text-[14px] text-muted">
-                    {message.replyTo.author}: {message.replyTo.body}
-                  </p>
+                  <div className="mt-1 flex items-center gap-2 border-l-2 border-line-strong pl-2.5 text-[14px] text-muted">
+                    {message.replyTo.photo?.src ? (
+                      // The commented post's picture, small (a signed thumbnail).
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={message.replyTo.photo.src} alt={t.chats.picture} loading="lazy" decoding="async" draggable={false} className="size-10 shrink-0 rounded-md object-cover" />
+                    ) : null}
+                    <p className="min-w-0 truncate">
+                      {message.replyTo.author}: {message.replyTo.body}
+                    </p>
+                  </div>
                 ) : null}
                 {message.body ? <p className={`mt-1 text-[16px] leading-normal whitespace-pre-wrap break-words ${message.state === 'sent' ? '' : 'opacity-60'}`}>{message.body}</p> : null}
                 {message.image ? (
@@ -562,12 +578,7 @@ export function ChatThread({
                         />
                       )}
                     </button>
-                    {message.verified ? (
-                      <figcaption className="mt-1 text-[13px] font-semibold text-accent">
-                        ✓ {t.chats.takenInApp}
-                        {message.verifiedDate ? ` · ${message.verifiedDate}` : ''}
-                      </figcaption>
-                    ) : null}
+                    <figcaption className={`mt-1 text-[13px] ${photoLabelClass(message.verified)}`}>{photoLabel(message.verified, message.photoDate)}</figcaption>
                   </figure>
                 ) : null}
                 {message.state === 'sending' ? <p className="mt-1 text-[13px] text-muted">{t.chats.sending}</p> : null}

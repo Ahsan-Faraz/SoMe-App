@@ -3,9 +3,10 @@
 import dynamic from 'next/dynamic'
 import { useRef, useState } from 'react'
 import { AlbumPhotos, type PickedPhoto } from '@/features/albums/components/AlbumPhotos'
-import { formatDay } from '@/lib/format'
+import { formatStamp } from '@/lib/format'
 import { t } from '@/lib/i18n'
-import { imageDataUrl } from '@/lib/image'
+import { blobDataUrl, resizeImage } from '@/lib/image'
+import { IMAGE_FULL_PX } from '@/lib/limits'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
 
@@ -23,7 +24,7 @@ export function PictureSheet({
   const [picking, setPicking] = useState(false)
 
   if (camera) {
-    return <CameraCapture onClose={() => setCamera(false)} onCapture={(src) => onPick({ src, verified: true, date: formatDay() })} />
+    return <CameraCapture onClose={() => setCamera(false)} onCapture={(src, image) => onPick({ src, verified: true, date: formatStamp(Date.now()), blob: image.blob })} />
   }
 
   return (
@@ -60,7 +61,8 @@ export function PictureSheet({
           onChange={async (event) => {
             const file = event.target.files?.[0]
             if (!file) return
-            onPick({ src: await imageDataUrl(file, 1600), verified: false, date: formatDay() })
+            const { blob } = await resizeImage(file, IMAGE_FULL_PX)
+            onPick({ src: await blobDataUrl(blob), verified: false, date: formatStamp(Date.now()), blob })
           }}
         />
       </div>

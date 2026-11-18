@@ -432,6 +432,7 @@ export type Database = {
           headline: string | null
           history: boolean
           id: string
+          keep_application_images: boolean
           kind: string
           last_message_at: string | null
           last_message_preview: string | null
@@ -462,6 +463,7 @@ export type Database = {
           headline?: string | null
           history?: boolean
           id?: string
+          keep_application_images?: boolean
           kind: string
           last_message_at?: string | null
           last_message_preview?: string | null
@@ -492,6 +494,7 @@ export type Database = {
           headline?: string | null
           history?: boolean
           id?: string
+          keep_application_images?: boolean
           kind?: string
           last_message_at?: string | null
           last_message_preview?: string | null
@@ -542,6 +545,7 @@ export type Database = {
           headline: string
           hero_path: string | null
           id: string
+          keep_application_images: boolean
           name: string
           privacy_version: string
           require_age_18: boolean
@@ -558,6 +562,7 @@ export type Database = {
           show_place: boolean
           show_score: boolean
           show_visibility: boolean
+          site: string
           slug: string
           state_label_1: string | null
           state_label_2: string | null
@@ -574,6 +579,7 @@ export type Database = {
           headline: string
           hero_path?: string | null
           id?: string
+          keep_application_images?: boolean
           name: string
           privacy_version?: string
           require_age_18?: boolean
@@ -590,6 +596,7 @@ export type Database = {
           show_place?: boolean
           show_score?: boolean
           show_visibility?: boolean
+          site?: string
           slug: string
           state_label_1?: string | null
           state_label_2?: string | null
@@ -606,6 +613,7 @@ export type Database = {
           headline?: string
           hero_path?: string | null
           id?: string
+          keep_application_images?: boolean
           name?: string
           privacy_version?: string
           require_age_18?: boolean
@@ -622,6 +630,7 @@ export type Database = {
           show_place?: boolean
           show_score?: boolean
           show_visibility?: boolean
+          site?: string
           slug?: string
           state_label_1?: string | null
           state_label_2?: string | null
@@ -759,6 +768,27 @@ export type Database = {
             referencedColumns: ["community_id", "id"]
           },
         ]
+      }
+      logins: {
+        Row: {
+          created_at: string
+          email: string
+          site: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          site: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          site?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       member_consents: {
         Row: {
@@ -1593,10 +1623,20 @@ export type Database = {
         Args: { p_community: string; p_name: string }
         Returns: string
       }
-      create_community: {
-        Args: { p_headline: string; p_name: string; p_slug: string }
-        Returns: string
-      }
+      create_community:
+        | {
+            Args: {
+              p_headline: string
+              p_name: string
+              p_site: string
+              p_slug: string
+            }
+            Returns: string
+          }
+        | {
+            Args: { p_headline: string; p_name: string; p_slug: string }
+            Returns: string
+          }
       decide_application: {
         Args: { p_application: string; p_decision: string }
         Returns: Json
@@ -1700,6 +1740,19 @@ export type Database = {
         Returns: undefined
       }
       join_notice_due: { Args: { p_email: string }; Returns: boolean }
+      join_prepare: {
+        Args: {
+          p_community: string
+          p_email: string
+          p_site: string
+          p_username: string
+        }
+        Returns: {
+          auth_email: string
+          user_id: string
+          username_taken: boolean
+        }[]
+      }
       leave_chat: {
         Args: { p_chat: string; p_community: string; p_mode: string }
         Returns: Json
@@ -1713,6 +1766,7 @@ export type Database = {
           p_limit?: number
         }
         Returns: {
+          author_icon: string
           author_id: string
           author_name: string
           author_status_id: string
@@ -1725,9 +1779,23 @@ export type Database = {
           photo: Json
           reactions: Json
           reply_author: string
+          reply_photo: string
           reply_snippet: string
           reply_to_seq: number
           seq: number
+        }[]
+      }
+      login_code_new: {
+        Args: { p_holder_hash: string; p_kind: string; p_user: string }
+        Returns: string
+      }
+      login_lookup: {
+        Args: { p_community: string; p_login: string; p_site: string }
+        Returns: {
+          auth_email: string
+          confirmed: boolean
+          email: string
+          user_id: string
         }[]
       }
       mark_read: {
@@ -1738,10 +1806,12 @@ export type Database = {
         Args: { p_community: string; p_user: string }
         Returns: {
           ages: number[]
+          author_icon: string
           district_id: string
           headline: string
           id: string
           looking_for: string[]
+          photo_at: string
           photo_path: string
           photo_taken_in_app: boolean
           photo_thumb: string
@@ -1763,6 +1833,16 @@ export type Database = {
         Returns: {
           icon: string
           user_id: string
+          username: string
+        }[]
+      }
+      my_account: {
+        Args: { p_community: string }
+        Returns: {
+          can_create_groups: boolean
+          icon: string
+          role: string
+          state: string
           username: string
         }[]
       }
@@ -1794,17 +1874,29 @@ export type Database = {
         Args: { p_community: string; p_user: string }
         Returns: string
       }
-      platform_communities: {
-        Args: never
-        Returns: {
-          admins: string[]
-          direct_join: boolean
-          id: string
-          members: number
-          name: string
-          slug: string
-        }[]
-      }
+      platform_communities:
+        | {
+            Args: never
+            Returns: {
+              admins: string[]
+              direct_join: boolean
+              id: string
+              members: number
+              name: string
+              slug: string
+            }[]
+          }
+        | {
+            Args: { p_site: string }
+            Returns: {
+              admins: string[]
+              direct_join: boolean
+              id: string
+              members: number
+              name: string
+              slug: string
+            }[]
+          }
       profile: { Args: { p_community: string; p_user: string }; Returns: Json }
       rate_limit_refund: {
         Args: { p_bucket: string; p_keys: string[] }
@@ -1843,6 +1935,19 @@ export type Database = {
         Args: { p_community: string; p_items: string[] }
         Returns: undefined
       }
+      reset_confirm: {
+        Args: {
+          p_code: string
+          p_community: string
+          p_login: string
+          p_site: string
+        }
+        Returns: {
+          auth_email: string
+          user_id: string
+        }[]
+      }
+      reset_finish: { Args: { p_user: string }; Returns: undefined }
       roster_applications: {
         Args: {
           p_after_at?: string
@@ -1972,10 +2077,12 @@ export type Database = {
         }
         Returns: {
           ages: number[]
+          author_icon: string
           district_id: string
           headline: string
           id: string
           looking_for: string[]
+          photo_at: string
           photo_path: string
           photo_taken_in_app: boolean
           photo_thumb: string
@@ -2072,6 +2179,25 @@ export type Database = {
           p_seq: number
         }
         Returns: Json
+      }
+      signup_confirm: {
+        Args: {
+          p_code: string
+          p_email: string
+          p_holder_hash: string
+          p_site: string
+        }
+        Returns: {
+          auth_email: string
+          user_id: string
+        }[]
+      }
+      signup_resend: {
+        Args: { p_email: string; p_holder_hash: string; p_site: string }
+        Returns: {
+          code: string
+          user_id: string
+        }[]
       }
       submit_application: {
         Args: { p_application: Json; p_community: string }

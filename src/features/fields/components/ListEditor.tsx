@@ -66,6 +66,28 @@ export function ListEditor({
   )
 }
 
+// A whole number from 1 to SLOT_COUNT_MAX. What is typed is kept as text, so the field can be emptied
+// and typed again; an empty or out-of-range value goes back to the last good one on leaving the field.
+function CountInput({ value, label, onChange }: { value: number; label: string; onChange: (value: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={draft ?? String(value)}
+      aria-label={label}
+      onChange={(event) => {
+        const typed = event.target.value.replace(/\D/g, '').slice(0, 2)
+        setDraft(typed)
+        const count = Number(typed)
+        if (count >= 1 && count <= SLOT_COUNT_MAX) onChange(count)
+      }}
+      onBlur={() => setDraft(null)}
+      className={`${control} w-20 text-center`}
+    />
+  )
+}
+
 // A Status's people: "The Man × 1, The Woman × 1". None = one person, without a section of their own.
 function SlotEditor({ slots, substatuses, onChange }: { slots: SlotInput[]; substatuses: readonly Choice[]; onChange: (slots: SlotInput[]) => void }) {
   const unused = substatuses.filter((item) => item.active && !slots.some((slot) => slot.substatusId === item.id))
@@ -79,16 +101,10 @@ function SlotEditor({ slots, substatuses, onChange }: { slots: SlotInput[]; subs
           <span className="min-w-0 flex-1 truncate">{name(slot.substatusId)}</span>
           <label className="flex items-center gap-1.5 text-muted">
             ×
-            <input
-              type="number"
-              min={1}
-              max={SLOT_COUNT_MAX}
+            <CountInput
               value={slot.count}
-              aria-label={t.builder.peopleCount(name(slot.substatusId))}
-              onChange={(event) =>
-                onChange(slots.map((item, i) => (i === index ? { ...item, count: Math.min(SLOT_COUNT_MAX, Math.max(1, Math.round(Number(event.target.value) || 1))) } : item)))
-              }
-              className={`${control} w-20 text-center`}
+              label={t.builder.peopleCount(name(slot.substatusId))}
+              onChange={(count) => onChange(slots.map((item, i) => (i === index ? { ...item, count } : item)))}
             />
           </label>
           <button

@@ -12,7 +12,7 @@ import { ApplicationForm } from '@/features/membership/components/ApplicationFor
 import { t } from '@/lib/i18n'
 
 // A group found with "Find new user/group": join straight away, or apply (A24) when direct join is off.
-// Already in it: its chat.
+// Already applied: "Application pending" until the group admin decides (261115). Already in it: its chat.
 export default function JoinGroupPage(props: PageProps<'/[community]/groups/[groupId]/join'>) {
   return (
     <Suspense fallback={<RouteSkeleton />}>
@@ -32,17 +32,34 @@ async function JoinGroupContent({ params }: PageProps<'/[community]/groups/[grou
   if (group.member) redirect(`/${community}/chats/${group.id}`)
   const backHref = `/${community}/chats/new`
 
+  if (group.applied) {
+    return (
+      <div className="flex h-app w-full flex-col bg-canvas">
+        <ScreenHeader title={group.name} backHref={backHref} />
+        <main className={scrollArea}>
+          <div className="mx-auto grid max-w-lg justify-items-center gap-3 px-5 py-8 text-center sm:px-8">
+            <Avatar name={group.name} seed={group.id} shape="square" size="lg" />
+            <h2 className="text-[22px] leading-tight font-bold">{group.name}</h2>
+            {group.headline ? <p className="text-[16px] text-ink-soft">{group.headline}</p> : null}
+            <p role="status" className="mt-3 w-full rounded-2xl border border-accent/40 bg-sunken p-4 text-[16px]">
+              <span className="block font-semibold">{t.groups.applicationPending}</span>
+              <span className="mt-1 block text-[15px] text-ink-soft">{t.groups.applicationPendingHint}</span>
+            </p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   if (!group.directJoin) {
     return (
       <div className="flex h-app w-full flex-col bg-canvas">
         <ScreenHeader title={t.apply.title(group.name)} backHref={backHref} />
         <ApplicationForm
-          key={group.applied ? 'sent' : 'new'}
           community={community}
           communityId={info.id}
           scope={{ kind: 'group', id: group.id, applicationText: group.applicationText, requires: { ...group.requires, identity: false } }}
           applicantId={viewer.userId}
-          applied={group.applied}
         />
       </div>
     )

@@ -14,6 +14,7 @@ import { filterCount } from '../filter'
 import { MAX_STARS } from '../options'
 import type { ProfileCard } from '../types'
 import { useCardPages } from '../useCardPages'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 
 // Cards in the first screenful: their photos load eagerly (they are the LCP); the rest stay lazy.
 const ABOVE_FOLD = 4
@@ -128,7 +129,7 @@ function ProfileRow({ community, profile, builtins, eager }: { community: string
             <Avatar name={profile.username} seed={profile.id} />
           </span>
         )}
-        {builtins.photo && profile.photo?.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.takenInApp}</span> : null}
+        {builtins.photo && profile.photo ? <span className={`max-w-28 text-right text-[12px] ${photoLabelClass(profile.photo.verified)}`}>{photoLabel(profile.photo.verified, profile.photo.date)}</span> : null}
       </span>
     </Link>
   )

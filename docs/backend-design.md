@@ -82,7 +82,9 @@ Phone (PWA)
 | D31 | Real members | Per community, the admin can require **18+** (a confirmation now, BankID later) and an **identity check** (an ID photo reviewed by hand, no automatic face matching), so communities get real people, not fake accounts. Identity material is deleted once the application is decided. |
 | D32 | Consent | Sign-up stores what the member agreed to (terms, privacy policy, 18+ when required) and which version. The join form never reveals whether an email already has a login. |
 
-**D17 note (separate accounts).** Supabase Auth allows one password per email. So each email has **one login**, and each community gets its own **member account**: its own username, profile, photos, chats, blocks and admin data. Communities never see each other. Default: the same email uses the same password in every community it joins (open question Q8).
+**D17 note (separate accounts).** Each community gets its own **member account**: its own username, profile, photos, chats, blocks and admin data. Communities never see each other. A **login** belongs to one **site** (a domain's world, `communities.site`): inside a site the same email uses the same password in every community it joins (Q8); on another site the same email is a separate login with its own password (Q12, built in step 17).
+
+**Sites and logins (step 17, client decision 261102).** Every community belongs to a site, and its address is unique inside that site only, so `theirl.net/demo` and `aiproduktion.se/demo` are two communities. A request's site comes from its host through the `SITE_HOSTS` setting (`src/lib/sites.ts`); a community never opens on another site's domain. Supabase Auth allows one login per email, so the email it holds is an internal address the server makes up (`<random>@<site>.login.invalid`); `public.logins` holds the site and the real email, unique together. The server finds the login by site + email (or community + username) and signs in with the internal address. Sign-up and reset codes are ours: 6 digits, only a hash stored, one hour, 5 tries, sent through Brevo from the site's own sender. A sign-up code only works in the browser that typed the password (a cookie), so nobody can start a sign-up with someone else's email and have the owner confirm it; a sign-up that was never confirmed is replaced by the next one for that email. A trigger on `members` refuses an account in a community of another site, whatever path creates it.
 
 ---
 
@@ -573,7 +575,7 @@ Deleting a member or a community removes everything below it (cascades). That is
 | Notes and stars | **Only the author** (no admin override) | Only the author |
 | Albums | Owner, and approved members with no block either way (the community admin despite a block, 261102). A locked album: name and a folder only, photos after `open_album` (open for an hour); the community admin needs the password too | Owner |
 | Photos | Profile bucket: public but unguessable URLs. Private bucket: signed URLs only, issued to people allowed to see the row that uses the photo | Owner |
-| Ads | Approved members, no block either way (on a profile, the community admin despite a block, 261102), never a removed member's; the Ads tab also leaves out members hidden from search. Images signed by the server after the read | Author |
+| Ads | Approved members, no block either way (on a profile, the community admin despite a block, 261102), never a removed member's; members hidden from search keep their ads in the Ads tab (an ad is a conscious choice, 261115). Images signed by the server after the read | Author |
 
 Extra protections:
 
@@ -778,7 +780,7 @@ Each feature lists: what the user sees, which tables it uses, and where the work
   - Age, Status and Published are shown from the profile, not editable
   - Publish, Delete
 - **View someone's ad (D3):** Profile, DM.
-- **Built (step 14):** `search_ads`, `save_ad_filter` / `ad_filter`, `member_ads` (My ads, a profile's Ads), `ad_view`, `save_ad`, `delete_ad`. Blocked people's ads never show either way; removed members' ads are gone; hidden members' ads stay off the Ads tab but on their profile. The server signs ad images with the service role after the RPC (no per-file Storage policy); deleting or replacing an image removes its files after the response.
+- **Built (step 14):** `search_ads`, `save_ad_filter` / `ad_filter`, `member_ads` (My ads, a profile's Ads), `ad_view`, `save_ad`, `delete_ad`. Blocked people's ads never show either way; removed members' ads are gone; hidden members' ads stay off the Ads tab but on their profile (changed in step 19: they show in the Ads tab too, client feedback 261115). The server signs ad images with the service role after the RPC (no per-file Storage policy); deleting or replacing an image removes its files after the response.
 
 ### 6.16 Find new user/group (A2)
 
@@ -940,7 +942,7 @@ The app stays usable after every slice.
 | Q9 | Profile photos visible to logged-in members only? | Public bucket, unguessable URLs | Private bucket + batched signed URLs |
 | Q10 | Identity check: ID card photo, a photo of the person, or both? | One ID photo, the admin decides what to ask for in the application text | A second photo slot |
 | Q11 | BankID later: who pays per check, members or community admins? | Not built yet | A per-community setting |
-| Q12 | **Pending (261102).** One login per domain: the same email is a separate account on theirl.net and aiproduktion.se, with one shared database. Supabase Auth allows one account per email in a project. Options: (a) one login per email, separate accounts and profiles per domain (looks separate; same password everywhere); (b) truly separate logins, with our own sign-in on top of Supabase; (c) one Supabase project per domain (separate databases, which the client doesn't want) | Not built: one login per email, as D17 | Decide (a)/(b)/(c) with the client first: it changes sign-up, login and memberships |
+| Q12 | **Answered, built in step 17: option (b).** One login per domain: the same email is a separate account on theirl.net and aiproduktion.se, with one shared database. Supabase Auth allows one account per email in a project. Options: (a) one login per email, separate accounts and profiles per domain (looks separate; same password everywhere); (b) truly separate logins, with our own sign-in on top of Supabase; (c) one Supabase project per domain (separate databases, which the client doesn't want) | Separate logins per site (`public.logins`), see the D17 note | — |
 | Q13 | **Pending (261102).** After login, pick one of your communities on this domain or apply to another; a direct link skips the picker; a community can be hidden from the list | Not built: `/` opens the default community; login is per community | Needs Q12, and a way to group communities by domain (`communities.domain` is one unique domain per community today) |
 | Q14 | **Pending (261102).** Confirm the sign-up email by a link or by a code? | A code (today) | Supabase Auth email template + `/auth/confirm` |
 | Q15 | **Pending (261102).** VIP members: groups of "max 10 profiles", edit and run the calendar of their own group. Is that at most 10 members? | Not built | A role flag on `members`, a member cap in `add_group_member` |

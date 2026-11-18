@@ -11,7 +11,7 @@ create temp table ids as select
   'a1400000-0000-4000-8000-00000000000c'::uuid as carl, -- Couple MF, community admin
   'a1400000-0000-4000-8000-00000000000d'::uuid as dora, -- Anna blocked her
   'a1400000-0000-4000-8000-00000000000e'::uuid as erik, -- applicant
-  'a1400000-0000-4000-8000-00000000000f'::uuid as fred, -- hidden from search
+  'a1400000-0000-4000-8000-00000000000f'::uuid as fred, -- hidden from search (his ads still show: 261115)
   'a1400000-0000-4000-8000-000000000010'::uuid as gina; -- removed later
 grant select on ids to anon, authenticated;
 
@@ -130,8 +130,8 @@ set local role authenticated;
 
 -- Reading --------------------------------------------------------------------------------------
 select pg_temp.as_user(bert) from ids;
-select is(pg_temp.found(), array['Test Carl rides', 'Test Gina rides', 'Test Dora rides', 'Test Trail company', 'Test Gravel partner'],
-  'Bert''s Ads tab: newest first, without the member hidden from search');
+select is(pg_temp.found(), array['Test Carl rides', 'Test Gina rides', 'Test Fred rides', 'Test Dora rides', 'Test Trail company', 'Test Gravel partner'],
+  'Bert''s Ads tab: newest first, with the ads of a member hidden from search (step 19, client 261115)');
 select results_eq(
   $$ select username, status_id, ages, score, place, photo_taken_in_app, photo_thumb from public.search_ads((select biking from ids)) where id = pg_temp.ad('gravel') $$,
   $$ select 'Test a14 anna'::text, pg_temp.option('status', 'Woman'), array[30], 40::smallint, 'Test Slussen'::text, true, pg_temp.file(anna, 1, true) from ids $$,
@@ -189,7 +189,7 @@ select is(pg_temp.search(jsonb_build_object('districts', jsonb_build_array(pg_te
 select is(pg_temp.search('{"place": "nacka"}'), array['Test Trail company'], 'the ad''s place');
 select is(pg_temp.search('{"age_min": 31, "age_max": 31}'), array['Test Trail company', 'Test Gravel partner'], 'the author''s age');
 select is(pg_temp.search('{"age_min": 60}'), array['Test Carl rides'], 'a couple matches when either person is in range');
-select is(pg_temp.search('{"score_min": 45}'), array['Test Carl rides', 'Test Dora rides', 'Test Trail company', 'Test Gravel partner'], 'the author''s score');
+select is(pg_temp.search('{"score_min": 45}'), array['Test Carl rides', 'Test Fred rides', 'Test Dora rides', 'Test Trail company', 'Test Gravel partner'], 'the author''s score');
 select public.set_note(biking, anna, '{"body": "Test", "stars": 4}') from ids;
 select is(pg_temp.search('{"stars_min": 3}'), array['Test Trail company', 'Test Gravel partner'], 'my stars for the author');
 select is(pg_temp.search(jsonb_build_object('text', 'test', 'statuses', jsonb_build_array(pg_temp.option('status', 'Woman')), 'districts',
@@ -202,7 +202,7 @@ select is((select count(*)::int from public.search_ads((select biking from ids),
 select is((select array_agg(s.headline order by s.published_at desc) from public.search_ads((select biking from ids), 2,
   (select published_at from public.search_ads((select biking from ids), 2) order by published_at limit 1),
   (select id from public.search_ads((select biking from ids), 2) order by published_at limit 1)) as s where s.user_id::text like 'a1400000-%'),
-  array['Test Trail company', 'Test Gravel partner'], 'the next page starts after the last ad');
+  array['Test Dora rides', 'Test Trail company'], 'the next page starts after the last ad');
 
 -- Editing and deleting -------------------------------------------------------------------------
 select throws_ok($$ select public.save_ad(biking, pg_temp.ad('gravel'), array[pg_temp.option('status', 'Man')], 'Test mine now', '', null, '', null) from ids $$,

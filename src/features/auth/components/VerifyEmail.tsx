@@ -69,6 +69,7 @@ export function VerifyEmail({ community, email }: { community: string; email: st
       </form>
 
       <form action={resend} onSubmit={submitWith(resend)} className="grid justify-items-center gap-1">
+        <input type="hidden" name="community" value={community} />
         <input type="hidden" name="email" value={email} />
         <button type="submit" disabled={resending} className="py-2 text-[15px] font-semibold text-accent hover:underline disabled:opacity-50">
           {t.verify.resend}

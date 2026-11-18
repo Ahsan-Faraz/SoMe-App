@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
 import { getGroupSettings } from '@/features/groups/queries'
-import { formatDay } from '@/lib/format'
+import { formatDay, formatStamp } from '@/lib/format'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { t } from '@/lib/i18n'
@@ -21,7 +21,16 @@ export const getScope = cache(async (kind: ScopeKind, community: string, groupId
     if (!found) return null
     // Direct join: nobody reviews the application, so it asks for no images (the database ignores them).
     const requires = found.directJoin ? { ...found.requires, image: false, identity: false } : found.requires
-    return { kind, id: 'community', name: found.name, stateLabels: found.stateLabels, applicationText: found.applicationText, requires, directJoin: found.directJoin }
+    return {
+      kind,
+      id: 'community',
+      name: found.name,
+      stateLabels: found.stateLabels,
+      applicationText: found.applicationText,
+      requires,
+      directJoin: found.directJoin,
+      keepImages: found.keepApplicationImages,
+    }
   }
   const settings = await getGroupSettings(community, groupId)
   if (!settings) return null
@@ -163,7 +172,7 @@ async function signImages(client: StorageClient, [image, idImage]: [PhotoRow | n
   const urls = new Map((data ?? []).flatMap((item) => (item.path && item.signedUrl ? [[item.path, item.signedUrl] as const] : [])))
   const shown = (photo: PhotoRow | null): ApplicationImage | null => {
     const src = photo ? urls.get(photo.path) : undefined
-    return photo && src ? { src, verified: photo.taken_in_app, date: formatDay(new Date(photo.taken_at ?? photo.created_at)) } : null
+    return photo && src ? { src, verified: photo.taken_in_app, date: formatStamp(photo.taken_at ?? photo.created_at) } : null
   }
   return [shown(image), shown(idImage)]
 }

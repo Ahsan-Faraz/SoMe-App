@@ -1,7 +1,7 @@
 'use server'
 
 import { updateTag } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { redirect, RedirectType } from 'next/navigation'
 import { getViewer } from '@/features/auth/queries'
 import { getCommunity } from '@/features/communities/queries'
 import { isBool, isRecord, isUuid } from '@/lib/guards'
@@ -67,7 +67,7 @@ export async function saveFieldAction(slug: string, input: FieldInput): Promise<
   if (error) return { error: errorText(error.code) }
 
   updateTag(fieldsTag(community.id))
-  redirect(`/${slug}/admin/fields`)
+  redirect(`/${slug}/admin/fields`, RedirectType.replace)
 }
 
 // One list in its new order. Districts are saved per country (countryId); Status items carry their people.
@@ -94,7 +94,7 @@ export async function saveListAction(slug: string, list: ChoiceList, items: List
   if (error) return { error: errorText(error.code) }
 
   updateTag(fieldsTag(community.id))
-  redirect(`/${slug}/admin/fields`)
+  redirect(`/${slug}/admin/fields`, RedirectType.replace)
 }
 
 // The basic fields this community shows. Saved on every switch; the switch moves first.

@@ -1,9 +1,9 @@
-import { t } from '@/lib/i18n'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 import type { ProfilePhoto } from '../types'
 
 // A profile photo across the profile's full width, at its place among the fields. The browser picks
 // the thumbnail or the full file for the screen; width/height keep the page from jumping as it loads.
-// Taken in app photos say so, with the date they were taken (D16, D18).
+// Every photo says "Taken in app" or "Uploaded", with its date and time (D16, D18).
 export function FullPhoto({ photo, alt, eager = false }: { photo: ProfilePhoto; alt: string; eager?: boolean }) {
   return (
     <figure>
@@ -23,9 +23,7 @@ export function FullPhoto({ photo, alt, eager = false }: { photo: ProfilePhoto; 
           className="mx-auto h-auto max-h-[85dvh] w-full object-contain"
         />
       </a>
-      <figcaption className={`mt-1.5 text-[13px] ${photo.verified ? 'font-semibold text-accent' : 'text-muted'}`}>
-        {photo.verified ? `✓ ${t.chats.takenInApp} · ${photo.date}` : photo.date}
-      </figcaption>
+      <figcaption className={`mt-1.5 text-[13px] ${photoLabelClass(photo.verified)}`}>{photoLabel(photo.verified, photo.date)}</figcaption>
     </figure>
   )
 }

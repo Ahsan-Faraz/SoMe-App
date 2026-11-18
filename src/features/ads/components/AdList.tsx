@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { t } from '@/lib/i18n'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 import { moreAdsAction } from '../actions'
 import { ADS_PAGE, type AdCard } from '../types'
 
@@ -66,13 +67,18 @@ export function AdList({ community, cards: first, paged }: { community: string; 
         {cards.map((ad, index) => (
           <li key={ad.id} className="[contain-intrinsic-size:auto_170px] [content-visibility:auto]">
             <Link href={`/${community}/ads/${ad.id}`} className="m-2 flex gap-3 rounded-2xl border border-line p-4 hover:border-accent/40">
-              <Avatar name={ad.username} seed={ad.userId} />
+              <Avatar name={ad.username} seed={ad.userId} src={ad.icon} />
               <span className="min-w-0 flex-1 text-[14px]">
                 <span className="line-clamp-2 text-[16px] leading-snug font-bold">{ad.headline}</span>
                 <span className="mt-1 block text-ink-soft">{ad.username}</span>
                 <span className="block text-ink-soft">{ad.ages.join(', ')}</span>
                 <span className="block text-ink-soft">{ad.district}</span>
                 <span className="block text-ink-soft">{ad.place}</span>
+                {ad.lookingFor.length > 0 ? (
+                  <span className="mt-1 line-clamp-2 block text-ink-soft">
+                    <span className="font-semibold">{t.ads.lookingFor}:</span> {ad.lookingFor.join(', ')}
+                  </span>
+                ) : null}
                 <span className="mt-1 block text-[13px] text-muted">{ad.published}</span>
               </span>
               <span className="grid shrink-0 justify-items-end gap-1.5">
@@ -82,7 +88,7 @@ export function AdList({ community, cards: first, paged }: { community: string; 
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={ad.image} alt="" width={96} height={96} loading={index < ABOVE_FOLD ? 'eager' : 'lazy'} decoding="async" className="size-24 rounded-xl object-cover" />
                 ) : null}
-                {ad.image && ad.verified ? <span className="text-[12px] font-semibold text-accent">✓ {t.chats.takenInApp}</span> : null}
+                {ad.image ? <span className={`max-w-28 text-right text-[12px] ${photoLabelClass(ad.verified)}`}>{photoLabel(ad.verified, ad.imageDate)}</span> : null}
               </span>
             </Link>
           </li>

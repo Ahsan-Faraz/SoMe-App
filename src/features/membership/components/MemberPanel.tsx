@@ -9,6 +9,8 @@ import { t } from '@/lib/i18n'
 import { saveMember } from '../save'
 import { wholeNumber } from '../numbers'
 import { REAL_NAMES, type MemberRecord, type RosterEdit, type Scope } from '../types'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
+import { joined, useDraft } from '@/lib/use-draft'
 
 type ScopeRef = Pick<Scope, 'kind' | 'id' | 'stateLabels'>
 
@@ -31,10 +33,8 @@ export function MemberPanel({
   statuses: readonly StatusChoice[]
 }) {
   const record = seed
-  // The inputs open fresh when a saved change comes back from the server.
   return (
     <PanelFields
-      key={`${record.realNames.join('|')}|${record.state.join('|')}|${record.notes}`}
       community={community}
       scope={scope}
       record={record}
@@ -81,7 +81,8 @@ function StatusEditor({ community, userId, statusId, statuses }: { community: st
   )
 }
 
-// Each field is saved when it is left, in the database (the community's or the group's record).
+// Each field is saved when it is left, in the database (the community's or the group's record). A
+// saved change coming back from the server updates only that field (useDraft), so the focus stays.
 function PanelFields({
   community,
   scope,
@@ -95,9 +96,12 @@ function PanelFields({
   labels: string[]
   status: ReactNode
 }) {
-  const [names, setNames] = useState(() => Array.from({ length: REAL_NAMES }, (_, i) => record.realNames[i] ?? ''))
-  const [state, setState] = useState(record.state)
-  const [notes, setNotes] = useState(record.notes)
+  const [names, setNames] = useDraft(
+    Array.from({ length: REAL_NAMES }, (_, i) => record.realNames[i] ?? ''),
+    joined,
+  )
+  const [state, setState] = useDraft(record.state, joined)
+  const [notes, setNotes] = useDraft(record.notes)
   const [error, setError] = useState('')
   const [, startTransition] = useTransition()
   const same = (a: string[], b: string[]) => a.join('|') === b.join('|')
@@ -228,9 +232,7 @@ function ApplicationFigure({ image, label, checked }: { image: MemberRecord['ima
       {/* A signed URL (private bucket, community) or a data URL (groups, until step 7). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={image.src} alt={label} loading="lazy" decoding="async" className="h-auto max-h-[70dvh] w-full rounded-xl bg-sunken object-contain" />
-      <figcaption className={`mt-1 text-[13px] ${image.verified ? 'font-semibold text-accent' : 'text-muted'}`}>
-        {image.verified ? `✓ ${t.chats.takenInApp} · ${image.date}` : image.date}
-      </figcaption>
+      <figcaption className={`mt-1 text-[13px] ${photoLabelClass(image.verified)}`}>{photoLabel(image.verified, image.date)}</figcaption>
     </figure>
   )
 }

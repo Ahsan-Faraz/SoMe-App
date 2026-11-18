@@ -13,6 +13,7 @@ import { formatDay } from '@/lib/format'
 import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
 import { imageDataUrl, type ResizedImage } from '@/lib/image'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 import { HEADLINE_MAX, LONG_TEXT_MAX, PLACE_MAX } from '@/lib/limits'
 import { deleteAdAction, saveAdAction } from '../actions'
 import type { AdDetail } from '../types'
@@ -48,7 +49,7 @@ export function AdEditor({
   statuses: readonly Choice[]
   districts: readonly Choice[]
 }) {
-  const goBack = useGoBack(community)
+  const goBack = useGoBack()
   const own = !ad || ad.own
   const [camera, setCamera] = useState(false)
   const [choosing, setChoosing] = useState(false)
@@ -57,7 +58,10 @@ export function AdEditor({
   const [lookingFor, setLookingFor] = useState<string[]>(ad?.lookingForIds ?? [])
   const [district, setDistrict] = useState(ad?.districtId ?? districts[0]?.id ?? '')
   const [place, setPlace] = useState(ad?.place ?? '')
-  const [image, setImage] = useState<{ src: string; verified: boolean } | null>(ad?.image ? { src: ad.image, verified: ad.verified } : null)
+  // date: when the saved picture was taken or uploaded; '' for a new one not published yet.
+  const [image, setImage] = useState<{ src: string; verified: boolean; date: string } | null>(
+    ad?.image ? { src: ad.image, verified: ad.verified, date: ad.imageDate } : null,
+  )
   const [picked, setPicked] = useState<Picked | null>(null)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
@@ -65,7 +69,7 @@ export function AdEditor({
   const back = ad?.own ? `/${community}/profiles/${viewerId}/ads` : `/${community}/ads`
 
   function pick(src: string, next: Picked) {
-    setImage({ src, verified: next.verified })
+    setImage({ src, verified: next.verified, date: '' })
     setPicked(next)
     setError('')
   }
@@ -174,7 +178,7 @@ export function AdEditor({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={image.src} alt="" className="mt-2 aspect-video w-full rounded-2xl object-cover" />
             ) : null}
-            {image?.verified ? <p className="mt-1 text-[13px] font-semibold text-accent">✓ {t.chats.takenInApp}</p> : null}
+            {image ? <p className={`mt-1 text-[13px] ${photoLabelClass(image.verified)}`}>{photoLabel(image.verified, image.date)}</p> : null}
             {own ? (
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => setCamera(true)} className="grid min-h-14 content-center rounded-xl bg-accent px-2 py-2 text-center text-white hover:bg-accent-hover">
@@ -247,7 +251,7 @@ export function AdEditor({
             </div>
           ) : ad ? (
             <div className="grid grid-cols-2 gap-3">
-              <Link href={`/${community}/profiles/${ad.userId}`} className={buttonClass('secondary')}>
+              <Link href={`/${community}/profiles/${ad.userId}?back=${encodeURIComponent(`/${community}/ads/${ad.id}`)}`} className={buttonClass('secondary')}>
                 {t.ads.profile}
               </Link>
               <Link href={dmHref(community, ad.userId)} className={buttonClass('primary')}>

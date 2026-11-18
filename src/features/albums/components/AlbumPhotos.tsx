@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import type { MainPhoto } from '@/features/profiles/types'
-import { formatDay } from '@/lib/format'
+import { formatStamp } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { createClient } from '@/lib/supabase/browser'
 import type { PickedPhoto } from '../types'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 
 export type { PickedPhoto }
 
@@ -32,7 +33,7 @@ export function AlbumPhotos({ communityId, profilePhoto = null, onPick }: { comm
       const album = data.flatMap((row) => {
         const src = urls.get(row.path)
         const thumb = urls.get(row.thumb_path)
-        return src && thumb ? [{ id: row.id, src, thumb, verified: row.taken_in_app, date: row.taken_at ? formatDay(new Date(row.taken_at)) : '' }] : []
+        return src && thumb ? [{ id: row.id, src, thumb, verified: row.taken_in_app, date: row.taken_at ? formatStamp(row.taken_at) : '' }] : []
       })
       const profile = profilePhoto ? [{ id: 'profile', src: profilePhoto.src, thumb: profilePhoto.src, verified: profilePhoto.verified, date: profilePhoto.date }] : []
       if (live) setPhotos([...profile, ...album])
@@ -53,7 +54,7 @@ export function AlbumPhotos({ communityId, profilePhoto = null, onPick }: { comm
           <button type="button" onClick={() => onPick({ src: photo.src, verified: photo.verified, date: photo.date })} className="block w-full rounded-xl text-left focus-visible:outline-2 focus-visible:outline-accent">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photo.thumb} alt="" loading="lazy" decoding="async" className="aspect-square w-full rounded-xl object-cover" />
-            <span className="mt-1 block text-[13px] text-muted">{photo.verified ? `✓ ${t.chats.takenInApp} · ${photo.date}` : photo.date}</span>
+            <span className={`mt-1 block text-[13px] ${photoLabelClass(photo.verified)}`}>{photoLabel(photo.verified, photo.date)}</span>
           </button>
         </li>
       ))}

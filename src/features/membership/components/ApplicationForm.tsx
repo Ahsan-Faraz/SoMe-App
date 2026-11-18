@@ -6,17 +6,20 @@ import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { buttonClass } from '@/components/ui/Button'
 import { GrowingTextarea } from '@/components/ui/GrowingTextarea'
 import { bottomBar, scrollArea } from '@/components/ui/Screen'
-import { formatDay } from '@/lib/format'
+import { formatStamp } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { blobDataUrl, resizeImage, type ResizedImage } from '@/lib/image'
 import { IMAGE_FULL_PX } from '@/lib/limits'
 import type { UploadedPhoto } from '@/features/profiles/photo'
 import { applyToGroupAction, submitApplicationAction } from '../actions'
 import { REAL_NAMES, type ApplicationImage, type Scope, type SentApplication } from '../types'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
 
-const field = 'w-full min-w-0 rounded-xl border border-line-strong bg-canvas px-3 text-[16px] text-ink outline-none focus:border-accent'
+const field = 'w-full min-w-0 rounded-xl border bg-canvas px-3 text-[16px] text-ink outline-none focus:border-accent'
+// One border colour at a time (two in one class list: the stylesheet's order decides, not ours).
+const edge = (missing: boolean) => (missing ? 'border-danger' : 'border-line-strong')
 
 // The chosen image: a preview, the resized file to upload when the application is sent,
 // and the upload once done (a refused try keeps it, so the next try doesn't upload it again).
@@ -40,7 +43,7 @@ export function ApplicationForm({
 }: {
   community: string
   communityId: string // where the images are uploaded
-  scope: Pick<Scope, 'kind' | 'id' | 'applicationText' | 'requires' | 'directJoin'> // a group: id is its chat id
+  scope: Pick<Scope, 'kind' | 'id' | 'applicationText' | 'requires' | 'directJoin' | 'keepImages'> // a group: id is its chat id
   applicantId: string
   applied?: boolean // already applied (community: members.state; group: an open application)
   sent?: SentApplication | null // community, once applied: what was sent
@@ -56,14 +59,23 @@ export function ApplicationForm({
   const [message, setMessage] = useState(sent?.message ?? '')
   const [names, setNames] = useState<string[]>(() => Array.from({ length: REAL_NAMES }, (_, i) => sent?.realNames[i] ?? ''))
   const [error, setError] = useState('')
+  // Set by a refused Apply: the asked-for parts still empty are named in the error and marked.
+  const [checked, setChecked] = useState(false)
   const [pending, startTransition] = useTransition()
   const { requires } = scope
+  const empty = {
+    image: requires.image && !image,
+    identity: requires.identity && !idImage,
+    text: requires.text && !message.trim(),
+    names: requires.names && !names[0]?.trim(),
+  }
+  const marked = (part: keyof typeof empty) => checked && empty[part]
 
   const setSlot = (slot: Slot) => (slot === 'image' ? setImage : setIdImage)
 
   async function pick(slot: Slot, file: Blob, verified: boolean) {
     const resized = await resizeImage(file, IMAGE_FULL_PX)
-    setSlot(slot)({ src: await blobDataUrl(resized.blob), verified, date: formatDay(), file: resized })
+    setSlot(slot)({ src: await blobDataUrl(resized.blob), verified, date: formatStamp(Date.now()), file: resized })
   }
 
   // The picked image in the private bucket (once: a refused try keeps the upload for the next).
@@ -83,10 +95,18 @@ export function ApplicationForm({
       setError(t.apply.profileMissing(missing))
       return
     }
-    if ((requires.image && !image) || (requires.identity && !idImage) || (requires.text && !message.trim()) || (requires.names && !names[0]?.trim())) {
-      setError(t.apply.missing)
+    const parts = [
+      empty.image && t.apply.image,
+      empty.identity && t.apply.idPhoto,
+      empty.text && t.apply.text,
+      empty.names && t.apply.name(1),
+    ].filter((part): part is string => Boolean(part))
+    if (parts.length) {
+      setChecked(true)
+      setError(t.apply.missingParts(parts))
       return
     }
+    setChecked(false)
     setError('')
     startTransition(async () => {
       let photos: [UploadedPhoto | null, UploadedPhoto | null]
@@ -107,7 +127,7 @@ export function ApplicationForm({
       <CameraCapture
         onClose={() => setCamera(null)}
         onCapture={(src, file) => {
-          setSlot(camera)({ src, verified: true, date: formatDay(), file })
+          setSlot(camera)({ src, verified: true, date: formatStamp(Date.now()), file })
           setCamera(null)
         }}
       />
@@ -141,6 +161,7 @@ export function ApplicationForm({
               title={t.apply.image}
               hint={t.apply.imageHint}
               image={image}
+              missing={marked('image')}
               applied={applied}
               onCamera={() => setCamera('image')}
               onFile={(file) => pick('image', file, false)}
@@ -151,8 +172,9 @@ export function ApplicationForm({
           {requires.identity ? (
             <ImageSlot
               title={t.apply.idPhoto}
-              hint={t.apply.idPhotoHint}
+              hint={scope.keepImages ? t.apply.idPhotoHintKept : t.apply.idPhotoHint}
               image={idImage}
+              missing={marked('identity')}
               applied={applied}
               onCamera={() => setCamera('id')}
               onFile={(file) => pick('id', file, false)}
@@ -163,7 +185,13 @@ export function ApplicationForm({
           {requires.text ? (
             <label className="grid gap-1.5 text-[14px] font-semibold">
               {t.apply.text}
-              <GrowingTextarea value={message} onChange={(event) => setMessage(event.target.value)} rows={4} className={`${field} min-h-28 py-2.5 leading-normal`} />
+              <GrowingTextarea
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                rows={4}
+                aria-invalid={marked('text') || undefined}
+                className={`${field} ${edge(marked('text'))} min-h-28 py-2.5 leading-normal`}
+              />
             </label>
           ) : null}
 
@@ -175,11 +203,12 @@ export function ApplicationForm({
                   key={index}
                   value={name}
                   required={index === 0}
+                  aria-invalid={(index === 0 && marked('names')) || undefined}
                   autoComplete={index === 0 ? 'name' : 'off'}
                   aria-label={t.apply.name(index + 1)}
                   placeholder={index === 0 ? t.apply.name(1) : `${t.apply.name(index + 1)} (${t.apply.optional})`}
                   onChange={(event) => setNames((current) => current.map((item, i) => (i === index ? event.target.value : item)))}
-                  className={`${field} h-11`}
+                  className={`${field} ${edge(index === 0 && marked('names'))} h-11`}
                 />
               ))}
             </fieldset>
@@ -216,6 +245,7 @@ function ImageSlot({
   title,
   hint,
   image,
+  missing,
   applied,
   onCamera,
   onFile,
@@ -224,6 +254,7 @@ function ImageSlot({
   title: string
   hint: string
   image: PickedImage | null
+  missing: boolean // asked for, still empty, after a refused Apply
   applied: boolean
   onCamera: () => void
   onFile: (file: Blob) => Promise<void>
@@ -239,7 +270,7 @@ function ImageSlot({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={image.src} alt={title} className="h-auto max-h-[70dvh] w-full rounded-2xl bg-sunken object-contain" />
           <figcaption className="mt-1 flex items-center justify-between gap-2 text-[13px]">
-            <span className={image.verified ? 'font-semibold text-accent' : 'text-muted'}>{image.verified ? `✓ ${t.chats.takenInApp} · ${image.date}` : image.date}</span>
+            <span className={photoLabelClass(image.verified)}>{photoLabel(image.verified, image.date)}</span>
             {applied ? null : (
               <button type="button" onClick={onClear} className="rounded-lg px-2 py-1 font-semibold text-accent hover:bg-hover">
                 {t.apply.change}
@@ -248,7 +279,7 @@ function ImageSlot({
           </figcaption>
         </figure>
       ) : (
-        <div className="grid gap-3 rounded-2xl border-2 border-dashed border-line-strong p-4">
+        <div className={`grid gap-3 rounded-2xl border-2 border-dashed p-4 ${missing ? 'border-danger' : 'border-line-strong'}`}>
           <p className="text-[14px] text-muted">{hint}</p>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={onCamera} className="grid min-h-14 content-center rounded-xl bg-accent px-2 py-2 text-center text-white hover:bg-accent-hover">

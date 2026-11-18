@@ -19,7 +19,9 @@ export default function DeleteAccountPage(props: PageProps<'/[community]/account
 async function DeleteAccountContent({ params }: PageProps<'/[community]/account/delete'>) {
   const { community } = await params
   const [viewer, info] = await Promise.all([getViewer(community), getCommunity(community)])
-  if (!viewer || !info) redirect(`/${community}/login`)
+  // No account (logged out, or just deleted: this page renders once more as the action ends): the
+  // start page, where the form's own full page load also goes.
+  if (!viewer || !info) redirect(`/${community}`)
 
   return (
     <div className="min-h-app w-full bg-canvas">

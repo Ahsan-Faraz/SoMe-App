@@ -1,6 +1,6 @@
 'use server'
 
-import { redirect } from 'next/navigation'
+import { redirect, RedirectType } from 'next/navigation'
 import { getCommunity } from '@/features/communities/queries'
 import { isUuid } from '@/lib/guards'
 import { t } from '@/lib/i18n'
@@ -22,7 +22,7 @@ export async function leaveChatAction(slug: string, chatId: string, mode: LeaveM
   const { data, error } = await supabase.rpc('leave_chat', { p_community: community.id, p_chat: chatId, p_mode: mode })
   if (error) return { error: error.code === '42501' ? t.leave.notAllowed : t.common.error }
   deletePrivateFiles(data)
-  redirect(mode === 'keep' ? `/${slug}/chats/${chatId}` : `/${slug}/chats`)
+  redirect(mode === 'keep' ? `/${slug}/chats/${chatId}` : `/${slug}/chats`, RedirectType.replace)
 }
 
 // B3/B5 "Delete": a post (and its comments). The database checks who may; their images go from

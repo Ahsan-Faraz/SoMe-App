@@ -16,6 +16,9 @@ export type AdCard = {
   publishedAt: string // the keyset for the next page
   image: string | null
   verified: boolean
+  imageDate: string // when the picture was taken in the app, or uploaded
+  icon: string | null // the author's profile image (thumbnail)
+  lookingFor: string[]
 }
 
 // One ad (ad_view). image: a signed link to the full image.
@@ -36,6 +39,7 @@ export type AdDetail = {
   published: string
   image: string | null
   verified: boolean
+  imageDate: string
 }
 
 // One page of the Ads tab.
