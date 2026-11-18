@@ -45,6 +45,7 @@ export const getGroupSettings = cache(async (slug: string, chatId: string): Prom
       applyImage: flag(data, 'require_app_image'),
       applyText: flag(data, 'require_app_text'),
       applyNames: flag(data, 'require_app_names'),
+      keepImages: flag(data, 'keep_application_images'),
       calendar: flag(data, 'calendar'),
       history: flag(data, 'history'),
       memberList: flag(data, 'member_list'),

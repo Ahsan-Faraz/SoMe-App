@@ -14,6 +14,7 @@ export type Scope = {
   applicationText: string
   requires: Requirements
   directJoin?: boolean // community: approved as it's sent, so no images are asked for (client 261102)
+  keepImages?: boolean // community: an approved application keeps its images (261115)
 }
 
 export type ApplicationImage = { src: string; verified: boolean; date: string }

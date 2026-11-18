@@ -1,3 +1,4 @@
+import { profilePhotoUrl } from '@/features/profiles/photo'
 import { formatStamp } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ChatMessage, Reaction } from './types'
@@ -11,7 +12,7 @@ export const MESSAGE_PAGE = 30
 export const CATCH_UP_LIMIT = 100
 
 // A post's photo as the database returns it (paths in the private bucket, to sign).
-export type PhotoRow = { path: string; thumb_path: string; width: number | null; height: number | null; taken_in_app: boolean; taken_at: string | null }
+export type PhotoRow = { path: string; thumb_path: string; width: number | null; height: number | null; taken_in_app: boolean; taken_at: string | null; created_at?: string | null }
 
 // A message as list_messages() returns it and send_message() broadcasts it
 // (supabase/migrations/20261022120000_post_actions.sql).
@@ -31,6 +32,8 @@ export type MessageRow = {
   photo?: PhotoRow | null
   reactions?: Record<string, number> | null
   my_reaction?: string | null
+  author_icon?: string | null // a path in the public profile bucket
+  reply_photo?: string | null // a thumbnail path in the private bucket
 }
 
 export function isMessageRow(value: unknown): value is MessageRow {
@@ -58,6 +61,7 @@ export function toMessage(row: MessageRow, viewerId: string, group: boolean, sta
     clientId: row.client_id,
     author: mine ? t.chats.you : row.author_name,
     authorId: mine ? null : row.author_id,
+    authorIcon: row.author_icon ? profilePhotoUrl(row.author_icon) : null,
     authorStatus: group && !mine && row.author_status_id ? (statuses[row.author_status_id] ?? null) : null,
     mine,
     system: row.kind === 'system',
@@ -66,12 +70,15 @@ export function toMessage(row: MessageRow, viewerId: string, group: boolean, sta
     state: 'sent',
     reactions: toReactions(row.reactions ?? {}, row.my_reaction ?? null),
     edited: Boolean(row.edited_at),
-    replyTo: row.reply_to_seq ? { seq: row.reply_to_seq, author: row.reply_author ?? '', body: row.reply_snippet ?? '' } : null,
+    replyTo: row.reply_to_seq
+      ? { seq: row.reply_to_seq, author: row.reply_author ?? '', body: row.reply_snippet ?? '', photo: row.reply_photo ? { thumbPath: row.reply_photo, src: null } : null }
+      : null,
     image: photo !== null,
     photo: photo ? { path: photo.path, thumbPath: photo.thumb_path, width: photo.width, height: photo.height } : null,
     imageSrc: null,
     verified: photo?.taken_in_app ?? false,
-    verifiedDate: photo?.taken_in_app && photo.taken_at ? formatStamp(photo.taken_at) : null,
+    // An upload has no taken_at: it was uploaded when the post was sent.
+    photoDate: photo ? formatStamp(photo.taken_at ?? photo.created_at ?? row.created_at) : null,
   }
 }
 

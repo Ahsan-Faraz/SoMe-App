@@ -27,8 +27,8 @@ export function ChatIndex({
     <>
       <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-canvas px-3">
         {pane ? null : (
-          <Link href={`/${community}/profiles/${viewer.userId}`} aria-label={t.chats.yourProfile} className="rail:hidden">
-            <Avatar name={viewer.username} seed={viewer.userId} size="sm" />
+          <Link href={`/${community}/profiles/${viewer.userId}?back=${encodeURIComponent(`/${community}/chats`)}`} aria-label={t.chats.yourProfile} className="rail:hidden">
+            <Avatar name={viewer.username} seed={viewer.userId} size="sm" src={viewer.icon} />
           </Link>
         )}
         <h1 className="min-w-0 flex-1 truncate pl-1 text-[18px] font-bold">{t.chats.title}</h1>

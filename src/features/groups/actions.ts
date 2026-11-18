@@ -1,7 +1,7 @@
 'use server'
 
 import { refresh } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { redirect, RedirectType } from 'next/navigation'
 import { getCommunity } from '@/features/communities/queries'
 import { isBool, isRecord, isUuid } from '@/lib/guards'
 import { t } from '@/lib/i18n'
@@ -49,12 +49,13 @@ export async function saveGroupAction(slug: string, groupId: string | null, grou
       require_app_image: group.applyImage,
       require_app_text: group.applyText,
       require_app_names: group.applyNames,
+      keep_application_images: group.keepImages,
       state_labels: group.stateLabels.map((label) => label.trim()),
       infos: [0, 1, 2].map((i) => ({ headline: (infos[i * 2] ?? '').trim(), body: (infos[i * 2 + 1] ?? '').trim() })),
     },
   })
   if (error || !data) return { error: errorText(error?.code ?? '') }
-  redirect(groupId ? `/${slug}/chats/${data}/info` : `/${slug}/chats/${data}`)
+  redirect(groupId ? `/${slug}/chats/${data}/info` : `/${slug}/chats/${data}`, RedirectType.replace)
 }
 
 // A10 "Delete group".
@@ -66,7 +67,7 @@ export async function deleteGroupAction(slug: string, groupId: string): Promise<
   const { data, error } = await supabase.rpc('delete_group', { p_community: community, p_chat: groupId })
   if (error) return { error: errorText(error.code) }
   deletePrivateFiles(data)
-  redirect(`/${slug}/chats`)
+  redirect(`/${slug}/chats`, RedirectType.replace)
 }
 
 // A2/A24 "Join" a group that allows direct join; then its chat.
@@ -77,7 +78,7 @@ export async function joinGroupAction(slug: string, groupId: string): Promise<Gr
   const supabase = await createClient()
   const { error } = await supabase.rpc('join_group', { p_community: community, p_chat: groupId })
   if (error) return { error: errorText(error.code) }
-  redirect(`/${slug}/chats/${groupId}`)
+  redirect(`/${slug}/chats/${groupId}`, RedirectType.replace)
 }
 
 // A30 "+" and F1: add a member to a group (on) or take them out.
@@ -119,7 +120,7 @@ const isText = (value: unknown, max: number): value is string => typeof value ==
 
 function isGroupForm(value: unknown): value is GroupForm {
   if (!isRecord(value)) return false
-  const flags = ['visibleInSearch', 'applyImage', 'applyText', 'applyNames', 'calendar', 'history', 'memberList', 'editPosts', 'directJoin', 'posting', 'commenting', 'reactions']
+  const flags = ['visibleInSearch', 'applyImage', 'applyText', 'applyNames', 'keepImages', 'calendar', 'history', 'memberList', 'editPosts', 'directJoin', 'posting', 'commenting', 'reactions']
   return (
     isText(value.name, NAME_MAX) &&
     isText(value.headline, GROUP_HEADLINE_MAX) &&

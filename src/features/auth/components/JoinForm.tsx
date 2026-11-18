@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useActionState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { PasswordField } from '@/components/ui/PasswordField'
 import { TextField } from '@/components/ui/TextField'
 import { t } from '@/lib/i18n'
 import { PASSWORD_MIN, USERNAME_MAX, USERNAME_MIN } from '@/lib/limits'
@@ -45,23 +46,8 @@ export function JoinForm({
         maxLength={USERNAME_MAX}
         required
       />
-      <TextField
-        id="password"
-        name="password"
-        type="password"
-        label={t.join.password}
-        autoComplete="new-password"
-        minLength={PASSWORD_MIN}
-        required
-      />
-      <TextField
-        id="repeatPassword"
-        name="repeatPassword"
-        type="password"
-        label={t.join.repeatPassword}
-        autoComplete="new-password"
-        required
-      />
+      <PasswordField id="password" name="password" label={t.join.password} hint={t.join.passwordHint} autoComplete="new-password" minLength={PASSWORD_MIN} required />
+      <PasswordField id="repeatPassword" name="repeatPassword" label={t.join.repeatPassword} autoComplete="new-password" required />
       <TextField id="email" name="email" type="email" label={t.join.email} autoComplete="email" inputMode="email" required />
 
       <div className="grid gap-3 pt-1">
@@ -69,7 +55,7 @@ export function JoinForm({
           <input type="checkbox" name="privacy" required className="mt-0.5 size-5 shrink-0" />
           <span>
             {t.join.privacyConsent}{' '}
-            <Link href={`/${community}/privacy`} target="_blank" className="font-semibold text-accent underline">
+            <Link href={`/${community}/privacy?back=${encodeURIComponent(`/${community}/join`)}`} className="font-semibold text-accent underline">
               {t.join.privacyLink}
             </Link>
           </span>

@@ -2,15 +2,14 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { canGoBack } from '@/lib/history'
+import { goUp } from '@/lib/history'
 import { t } from '@/lib/i18n'
 import { Icon } from './Icon'
 
-// The header's back arrow. It goes back to the previous screen, like the browser's Back.
-// `fallback` (the screen's parent) is only used when the screen was opened directly.
+// The header's back arrow. It goes to the screen's parent (`fallback`): one logical level up, not
+// the browser's previous page (lib/history.ts).
 export function BackLink({ fallback }: { fallback: string }) {
   const router = useRouter()
-  const community = fallback.split('/')[1] ?? ''
 
   return (
     <Link
@@ -19,9 +18,8 @@ export function BackLink({ fallback }: { fallback: string }) {
       onClick={(event) => {
         // Let cmd/ctrl-click open the parent in a new tab.
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-        if (!canGoBack(community)) return
         event.preventDefault()
-        router.back()
+        goUp(router, fallback)
       }}
       className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover"
     >

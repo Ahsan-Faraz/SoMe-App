@@ -3,6 +3,7 @@
 import { refresh } from 'next/cache'
 import { isUuid } from '@/lib/guards'
 import { t } from '@/lib/i18n'
+import { requestSite } from '@/lib/sites'
 import { deletePrivateFiles } from '@/lib/supabase/private-files'
 import { createClient } from '@/lib/supabase/server'
 import { HEADLINE_MAX, NAME_MAX, SLUG } from './types'
@@ -13,14 +14,14 @@ export type PlatformResult = { error: string } | undefined
 // admin (supabase/migrations/20261103120000_feedback_261102.sql); the guards here only give a
 // friendly message first.
 
-// A new community with empty lists, at /{slug}.
+// A new community with empty lists, at /{slug} on the site (domain) the platform admin is on.
 export async function createCommunityAction(slug: string, name: string, headline: string): Promise<PlatformResult> {
   const address = slug.trim().toLowerCase()
   if (!SLUG.test(address)) return { error: t.platform.badAddress }
   if (!name.trim() || name.trim().length > NAME_MAX || headline.trim().length > HEADLINE_MAX) return { error: t.platform.invalid }
 
-  const supabase = await createClient()
-  const { error } = await supabase.rpc('create_community', { p_slug: address, p_name: name.trim(), p_headline: headline.trim() })
+  const [supabase, site] = await Promise.all([createClient(), requestSite()])
+  const { error } = await supabase.rpc('create_community', { p_site: site, p_slug: address, p_name: name.trim(), p_headline: headline.trim() })
   if (error) {
     if (error.code === '23505') return { error: t.platform.taken }
     if (error.code === '22023') return { error: t.platform.badAddress }

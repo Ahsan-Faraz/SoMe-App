@@ -29,7 +29,7 @@ async function CommunityAdminContent({ params }: PageProps<'/[community]/admin'>
         <BigLink href={`${base}/stats`} icon="chart" label={t.admin.statistics} />
         <BigLink href={`${base}/fields`} icon="pencil" label={t.admin.builder} />
         <BigLink href={`${base}/settings`} icon="info" label={t.admin.settings} />
-        {platformAdmin ? <BigLink href="/platform" icon="shield" label={t.admin.platform} /> : null}
+        {platformAdmin ? <BigLink href={`/platform?back=${encodeURIComponent(`/${community}/admin`)}`} icon="shield" label={t.admin.platform} /> : null}
         <p className="mt-2 px-1 text-[14px] text-muted">{t.admin.more}</p>
       </nav>
     </div>

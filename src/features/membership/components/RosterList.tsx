@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition 
 import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
 import { createClient } from '@/lib/supabase/browser'
+import { joined, useDraft } from '@/lib/use-draft'
 import { saveMember } from '../save'
 import { wholeNumber } from '../numbers'
 import { ROSTER_PAGE, fetchRosterPage, type StatusLabels } from '../rows'
@@ -144,8 +145,7 @@ export function RosterList({
         <ul className="mx-auto grid max-w-6xl grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-3 p-3 sm:p-6">
           {rows.map((row) => (
             <li key={row.userId} className="[contain-intrinsic-size:auto_220px] [content-visibility:auto]">
-              {/* Keyed by the saved values: a row re-seeds when fresh saved data arrives. */}
-              <RosterRow key={`${row.state.join('|')}|${row.notes}`} row={row} labels={scope.stateLabels} href={`${profileBase}/${row.userId}${back}`} onSave={save} />
+              <RosterRow row={row} labels={scope.stateLabels} href={`${profileBase}/${row.userId}${back}`} onSave={save} />
             </li>
           ))}
         </ul>
@@ -167,8 +167,9 @@ const RosterRow = memo(function RosterRow({
   href: string
   onSave: (row: MemberRecord, edit: RosterEdit) => void
 }) {
-  const [state, setState] = useState(row.state)
-  const [notes, setNotes] = useState(row.notes)
+  // Drafts that follow fresh saved data without remounting the row (the focus stays).
+  const [state, setState] = useDraft(row.state, joined)
+  const [notes, setNotes] = useDraft(row.notes)
   const [asking, setAsking] = useState(false)
   const names = row.realNames.filter(Boolean)
 

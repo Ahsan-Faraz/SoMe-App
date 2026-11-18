@@ -45,7 +45,7 @@ export function AdFilterForm({
   const [filter, setFilter] = useState<AdFilter>(saved)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
-  const goBack = useGoBack(community)
+  const goBack = useGoBack()
   const set = <K extends keyof AdFilter>(name: K) => (value: AdFilter[K]) => setFilter((current) => ({ ...current, [name]: value }))
   const names = Object.fromEntries(statuses.map((choice) => [choice.id, choice.label]))
   const name = (id: string) => names[id] ?? ''

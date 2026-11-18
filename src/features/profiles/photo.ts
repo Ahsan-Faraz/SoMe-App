@@ -1,5 +1,5 @@
 import { getSupabaseEnv } from '@/lib/env'
-import { formatDay } from '@/lib/format'
+import { formatStamp } from '@/lib/format'
 import type { ProfilePhoto } from './types'
 
 // Profile photos live in the public `profile` bucket under unguessable, never-reused paths, so the
@@ -28,7 +28,7 @@ export function toProfilePhoto(row: PhotoRow): ProfilePhoto {
     width: row.width,
     height: row.height,
     verified: row.taken_in_app,
-    date: formatDay(new Date(row.taken_at ?? row.created_at)),
+    date: formatStamp(row.taken_at ?? row.created_at), // taken in the app, or uploaded
   }
 }
 

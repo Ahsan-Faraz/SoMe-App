@@ -105,6 +105,7 @@ export async function approveApplicationAction(slug: string, applicationId: stri
       await sendEmail({
         to: email,
         fromName: community.name,
+        site: community.site,
         subject: t.email.approvedSubject(community.name),
         text: t.email.approvedBody(username, community.name, `${origin}/${slug}/login`),
       })

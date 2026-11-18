@@ -8,8 +8,11 @@ import { t } from '@/lib/i18n'
 import type { ResizedImage } from '@/lib/image'
 import { addAlbumPhotoAction, deleteAlbumAction, openAlbumAction, removeAlbumPhotoAction, setAlbumPasswordAction } from '../actions'
 import type { AlbumDetail, AlbumPhoto } from '../types'
+import { photoLabel, photoLabelClass } from '@/lib/photo-label'
 
 const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture').then((mod) => mod.CameraCapture), { ssr: false })
+// The whole picture, uncropped, over the album (the same viewer as a chat picture).
+const ImageViewer = dynamic(() => import('@/features/chats/components/ImageViewer').then((mod) => mod.ImageViewer), { ssr: false })
 const LONG_PRESS_MS = 450
 
 // A password for the album actions, inside a FormData so no server log shows it.
@@ -46,6 +49,7 @@ export function AlbumView({
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [camera, setCamera] = useState(false)
+  const [viewing, setViewing] = useState<AlbumPhoto | null>(null)
   const [ask, setAsk] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
   const [askAlbum, setAskAlbum] = useState(false)
@@ -177,7 +181,9 @@ export function AlbumView({
               <span className="relative block">
                 {/* A signed link (an hour), or the photo being added. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.src} alt="" draggable={false} loading="lazy" decoding="async" className="aspect-video w-full rounded-2xl bg-sunken object-cover" />
+                <button type="button" aria-label={t.albums.openImage} onClick={() => setViewing(photo)} className="block w-full">
+                  <img src={photo.src} alt="" draggable={false} loading="lazy" decoding="async" className="aspect-video w-full rounded-2xl bg-sunken object-cover" />
+                </button>
                 {own && saved ? (
                   <button
                     type="button"
@@ -190,9 +196,7 @@ export function AlbumView({
                   </button>
                 ) : null}
               </span>
-              {photo.verified || photo.date ? (
-                <p className="mt-1 text-[14px] text-muted">{photo.verified ? `✓ ${t.chats.takenInApp} · ${photo.date}` : photo.date}</p>
-              ) : null}
+              <p className={`mt-1 text-[14px] ${photoLabelClass(photo.verified)}`}>{photoLabel(photo.verified, photo.date)}</p>
             </li>
           )
         })}
@@ -283,6 +287,7 @@ export function AlbumView({
           </div>
         </div>
       ) : null}
+      {viewing ? <ImageViewer src={viewing.src} verified={viewing.verified} date={viewing.date} onClose={() => setViewing(null)} /> : null}
     </div>
   )
 }

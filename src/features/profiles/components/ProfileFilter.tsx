@@ -41,7 +41,7 @@ export function ProfileFilterForm({
   const [filter, setFilter] = useState<ProfileFilter>(saved)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
-  const goBack = useGoBack(community)
+  const goBack = useGoBack()
   const set = <K extends keyof ProfileFilter>(name: K) => (value: ProfileFilter[K]) => setFilter((current) => ({ ...current, [name]: value }))
   const setField = (id: string, cond: FieldFilter) => setFilter((current) => ({ ...current, fields: { ...current.fields, [id]: cond } }))
   const names = Object.fromEntries([...statuses, ...districts].map((choice) => [choice.id, choice.label]))

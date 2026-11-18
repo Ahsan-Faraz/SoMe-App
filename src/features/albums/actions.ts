@@ -1,7 +1,7 @@
 'use server'
 
 import { refresh } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { redirect, RedirectType } from 'next/navigation'
 import { getCommunity } from '@/features/communities/queries'
 import { isBool, isRecord, isUuid } from '@/lib/guards'
 import { t } from '@/lib/i18n'
@@ -50,7 +50,7 @@ export async function deleteAlbumAction(slug: string, albumId: string, listHref:
   const { data, error } = await supabase.rpc('delete_album', { p_community: community, p_album: albumId })
   if (error) return { error: errorText(error.code) }
   deletePrivateFiles(data)
-  if (listHref?.startsWith(`/${slug}/`)) redirect(listHref)
+  if (listHref?.startsWith(`/${slug}/`)) redirect(listHref, RedirectType.replace)
   refresh()
 }
 

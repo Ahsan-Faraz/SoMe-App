@@ -232,8 +232,10 @@ ssh some-prod
    | `NEXT_PUBLIC_SUPABASE_URL` | some-prod → Project Settings → API Keys: `https://<id>.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | same page, **Publishable key** (`sb_publishable_…`) |
    | `SUPABASE_SECRET_KEY` | same page, **Secret keys** → new key named `vps` (`sb_secret_…`) |
-   | `BREVO_API_KEY` | client's Brevo → SMTP & API → API keys |
-   | `EMAIL_FROM` | a sender address verified in Brevo, e.g. `no-reply@theirl.net` |
+   | `SITE_HOSTS` | which domain is which site: `theirl.net=theirl,www.theirl.net=theirl,aiproduktion.se=aiproduktion,www.aiproduktion.se=aiproduktion`. Each site has its own communities and logins; a domain missing here is served as the default site `main` |
+   | `BREVO_API_KEY` | client's Brevo → SMTP & API → API keys. The app sends every email itself (codes and approvals) |
+   | `SITE_SENDERS` | the sender per site, each verified in Brevo: `theirl=no-reply@theirl.net,aiproduktion=no-reply@aiproduktion.se` |
+   | `EMAIL_FROM` | the sender for a site that isn't in `SITE_SENDERS` |
    | `DEFAULT_COMMUNITY` | slug of the community shown at `/`. **Leave the line commented out (`#`) until it has a value.** An empty `DEFAULT_COMMUNITY=` makes `/` redirect to itself. Unset, it's `biking-stockholm` |
    | `COMMUNITY_DOMAINS` | leave it commented out for now |
 
@@ -345,10 +347,13 @@ The prod database is filled by the pipeline on the first merge to `main`, after 
 
 ## Part 10: the Supabase prod project
 
-- **Authentication**: copy the settings from the dev project (`hckf…`) one by one: Sign In / Providers, Emails (templates), Rate limits. The current code works with those. Then change the URL Configuration for prod:
-  - Site URL: `https://theirl.net`
-  - Redirect URLs: `https://theirl.net/**`, `https://www.theirl.net/**`, `https://aiproduktion.se/**`, `https://www.aiproduktion.se/**`
-- **Authentication → Emails → SMTP**: Brevo, from the client's account. Supabase's built-in email sends only a few messages an hour.
+- **Authentication → Sign In / Providers → Email**, since logins are per site (step 17):
+  - **Confirm email: ON.** Required: it is what keeps a sign-up from logging in before its code is typed.
+  - **Allow new users to sign up: OFF** (recommended). The server creates every login itself, so nobody can create one by calling Supabase directly. After switching it off, do one test sign-up in the app.
+  - Leaked password protection: ON. Minimum password length: 8 or lower (the app asks for 8).
+- **No SMTP and no email templates are needed.** Supabase Auth sends no email any more: the app sends the codes through Brevo (`BREVO_API_KEY`, `SITE_SENDERS`). The Supabase login emails go to internal addresses that don't exist.
+- **URL Configuration**: Site URL `https://theirl.net`; Redirect URLs `https://theirl.net/**`, `https://www.theirl.net/**`, `https://aiproduktion.se/**`, `https://www.aiproduktion.se/**`.
+- **Sites**: every community has a site (`communities.site`), set when the platform admin creates it on that domain. The site keys in `SITE_HOSTS` must match. The platform admin needs a login, and a `platform_admins` row, on each domain: `insert into public.platform_admins (user_id) select user_id from public.logins where site = '<site>' and email = '<their email>';`
 - **Database → Settings**: turn on **Enforce SSL**.
 - Ask the client to turn on **two-factor login** for the Supabase and Hostinger accounts, because they hold everything.
 

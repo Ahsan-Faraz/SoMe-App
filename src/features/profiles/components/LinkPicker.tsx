@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon'
 import { t } from '@/lib/i18n'
 import { LINK_COMMENT_MAX, LINKED_PROFILES_MAX } from '@/lib/limits'
 import { createClient } from '@/lib/supabase/browser'
+import { useDraft } from '@/lib/use-draft'
 import { setLinkAction, setLinkCommentAction } from '../actions'
 import { profilePhotoUrl } from '../photo'
 import type { LinkedProfile } from '../types'
@@ -78,7 +79,7 @@ export function LinkPicker({ slug, communityId, linked, linkedYou }: { slug: str
           <ul className="divide-y divide-line border-b-4 border-line">
             {list.map((item) => (
               <Row key={item.id} item={item} note={item.confirmed ? null : t.linked.waiting} label={t.linked.remove(item.username)} icon="trash" danger onClick={() => save(false, item)}>
-                <LinkComment key={item.comment} slug={slug} item={item} onError={setError} />
+                <LinkComment slug={slug} item={item} onError={setError} />
               </Row>
             ))}
           </ul>
@@ -150,28 +151,60 @@ function Row({
   )
 }
 
-// Your short comment on a link ("My partner"), shown next to it on your profile. Saved when the
-// field is left, only if it changed.
+// Your short comment on a link ("My partner"), shown next to it on your profile. Saved with the Save
+// button (or Enter), and also when the field is left, so nothing typed is lost; each text is sent once.
+// "Saved" shows only after a save here; the drafts follow the saved comment without remounting.
 function LinkComment({ slug, item, onError }: { slug: string; item: LinkedProfile; onError: (error: string) => void }) {
-  const [comment, setComment] = useState(item.comment)
+  const [comment, setComment] = useDraft(item.comment)
+  const [saved, setSaved] = useDraft(item.comment) // the last text saved (and not refused)
+  const [justSaved, setJustSaved] = useState(false)
   const [pending, startTransition] = useTransition()
+  const dirty = comment.trim() !== saved
+
+  function save() {
+    if (!dirty || pending) return
+    const text = comment.trim()
+    onError('')
+    startTransition(async () => {
+      const result = await setLinkCommentAction(slug, item.id, text)
+      if (result) onError(result.error)
+      else {
+        setSaved(text)
+        setJustSaved(true)
+      }
+    })
+  }
+
   return (
-    <input
-      value={comment}
-      maxLength={LINK_COMMENT_MAX}
-      aria-label={t.linked.comment(item.username)}
-      placeholder={t.linked.commentPlaceholder}
-      disabled={pending}
-      onChange={(event) => setComment(event.target.value)}
-      onBlur={() => {
-        if (comment.trim() === item.comment) return
-        onError('')
-        startTransition(async () => {
-          const result = await setLinkCommentAction(slug, item.id, comment)
-          if (result) onError(result.error)
-        })
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        save()
       }}
-      className="order-last h-10 w-full rounded-xl border border-line-strong bg-canvas px-3 text-[15px] text-ink outline-none focus:border-accent"
-    />
+      className="order-last flex w-full gap-2"
+    >
+      <input
+        value={comment}
+        maxLength={LINK_COMMENT_MAX}
+        aria-label={t.linked.comment(item.username)}
+        placeholder={t.linked.commentPlaceholder}
+        readOnly={pending} // not disabled: the focus stays in the field while it saves
+        onChange={(event) => {
+          setComment(event.target.value)
+          setJustSaved(false)
+        }}
+        onBlur={save}
+        className="h-10 min-w-0 flex-1 rounded-xl border border-line-strong bg-canvas px-3 text-[15px] text-ink outline-none focus:border-accent"
+      />
+      <button
+        type="submit"
+        disabled={!dirty || pending}
+        // Keeps the focus in the field, so the click saves once (not blur and then submit).
+        onMouseDown={(event) => event.preventDefault()}
+        className="h-10 shrink-0 rounded-xl bg-accent px-4 text-[15px] font-semibold text-white hover:bg-accent-hover disabled:bg-soft disabled:text-muted"
+      >
+        {pending ? t.linked.saving : !dirty && justSaved ? t.linked.saved : t.linked.save}
+      </button>
+    </form>
   )
 }

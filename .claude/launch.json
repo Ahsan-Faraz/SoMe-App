@@ -6,6 +6,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "two-sites",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set SITE_HOSTS=127.0.0.1=site-b&& set BREVO_API_KEY=off&& npm run dev"],
+      "port": 3000
+    },
+    {
+      "name": "two-sites-prod",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set SITE_HOSTS=127.0.0.1=site-b&& set BREVO_API_KEY=off&& npm run build && npm run start"],
+      "port": 3000
     }
   ]
 }

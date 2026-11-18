@@ -57,6 +57,10 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
             <Link href={`${base}/info`} className="text-ink hover:underline">
               {chat.name}
             </Link>
+          ) : notesHref && chat.otherUserId ? (
+            <Link href={`/${community}/profiles/${chat.otherUserId}?back=${encodeURIComponent(base)}`} className="text-ink hover:underline">
+              {chat.name}
+            </Link>
           ) : (
             chat.name
           )
@@ -108,6 +112,7 @@ async function ChatContent({ params }: PageProps<'/[community]/chats/[chatId]'>)
         blocked={chat.blocked}
         statuses={statuses}
         viewerId={viewer.userId}
+        viewerIcon={viewer.icon}
         isAdmin={chat.manage}
         rules={rules}
         backHref={base}

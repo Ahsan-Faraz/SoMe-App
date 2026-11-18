@@ -495,3 +495,75 @@ Open questions for the client:
 1. Profile photos: visible to logged-in members only (private bucket), or keep public unguessable links?
 2. Identity check: ID card photo, a photo of the person, or both?
 3. Later, who pays for BankID checks: members or community admins?
+
+## Step 17 — Sites: addresses and logins per domain
+
+From the client's answers of 2 Nov 2026 (Q12): a login belongs to one domain, and domains are fully separate. Design: `docs/backend-design.md`, D17 note.
+
+- [x] **A site per domain.** `communities.site` (default `main`). A request's site comes from its host through `SITE_HOSTS` (`src/lib/sites.ts`), not the database. `getCommunity(slug)` looks up by site + slug, so the same address on two domains is two communities, and a community never opens on another site's domain. `/platform` lists and creates communities for the domain it is opened on.
+- [x] **A login per site.** `public.logins` (site + real email, unique together); Supabase Auth holds an internal address. The same email signs up separately on each site, with its own password. A trigger on `members` refuses an account in a community of another site.
+- [x] **Our own codes.** Sign-up and reset codes are made and checked in the database (hash only, one hour, 5 tries) and sent through Brevo after the response, from the site's sender (`SITE_SENDERS`). Supabase Auth sends no email. The server creates logins with the admin API, so public sign-up in Supabase can be off.
+- [x] **Sign-up can't be hijacked.** A sign-up code only confirms in the browser that typed the password. A sign-up that was never confirmed gives way to the next one for that email (its username is free again).
+- [x] **Password reset** keeps the code until the new password is saved (a refused password doesn't cost the code), then ends every session of the login.
+- [x] Join a second community on the same site with the existing password (as before); delete my account and the approval email work with the new logins.
+
+Built with: migrations `20261110120000_sites.sql`, `20261110130000_logins.sql`, `20261110140000_reset_steps.sql`, `20261110150000_login_speed.sql` (only adding; `handle_new_user`, `decide_application` replaced with the same signatures). New RPCs: `platform_communities(p_site)`, `create_community(p_site, …)` (platform admin); `login_lookup`, `join_prepare`, `login_code_new`, `signup_resend`, `signup_confirm`, `reset_confirm`, `reset_finish` (service role only). Tests `21_sites.test.sql` (13) and `22_logins.test.sql` (40). Speed (`scripts/speed/18_logins.sql`: 20,000 logins on two sites, 10,000 members in a community): every lookup and code step under 1.1 ms, removing an unconfirmed sign-up 2.2 ms. A login is the same number of round trips as before. Checked in the browser on two local hosts mapped to two sites: the same email signs up on both, each password only works on its own site, wrong and right codes, reset.
+
+**Before production:** `docs/prod-db-changes-steps-9-11.md` §5 (deploy this build everywhere before two communities share an address), and `docs/vps-setup.md` Part 10 (`SITE_HOSTS`, `SITE_SENDERS`, Confirm email on, sign-ups off, no SMTP).
+
+**Pending:** Q13 (community picker after login, hidden communities), Q14 (link or code), Q15 (VIP groups of at most 10).
+
+**Test it** (needs two host names, e.g. the `two-sites` entry in `.claude/launch.json`, with a second community on the other site):
+1. Sign up with the same email on both domains, with different passwords: each gets its own code and its own account.
+2. Log in on each domain: only that domain's password works. A community of the other domain doesn't open.
+3. Type a wrong code, then the right one. Open the code step in another browser: the right code is refused there.
+4. Forgot password on one domain: the other domain's password is unchanged, and other devices of that login are logged out.
+
+## Step 18 — Client feedback 261111
+
+From `SoMe-Test-Guide-261111pm.docx` (the "Problems" list and the notes in the test steps). The "near future" features are in `docs/future-features-261111.md` and are not built.
+
+- [x] **Back goes up one level**, not to the browser's previous page (`src/lib/history.ts`): to the screen's parent, stepping back in the history when the parent is there (so it comes back as it was left), else opening it. Saving or deleting replaces the form in the history, so Back never returns to an edit form. Privacy terms opened from the join form go back to the form, with what was typed. The platform screen has a back arrow.
+- [x] **In-app camera**: starts the stream explicitly (iOS), says "Starting the camera…", and every failure shows why (not allowed, no camera, in use, browser can't) with "Try again"; a failed capture no longer leaves the shutter dead. The chat gets the captured file directly. Not reproduced on the client's iPhone: to be confirmed there.
+- [x] **Profile images as the round icons**: posts in chats, the chat list header, ad cards.
+- [x] **"Taken in app" or "Uploaded" + date and time** under every image: profiles, profile cards, chats, the full-image view, ads and ad cards, albums, applications (`src/lib/photo-label.ts`).
+- [x] A comment on a photo shows that photo small. A DM's name at the top opens the profile. Ad cards show "Looking for". Albums: tap a photo to see it whole, uncropped; the "+" form closes after creating an album.
+- [x] **Community settings**: the names of the member list's three extra columns (the sums) are edited there.
+- [x] Profile builder: the number of people in a Status can be cleared and typed again.
+- [x] **Passwords**: a show/hide button on every password field and a hint on new passwords. The rule stays "at least 8 characters" plus the leaked-password check, with no forced mix of character kinds (current NIST guidance: length and a breach check protect better than composition rules, which push people to predictable patterns).
+
+Built with: migrations `20261112130000_my_account.sql` (`my_account`: the caller's account and profile image in one query, replacing the direct read of `members`) and `20261112120000_feedback_261111.sql` (same arguments everywhere; results only gain columns or keys: `list_messages` and `message_json` + `author_icon`, `reply_photo`; `search_ads` and `member_ads` + `author_icon`, `photo_at`; every photo JSON + `created_at`; `save_community_settings` + optional `state_labels`). Tests `23_feedback_261111.test.sql` (24). The new columns are primary-key joins on rows already read; `scripts/speed-all.mjs` stays within its targets.
+
+**Waiting for the client:** may a removed member apply again; keeping the application image after approval (per community and group).
+
+**Not bugs:** "got in without approval" was direct join, switched on for Biking Stockholm when it was tested (9 Nov; off since 10 Nov). "Wait 46 minutes" on Forgot password is the limit of 3 emails an hour per account.
+
+## Step 19 — Client feedback 261115
+
+From `SoMe-Test-Guide-261115.docx` (the new list at the top and the notes in the test steps). Peter tested the step 16 build, so the 261111 list he repeats is covered by step 18. The future features are still not built (`docs/future-features-261111.md`).
+
+- [x] **Opened ad**: the picture says "Taken in app" or "Uploaded" with date and time (the 261111 item step 18 missed).
+- [x] **Keep application images after approval**: a setting per community (community settings) and per group (group form), off by default (= deleted on decision, as before). A rejected application's images are always deleted. Kept images go when the member is removed from or leaves that community or group, when the group is deleted, or with the account. The applicant's ID photo hint says which applies.
+- [x] **18+ at sign-up** is switched in community settings (`require_age_18` had no screen).
+- [x] **Ads stay in the Ads tab** when their author is hidden from search (an ad is a conscious choice). Blocks and removed members still hide them.
+- [x] **Applying**: "Save profile" goes back to the application. A refused Apply names what is missing (application text, image, ID photo, real name) and marks those fields.
+- [x] **Linked profiles**: the comment has a Save button (Enter also saves; leaving the field still saves, so nothing typed is lost).
+- [x] **Group application**: after applying, and when coming back before being let in, the group shows "Application pending".
+- [x] **Chat opens at the newest message**: it stays at the bottom while pictures and posts get their real height, and when a kept screen is shown again, unless you scrolled up (`src/features/chats/useStickToBottom.ts`: one ResizeObserver, no timers).
+- [x] **Number fields in an application or the member list** no longer drop the focus after each save (the screen jumped on phones): a saved value updates only its own field (`src/lib/use-draft.ts`), instead of remounting the form.
+- [x] **State labels**: no example text in the empty fields; the heading is "Numeric Profile Admin State Labels" (community settings and group form).
+
+Built with: migrations `20261117120000_feedback_261115.sql` and `20261117130000_leave_group_images.sql` (same arguments and results everywhere; new settings keys optional, so the older build's calls keep their values). Tests `24_feedback_261115.test.sql` (24); `18_ads.test.sql` updated for the ads rule. `scripts/speed-all.mjs` within targets.
+
+**Not built, and why:**
+- Live unread number in the chat list while it is open: performance.mdc rules out a per-user live channel and polling (a message would push once per member). The list refreshes when it is shown again or the app comes back. Peter: "nice to fix but not urgent". Needs a decision before building.
+- Email from `noreply@theirl.net`: code is ready (`SITE_SENDERS`); needs the theirl.net domain in Brevo (go-live D).
+- Android UI test: needs an Android phone or emulator.
+- Removing the block between petter-purposewrite and test-petterm: a data change on the shared database; waits for the go-ahead (the step 16 unblock may let Peter undo it himself).
+- A blocked profile shows "404": it correctly doesn't open; a friendlier page waits for Peter.
+- Scroll when coming back into an edit form: step 18 stops Back from returning into a saved form; to check in the browser test.
+
+**Waiting for the client:** may a removed member apply again.
+
+**Browser test (17 Nov, production build on localhost, dev database):** passed: community settings (18+, keep pictures, column names in the member list and statistics); a number field saves and the focus stays in the next field; group form (keep switch, empty labels, new heading); coming back into an edit form starts at the top (the old scroll problem doesn't show); opened ad labels; a chat with pictures stays at the newest message while they load, and a scrolled-up position is kept; link comment Save; group "Application pending" after applying and from Find new; 18+ required at sign-up; "Save profile" back to the application; missing parts named and outlined; deleting an account lands on the start page and removes the login. Two fixes from the test: the red outline lost to the grey border class (one border colour at a time now), and the comment button said "Saved" before anything was typed (now "Save" until a save, and the focus stays while it saves). Not covered here: camera and photo upload (no camera or file picker in the pane), real email, older iPhones.
+

@@ -2,13 +2,14 @@ import 'server-only'
 import { getCommunity } from '@/features/communities/queries'
 import { getProfileSchema } from '@/features/fields/queries'
 import type { ProfileSchema } from '@/features/fields/types'
-import { formatDay } from '@/lib/format'
+import { formatDay, formatStamp } from '@/lib/format'
 import { isRecord, isUuid } from '@/lib/guards'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Database } from '@/lib/supabase/database.types'
 import { createClient } from '@/lib/supabase/server'
 import { fromSavedAdFilter } from './filter'
 import { ADS_PAGE, type AdCard, type AdDetail, type AdFilter, type AdSearch } from './types'
+import { profilePhotoUrl } from '@/features/profiles/photo'
 
 // The Ads tab (search_ads), a member's ads (member_ads) and one ad (ad_view). Each RPC checks the
 // caller (approved, no block either way; the Ads tab also leaves out members hidden from search),
@@ -49,6 +50,9 @@ async function toCards(rows: CardRow[], labels: Labels): Promise<AdCard[]> {
     publishedAt: row.published_at,
     image: row.photo_thumb ? (urls.get(row.photo_thumb) ?? null) : null,
     verified: Boolean(row.photo_thumb && row.photo_taken_in_app),
+    imageDate: row.photo_at ? formatStamp(row.photo_at) : '',
+    icon: row.author_icon ? profilePhotoUrl(row.author_icon) : null,
+    lookingFor: (row.looking_for ?? []).map((id) => label(labels, id)).filter(Boolean),
   }))
 }
 
@@ -130,5 +134,6 @@ export async function getAd(slug: string, adId: string): Promise<AdDetail | null
     published: formatDay(new Date(text(data.published_at))),
     image: photo ? (urls.get(text(photo.path)) ?? null) : null,
     verified: photo?.taken_in_app === true,
+    imageDate: photo ? formatStamp(text(photo.taken_at ?? photo.created_at)) : '',
   }
 }

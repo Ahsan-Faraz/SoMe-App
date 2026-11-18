@@ -1,6 +1,6 @@
 import 'server-only'
 import { getCommunity } from '@/features/communities/queries'
-import { formatDay } from '@/lib/format'
+import { formatStamp } from '@/lib/format'
 import { isRecord, isUuid } from '@/lib/guards'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -52,7 +52,7 @@ export async function getAlbum(slug: string, albumId: string): Promise<AlbumDeta
     const src = urls.get(text(row.path))
     if (!src) return []
     const verified = row.taken_in_app === true
-    return [{ id: text(row.id), src, width: size(row.width), height: size(row.height), verified, date: verified && row.taken_at ? formatDay(new Date(text(row.taken_at))) : '' }]
+    return [{ id: text(row.id), src, width: size(row.width), height: size(row.height), verified, date: formatStamp(text(row.taken_at ?? row.created_at)) }]
   })
   return { id: text(data.id), ownerId: text(data.owner_id), name: text(data.name), locked: data.locked === true, access, photos }
 }

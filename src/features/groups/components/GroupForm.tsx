@@ -20,6 +20,7 @@ const blank: GroupValues = {
   applyImage: false,
   applyText: true,
   applyNames: false,
+  keepImages: false,
   calendar: true,
   history: true,
   memberList: true,
@@ -122,7 +123,6 @@ export function GroupForm({ community, group, infos: saved }: { community: strin
             key={index}
             value={values.stateLabels[index] ?? ''}
             onChange={(event) => set('stateLabels', Array.from({ length: STATE_LABELS }, (_, i) => (i === index ? event.target.value : (values.stateLabels[i] ?? ''))))}
-            placeholder={t.groups.stateExamples[index]}
             aria-label={t.groups.stateLabel(index + 1)}
             className={`${field} h-11`}
           />
@@ -149,6 +149,13 @@ export function GroupForm({ community, group, infos: saved }: { community: strin
               </label>
             ))}
           </div>
+          <label className="mt-4 flex items-start gap-2.5 text-[16px] font-medium">
+            <input type="checkbox" checked={values.keepImages} onChange={(event) => set('keepImages', event.target.checked)} className="mt-1" />
+            <span>
+              {t.groups.keepImages}
+              <span className="block text-[14px] font-normal text-ink-soft">{t.groups.keepImagesHint}</span>
+            </span>
+          </label>
         </fieldset>
       )}
 

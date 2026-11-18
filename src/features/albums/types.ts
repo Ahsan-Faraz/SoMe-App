@@ -14,4 +14,5 @@ export type AlbumAccess = 'owner' | 'open' | 'locked'
 export type AlbumDetail = { id: string; ownerId: string; name: string; locked: boolean; access: AlbumAccess; photos: AlbumPhoto[] }
 
 // "From profile/album": a photo to copy into a chat or an ad (src: a link the phone can fetch).
-export type PickedPhoto = { src: string; verified: boolean; date: string }
+// blob: the file itself when it was just captured or uploaded; an album or profile photo has only its address.
+export type PickedPhoto = { src: string; verified: boolean; date: string; blob?: Blob }

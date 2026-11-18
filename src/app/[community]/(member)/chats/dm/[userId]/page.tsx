@@ -46,6 +46,7 @@ async function NewDmContent({ params }: PageProps<'/[community]/chats/dm/[userId
         hasOlder={false}
         statuses={{}}
         viewerId={viewer.userId}
+        viewerIcon={viewer.icon}
         isAdmin={false}
         rules={rules}
         backHref={`/${community}/chats/dm/${userId}`}

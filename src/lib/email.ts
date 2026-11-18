@@ -1,20 +1,31 @@
 import 'server-only'
 
-// Emails the app sends itself (docs/backend-design.md §9): "You are approved". Sent through Brevo's
-// API (EU), the same provider as Supabase Auth's SMTP. Login emails (codes) are Supabase Auth's.
-// Needs BREVO_API_KEY and EMAIL_FROM (a sender address verified in Brevo). Without them nothing is
-// sent and the server log says so: the approval itself never depends on the email.
+// Every email the app sends (docs/backend-design.md §9): the sign-up and reset codes, the join
+// notice and "You are approved". Sent through Brevo's API (EU). Supabase Auth sends none.
+// Needs BREVO_API_KEY and a sender address verified in Brevo: EMAIL_FROM, or one per site in
+// SITE_SENDERS="theirl=no-reply@theirl.net,aiproduktion=no-reply@aiproduktion.se" (lib/sites.ts), so
+// each domain's email comes from that domain. Without them nothing is sent and the server log says
+// so: an approval never depends on the email.
 
 const ENDPOINT = 'https://api.brevo.com/v3/smtp/email'
 const TIMEOUT_MS = 10_000
 
-export type Email = { to: string; subject: string; text: string; fromName: string }
+// site: the site of the community the email is about (communities.site).
+export type Email = { to: string; subject: string; text: string; fromName: string; site: string }
 
-export async function sendEmail({ to, subject, text, fromName }: Email): Promise<boolean> {
+// Read once per server instance. An entry that isn't "site=address" is skipped.
+const senders = new Map(
+  (process.env.SITE_SENDERS ?? '')
+    .split(',')
+    .map((entry) => entry.split('=').map((part) => part.trim().toLowerCase()))
+    .filter((pair): pair is [string, string] => pair.length === 2 && Boolean(pair[0]) && Boolean(pair[1]?.includes('@'))),
+)
+
+export async function sendEmail({ to, subject, text, fromName, site }: Email): Promise<boolean> {
   const key = process.env.BREVO_API_KEY
-  const from = process.env.EMAIL_FROM
+  const from = senders.get(site) ?? process.env.EMAIL_FROM
   if (!key || !from) {
-    console.warn('Email not sent: BREVO_API_KEY or EMAIL_FROM is not set')
+    console.warn('Email not sent: BREVO_API_KEY or a sender (EMAIL_FROM, SITE_SENDERS) is not set')
     return false
   }
   try {

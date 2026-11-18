@@ -7,6 +7,7 @@ import { MultiSelect } from '@/components/ui/MultiSelect'
 import { profileLayout, type Person, type Slot } from '@/features/fields/schema'
 import type { ProfileSchema } from '@/features/fields/types'
 import { todayKey } from '@/lib/format'
+import { useGoBack } from '@/lib/history'
 import { t } from '@/lib/i18n'
 import { PLACE_MAX } from '@/lib/limits'
 import { saveProfileAction, setStatusAction, setVisibleAction, type ProfileInput } from '../actions'
@@ -170,6 +171,9 @@ function EditForm({
   setMessage: (message: string) => void
 }) {
   const { builtins } = lists
+  const goBack = useGoBack()
+  // An applicant fills in the profile for their application: a save takes them back to it (261115).
+  const applying = profile.state === 'profile' || profile.state === 'applied'
   const layout = profileLayout(lists, lists.statuses.find((item) => item.id === profile.statusId))
   const people = [...(layout.mainPerson ? [layout.mainPerson] : []), ...layout.sections.map((section) => section.person)]
   const activeCountries = lists.countries.filter((country) => country.active || country.id === profile.countryId)
@@ -219,6 +223,7 @@ function EditForm({
         values,
       })
       setMessage(result?.error ?? t.profiles.saved)
+      if (!result && applying) goBack(`/${owner.slug}/pending`)
     })
   }
 

@@ -48,7 +48,14 @@ async function PendingContent({ params }: PageProps<'/[community]/pending'>) {
         key={applied ? 'sent' : 'new'}
         community={community}
         communityId={info.id}
-        scope={{ kind: scope.kind, id: scope.id, applicationText: scope.applicationText, requires: scope.requires, directJoin: scope.directJoin }}
+        scope={{
+          kind: scope.kind,
+          id: scope.id,
+          applicationText: scope.applicationText,
+          requires: scope.requires,
+          directJoin: scope.directJoin,
+          keepImages: scope.keepImages,
+        }}
         applied={applied}
         sent={applied ? sent : null}
         missing={missing}

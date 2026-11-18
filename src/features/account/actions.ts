@@ -29,7 +29,9 @@ export async function deleteAccountAction(_: DeleteAccountState, form: FormData)
   } = await supabase.auth.getUser()
   if (!user?.email) redirect(`/${slug}/login`)
 
-  const attempt = await takeAttempt('password', user.email)
+  // The same limit as logging in to this login. user.email is the address Supabase Auth signs in
+  // with (lib/auth/logins.ts), not the person's real email.
+  const attempt = await takeAttempt('password', user.id)
   if (attempt.wait > 0) return { error: t.common.tooMany(waitMinutes(attempt.wait)) }
   // Checked on a separate client that keeps nothing, so this device's own login cookie is untouched;
   // its session is ended again right away.

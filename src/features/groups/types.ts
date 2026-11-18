@@ -12,6 +12,7 @@ export type GroupForm = {
   applyImage: boolean
   applyText: boolean
   applyNames: boolean
+  keepImages: boolean // an approved application keeps its image (261115); else deleted on decision
   calendar: boolean
   history: boolean
   memberList: boolean

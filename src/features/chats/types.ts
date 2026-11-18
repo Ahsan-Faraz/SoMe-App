@@ -14,6 +14,7 @@ export type ChatMessage = {
   clientId: string | null // made on the phone when sending
   author: string
   authorId: string | null
+  authorIcon: string | null // the author's profile image (thumbnail), or null: initials
   // Group posts show the author's status, e.g. "Kitty553 (Woman)". Null in DMs and on your own posts.
   authorStatus: string | null
   mine: boolean
@@ -24,14 +25,15 @@ export type ChatMessage = {
   reactions: Reaction[]
   edited: boolean
   // A comment on another post: shown as a dimmed snippet of that post above the comment text.
-  replyTo: { seq: number; author: string; body: string } | null
+  // photo: the commented post's picture, small (its path in the private bucket, signed into src).
+  replyTo: { seq: number; author: string; body: string; photo: { thumbPath: string; src: string | null } | null } | null
   image: boolean
   // The photo in the private bucket (signed links only). thumb/full: signed URLs once signed (or the
   // picked image while sending); width/height keep its shape while it loads.
   photo: { path: string; thumbPath: string; width: number | null; height: number | null } | null
   imageSrc: string | null
-  verified: boolean
-  verifiedDate: string | null
+  verified: boolean // taken with the in-app camera
+  photoDate: string | null // when it was taken in the app, or uploaded
 }
 
 export type ChatPanel = 'calendar' | 'info1' | 'info2' | 'info3'
