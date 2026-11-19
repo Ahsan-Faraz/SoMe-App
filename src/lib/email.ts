@@ -3,7 +3,7 @@ import 'server-only'
 // Every email the app sends (docs/backend-design.md §9): the sign-up and reset codes, the join
 // notice and "You are approved". Sent through Brevo's API (EU). Supabase Auth sends none.
 // Needs BREVO_API_KEY and a sender address verified in Brevo: EMAIL_FROM, or one per site in
-// SITE_SENDERS="theirl=no-reply@theirl.net,aiproduktion=no-reply@aiproduktion.se" (lib/sites.ts), so
+// SITE_SENDERS="theirl=noreply@theirl.net,aiproduktion=noreply@aiproduktion.se" (lib/sites.ts), so
 // each domain's email comes from that domain. Without them nothing is sent and the server log says
 // so: an approval never depends on the email.
 

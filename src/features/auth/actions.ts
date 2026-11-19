@@ -153,8 +153,12 @@ export async function joinAction(_: AuthState, form: FormData): Promise<AuthStat
       email_confirm: false,
       user_metadata: { community_id: community.id, username, consents, site: community.site, login_email: email },
     })
-    // A username (or email) taken a moment ago fails inside the sign-up transaction.
-    if (error) return { error: error.code === 'unexpected_failure' ? t.join.usernameTaken : t.join.failed }
+    // A username (or email) taken a moment ago fails inside the sign-up transaction. A password
+    // Supabase Auth refuses (too weak, or found in a leak) gets the same answer as on reset.
+    if (error) {
+      if (error.code === 'weak_password') return { error: t.reset.weakPassword }
+      return { error: error.code === 'unexpected_failure' ? t.join.usernameTaken : t.join.failed }
+    }
     sendCode(community, email, 'signup', await newCode(created.user.id, 'signup', await newHolder()))
     return { verifyEmail: email }
   }
