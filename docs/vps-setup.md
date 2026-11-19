@@ -234,7 +234,7 @@ ssh some-prod
    | `SUPABASE_SECRET_KEY` | same page, **Secret keys** → new key named `vps` (`sb_secret_…`) |
    | `SITE_HOSTS` | which domain is which site: `theirl.net=theirl,www.theirl.net=theirl,aiproduktion.se=aiproduktion,www.aiproduktion.se=aiproduktion`. Each site has its own communities and logins; a domain missing here is served as the default site `main` |
    | `BREVO_API_KEY` | client's Brevo → SMTP & API → API keys. The app sends every email itself (codes and approvals) |
-   | `SITE_SENDERS` | the sender per site, each verified in Brevo: `theirl=no-reply@theirl.net,aiproduktion=no-reply@aiproduktion.se` |
+   | `SITE_SENDERS` | the sender per site, each verified in Brevo: `theirl=noreply@theirl.net,aiproduktion=noreply@aiproduktion.se` |
    | `EMAIL_FROM` | the sender for a site that isn't in `SITE_SENDERS` |
    | `DEFAULT_COMMUNITY` | slug of the community shown at `/`. **Leave the line commented out (`#`) until it has a value.** An empty `DEFAULT_COMMUNITY=` makes `/` redirect to itself. Unset, it's `biking-stockholm` |
    | `COMMUNITY_DOMAINS` | leave it commented out for now |
@@ -369,6 +369,8 @@ The prod database is filled by the pipeline on the first merge to `main`, after 
   sudo systemctl restart some.service
   ```
   A `NEXT_PUBLIC_` setting is baked into the build, so a restart isn't enough. Merge a new commit to `main` so it gets rebuilt.
+- **After changing a community with SQL** (moving it to a site, adding or renaming one), restart the app as well. The app keeps each community it looks up in memory for days, and only changes made in the app clear that. Without a restart the page keeps showing the old version, or "404" for a community that was just moved.
+- **Reading the env file** needs `sudo`, for example `sudo grep SITE_HOSTS /srv/some/shared/.env.production`.
 - **Roll back:** the last five builds stay on disk. List them, newest first, then release the one you want. This switches only the app, and database changes stay, which is why migrations only add things.
   ```bash
   ls -1t /srv/some/releases
