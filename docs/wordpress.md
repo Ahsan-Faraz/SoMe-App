@@ -43,6 +43,8 @@ Run on the VPS as root, from `~/wp` with the files copied there flat (`scp ... p
 | `vps/wordpress-clone.sh <from> <to> [--icon-only] [--force]` | Copies one site to another with the domain name replaced; the target keeps its own database and keys. |
 | `vps/wordpress-plugins.sh <domain>...` | The must-use plugins and the mail key for the named sites only. Run again after a new Brevo key. |
 | `vps/wordpress-finish.sh` | aiproduktion.se as a copy of theirl.net, the must-use plugins and mail key on both, nginx, nightly backups, checks. Safe to repeat. |
+| `vps/wordpress-switch.sh [--undo]` | The public pages to WordPress with page caching (or back). |
+| `vps/wordpress-tune.sh [--measure]` | Small WebP logo, fonts from this server instead of Google, 404 for bot probes; then a speed measurement on the server. |
 | `vps/wordpress-check.sh [--update]` | Health check: versions, mail (Brevo sandbox, nothing is sent), timers, last backups. `--update` installs newer must-use plugins first. |
 | `vps/wordpress-backup.sh` | The nightly backup (installed as `/usr/local/sbin/wordpress-backup`). |
 
