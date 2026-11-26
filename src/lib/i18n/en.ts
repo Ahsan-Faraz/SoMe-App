@@ -53,7 +53,6 @@ export const en = {
     failed: 'Wrong username or password.',
     failedEmail: 'Wrong email or password.',
     confirmFirst: 'Confirm your email first. Open the link we sent you.',
-    noAccountHere: (community: string) => `You don’t have an account in ${community} yet. Tap Join to create one.`,
     forgot: 'Forgot password?',
     forgotBody: 'Enter your username or email. We’ll send you a link to choose a new password.',
     forgotBodyEmail: 'Enter your email. We’ll send you a code to choose a new password.',

@@ -118,9 +118,13 @@ export async function signInAction(_: AuthState, form: FormData): Promise<AuthSt
     .eq('community_id', place.communityId)
     .eq('user_id', auth.user.id)
     .maybeSingle()
-  if (!member || member.state === 'rejected' || member.state === 'removed') {
+  // A login of this site with no account here yet (made on the main domain, or in another community):
+  // the password is proven, so it stays logged in and goes to the join form, which then asks only for
+  // a username and the consents. Nothing joins it without that form.
+  if (!member) redirect(`/${slug}/join`)
+  if (member.state === 'rejected' || member.state === 'removed') {
     await supabase.auth.signOut({ scope: 'local' })
-    return { error: member ? t.login.failed : t.login.noAccountHere(place.name) }
+    return failed
   }
 
   recordLogin(supabase, place.communityId, auth.user.id)
