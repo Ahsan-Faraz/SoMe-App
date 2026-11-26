@@ -12,6 +12,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
   poweredByHeader: false,
+  // Development only: 127.0.0.1 is a second local host with its own cookies, for trying a second
+  // login (or a second site with SITE_HOSTS) beside localhost. No effect on a production build.
+  allowedDevOrigins: ['127.0.0.1'],
   // The platform's `/` opens its default community; a community's own domain (D30) keeps `/` for
   // itself (src/proxy.ts serves it there).
   async redirects() {

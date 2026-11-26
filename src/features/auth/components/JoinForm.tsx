@@ -7,7 +7,7 @@ import { PasswordField } from '@/components/ui/PasswordField'
 import { TextField } from '@/components/ui/TextField'
 import { t } from '@/lib/i18n'
 import { PASSWORD_MIN, USERNAME_MAX, USERNAME_MIN } from '@/lib/limits'
-import { joinAction } from '../actions'
+import { joinAction, joinSignedInAction } from '../actions'
 import { submitWith, useFormError } from './submit'
 import { VerifyEmail } from './VerifyEmail'
 
@@ -15,18 +15,21 @@ const check = 'flex items-start gap-2.5 text-[15px] leading-snug text-ink'
 
 // AC. The consents are part of joining (D32): the privacy terms always, "18 or older" when the
 // community asks for it. privacyVersion: the text shown, so a newer text has to be agreed to again.
+// signedIn: the person is logged in on this domain already, so only a username for this community.
 export function JoinForm({
   community,
   communityName,
   privacyVersion,
   requireAge18,
+  signedIn = false,
 }: {
   community: string
   communityName: string
   privacyVersion: string
   requireAge18: boolean
+  signedIn?: boolean
 }) {
-  const [state, join, pending] = useActionState(joinAction, undefined)
+  const [state, join, pending] = useActionState(signedIn ? joinSignedInAction : joinAction, undefined)
   const { error, clear } = useFormError(state, pending)
 
   if (state?.verifyEmail) return <VerifyEmail community={community} email={state.verifyEmail} />
@@ -35,7 +38,7 @@ export function JoinForm({
     <form action={join} onSubmit={submitWith(join, true)} onChange={clear} className="grid gap-4">
       <input type="hidden" name="community" value={community} />
       <input type="hidden" name="privacyVersion" value={privacyVersion} />
-      <p className="text-ink-soft">{t.join.subtitle(communityName)}</p>
+      <p className="text-ink-soft">{signedIn ? t.join.signedInSubtitle(communityName) : t.join.subtitle(communityName)}</p>
       <TextField
         id="username"
         name="username"
@@ -46,9 +49,13 @@ export function JoinForm({
         maxLength={USERNAME_MAX}
         required
       />
-      <PasswordField id="password" name="password" label={t.join.password} hint={t.join.passwordHint} autoComplete="new-password" minLength={PASSWORD_MIN} required />
-      <PasswordField id="repeatPassword" name="repeatPassword" label={t.join.repeatPassword} autoComplete="new-password" required />
-      <TextField id="email" name="email" type="email" label={t.join.email} autoComplete="email" inputMode="email" required />
+      {signedIn ? null : (
+        <>
+          <PasswordField id="password" name="password" label={t.join.password} hint={t.join.passwordHint} autoComplete="new-password" minLength={PASSWORD_MIN} required />
+          <PasswordField id="repeatPassword" name="repeatPassword" label={t.join.repeatPassword} autoComplete="new-password" required />
+          <TextField id="email" name="email" type="email" label={t.join.email} autoComplete="email" inputMode="email" required />
+        </>
+      )}
 
       <div className="grid gap-3 pt-1">
         <label className={check}>

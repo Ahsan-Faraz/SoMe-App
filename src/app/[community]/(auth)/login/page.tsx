@@ -24,7 +24,7 @@ async function LoginContent({ params }: PageProps<'/[community]/login'>) {
   return (
     <div className="min-h-app w-full bg-canvas">
       <ScreenHeader title={t.login.title} backHref={`/${slug}`} right={<ThemeToggle className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-hover" />} />
-      <AuthShell community={community} src={community.heroSrc} alt={`${community.name} riders by the water`} title={t.login.heading}>
+      <AuthShell community={community} src={community.heroSrc} alt={community.heroUploaded ? '' : t.start.heroAlt(community.name)} title={t.login.heading}>
         <LoginForm community={slug} />
       </AuthShell>
     </div>

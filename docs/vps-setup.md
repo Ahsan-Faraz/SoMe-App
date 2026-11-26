@@ -2,6 +2,8 @@
 
 One-time setup of the prod server, and how deploys, rollbacks and settings work afterwards. The files it installs are in `deploy/vps/`. The pipeline is `.github/workflows/deploy-prod.yml`.
 
+The WordPress sites on the main domains run on the same server: see `docs/wordpress.md`. Moving a main domain to a new name: `docs/move-domain.md`.
+
 ## The setup at a glance
 
 | | Test (ours) | Prod (live) |

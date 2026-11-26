@@ -43,10 +43,12 @@ export function CommunityStart({ community }: { community: Community }) {
       <section className="relative mx-auto flex max-w-7xl flex-col min-[52rem]:h-[min(40rem,calc(100dvh-7rem))] min-[52rem]:min-h-[28rem] min-[52rem]:justify-end min-[52rem]:overflow-hidden min-[52rem]:rounded-3xl min-[52rem]:p-12 lg:p-16">
         <Image
           src={community.heroSrc}
-          alt={t.start.heroAlt(community.name)}
+          alt={community.heroUploaded ? '' : t.start.heroAlt(community.name)}
           width={1280}
           height={720}
           priority
+          // The admin's own image is already resized on upload and served by the Storage CDN.
+          unoptimized={community.heroUploaded}
           sizes="(min-width: 832px) 90vw, 100vw"
           className="order-2 mt-6 aspect-video w-full min-w-0 rounded-2xl object-cover min-[52rem]:absolute min-[52rem]:inset-0 min-[52rem]:mt-0 min-[52rem]:aspect-auto min-[52rem]:size-full min-[52rem]:rounded-none"
         />
@@ -58,11 +60,13 @@ export function CommunityStart({ community }: { community: Community }) {
             {t.start.membersOnly}
           </p>
           <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl min-[52rem]:text-left min-[52rem]:text-5xl min-[52rem]:text-white lg:text-6xl">
-            {community.name}
+            {community.title}
           </h1>
-          <p className="mt-3 text-center text-[16px] text-ink-soft min-[52rem]:mt-4 min-[52rem]:text-left min-[52rem]:text-[20px] min-[52rem]:text-white/85">
-            {community.headline}
-          </p>
+          {community.headline ? (
+            <p className="mt-3 text-center text-[16px] text-ink-soft min-[52rem]:mt-4 min-[52rem]:text-left min-[52rem]:text-[20px] min-[52rem]:text-white/85">
+              {community.headline}
+            </p>
+          ) : null}
         </div>
         <div className="relative order-3 mx-auto mt-6 grid w-full max-w-sm gap-3 min-[52rem]:mx-0 min-[52rem]:mt-8 min-[52rem]:flex min-[52rem]:max-w-none">
           <Link href={login} className={`${buttonClass('primary')} min-[52rem]:w-40`}>

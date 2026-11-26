@@ -12,3 +12,7 @@ next-env.d.ts
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# WordPress site exports (All-in-One WP Migration): a full site backup with user data, never committed
+/Wordpress/
+*.wpress
