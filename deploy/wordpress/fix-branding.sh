@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Branding after fix-layout.sh (client guide 261123): the square icon plus the site name as the logo
-# (aiproduktion.se: icon only, pass --icon-only), no social icons in the footer, and the uploads
-# folder emptied of the removed plugins' and purposewrite's files (the site icon's files stay).
+# on phones, tablets and desktops (aiproduktion.se: icon only, pass --icon-only), no social icons in
+# the footer, and the uploads folder emptied of files no media library item owns (the removed
+# plugins' and purposewrite's leftovers). Safe to run again: every library item's files stay.
 #   sudo bash fix-branding.sh theirl.net [--icon-only]
 set -euo pipefail
 domain=${1:-}
@@ -17,8 +18,9 @@ w() { sudo -u "wp-$slug" -- env HOME="$root/tmp" WP_CLI_CACHE_DIR="$root/tmp/wp-
 # --- Logo: icon (44 px desktop, 36 px phone) with the site name next to it ------------------------------
 w eval '
 $layout = get_theme_mod( "logo_layout", array() );
-$layout["include"] = array( "mobile" => "", "tablet" => "", "desktop" => "'"$include"'" );
-$layout["layout"]  = array( "mobile" => "", "tablet" => "", "desktop" => "standard" );
+// Every size set: left empty ("inherit"), Kadence hides the site name on tablets.
+$layout["include"] = array( "mobile" => "'"$include"'", "tablet" => "'"$include"'", "desktop" => "'"$include"'" );
+$layout["layout"]  = array( "mobile" => "standard", "tablet" => "standard", "desktop" => "standard" );
 set_theme_mod( "logo_layout", $layout );
 set_theme_mod( "logo_width", array(
   "size" => array( "mobile" => 36, "tablet" => 40, "desktop" => 44 ),
@@ -36,11 +38,16 @@ du -sh "$up"/.[!.]* 2>/dev/null || echo "none"
 for d in rank-math kadence_ai eb-patterns uag-plugin elementor wpforms ast-block-templates-json; do
   [[ -e $up/$d ]] && rm -rf -- "${up:?}/$d" && echo "removed uploads/$d"
 done
-# Old media: everything except the site icon's files (the attachment and its sizes).
-icon_file=$(w post meta get "$(w option get site_icon)" _wp_attached_file)   # e.g. 2025/08/cropped-x.png
-icon_base=$(basename "${icon_file%.*}")
-find "$up"/20[0-9][0-9] -type f ! -name "${icon_base}*" -print -delete | wc -l | xargs echo "old media files removed:"
-find "$up"/20[0-9][0-9] -type d -empty -delete
+# Old media: files that no media library item owns. Each item keeps its file and its sizes
+# (name-150x150.png, ...), so the site icon, the logo and anything uploaded later all stay.
+keep=()
+while IFS= read -r file; do
+  [[ -n $file ]] && keep+=( ! -name "$(basename "${file%.*}")*" )
+done < <(w db query "SELECT meta_value FROM $(w db prefix)postmeta WHERE meta_key = '_wp_attached_file'" --skip-column-names)
+if compgen -G "$up/20[0-9][0-9]" >/dev/null; then
+  find "$up"/20[0-9][0-9] -type f "${keep[@]}" -print -delete | wc -l | xargs echo "old media files removed:"
+  find "$up"/20[0-9][0-9] -type d -empty -delete
+fi
 w transient delete --all >/dev/null
 
 echo; echo "== Uploads now"

@@ -78,14 +78,9 @@ w theme mod set mobile_button_label "Get started"
 w theme mod set mobile_button_link /join
 w theme mod set footer_html_content '{copyright} {year} {site-title}'
 
-# --- purposewrite leftovers: its forms, and every image except the site icon -------------------------------
-forms=$(w post list --post_type=kadence_form --post_status=any --format=ids)
-[[ -n $forms ]] && w post delete $forms --force --quiet
-icon=$(w option get site_icon)
-w theme mod set custom_logo "$icon"   # the square icon; "theirl.net" goes next to it as text
-for id in $(w post list --post_type=attachment --post_status=any --format=ids); do
-  [[ $id == "$icon" ]] || w post delete "$id" --force --quiet
-done
+# purposewrite's forms, images and logo were removed once (25 Nov 2026). This script no longer touches
+# the media library or the logo, so running it again keeps every uploaded image and the small logo
+# from wordpress-tune.sh.
 w transient delete --all >/dev/null
 w rewrite flush
 
