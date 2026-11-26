@@ -4,7 +4,10 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'SoMe',
     short_name: 'SoMe',
-    start_url: '/',
+    // Not `/`: on the main domains that is the WordPress site (client guide 261123). The community
+    // list opens the app for a logged-in login, and sends anyone else to /login.
+    start_url: '/communities',
+    scope: '/',
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#ffffff',

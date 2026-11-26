@@ -5,9 +5,7 @@ Contact, Cookies, a "Get started" button); their Log in and Join buttons go to t
 address (`/<community>`, `/login`, `/join`, `/communities`) is the app. Both run on the prod VPS next
 to the app, and nginx sends each path to one or the other.
 
-**Status (25 Nov 2026):** both sites are built and run beside the app. nginx sends them only their own
-paths (`/wp-admin`, `/wp-login.php`, `/wp-content`, `/wp-includes`, `/wp-json`). The public pages
-(`/`, `/about`, ...) still go to the app until the switch (below), which waits for a go-ahead.
+**Status:** both sites are built; the public pages move to WordPress with `wordpress-switch.sh` (below).
 
 ## How it is set up
 
@@ -70,17 +68,23 @@ the preview plugin at the switch.
   `chown wp-<slug> /srv/wp/<domain>/tmp/restore.sql`, then as the site user
   `wp db import /srv/wp/<domain>/tmp/restore.sql` and delete the file.
 
-## The switch (not done; waits for a go-ahead)
+## The switch: the public pages to WordPress
 
-What it takes, per domain, once the step 20 release (main-domain `/login`, `/join`, `/communities`)
-is deployed:
+`deploy/vps/wordpress-switch.sh` (run as root from the deploy files' folder) does it for both domains:
 
-1. nginx sends `/`, `/home`, `/pricing`, `/about`, `/contact`, `/cookies` (with and without the
-   trailing slash) and `/get-started` to WordPress, with page caching in nginx for visitors who are
-   not logged in, and framing headers for those pages. Everything else stays with the app.
-2. `blog_public` to 1 (search engines allowed).
-3. Delete `wp-content/mu-plugins/theirl-preview.php`.
-4. Check: `/` shows WordPress, `/biking-stockholm`, `/login` and `/join` the app, logged in and out.
+1. nginx sends `/`, `/home`, `/pricing`, `/about`, `/contact`, `/cookies`, `/robots.txt` and the
+   WordPress sitemap to WordPress; `/get-started` forwards to the app's `/join`. Every other address
+   (every community, `/login`, `/join`, `/communities`) stays with the app. These addresses are
+   reserved community slugs (`private.reserved_slug`), so no community can take them.
+2. Page caching in nginx (`nginx-wp-page.conf`, zone `wp_pages` in `/var/cache/nginx/wp`, at most
+   256 MB): visitors get a stored copy for 5 minutes; a logged-in WordPress editor, a form post or an
+   address with a query string always gets the page fresh. The `X-Cache` header shows HIT, MISS or
+   BYPASS. After an edit, visitors see it within 5 minutes.
+3. `blog_public` to 1 (search engines welcome) and the preview plugin removed.
+4. Checks for both domains: pages, cache HIT and BYPASS, the app's addresses, the title.
 
-These addresses are reserved community slugs already (`private.reserved_slug`), so no community can
-take them.
+`sudo bash wordpress-switch.sh --undo` puts the nginx config from before the switch back and keeps
+search engines out again.
+
+The installed app (the PWA) starts at `/communities` (`src/app/manifest.ts`), not at `/`, which is
+the WordPress page on the main domains. Community pages have their own start address (`/<community>`).
