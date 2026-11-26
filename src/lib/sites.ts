@@ -36,3 +36,9 @@ export function siteForHost(host: string | null): string {
 export async function requestSite(): Promise<string> {
   return siteForHost((await headers()).get('host'))
 }
+
+// The domain being served as people know it ("theirl.net"): the name in the main domain's emails.
+export async function requestSiteName(): Promise<string> {
+  const host = (await headers()).get('host')?.trim().toLowerCase() ?? ''
+  return host.replace(/:\d+$/, '').replace(/^www\./, '') || 'SoMe'
+}

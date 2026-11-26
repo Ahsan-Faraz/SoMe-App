@@ -1,7 +1,9 @@
 import 'server-only'
 import { cacheLife, cacheTag } from 'next/cache'
+import { profilePhotoUrl } from '@/features/profiles/photo'
 import { requestSite } from '@/lib/sites'
 import { createPublicClient } from '@/lib/supabase/public'
+import { createClient } from '@/lib/supabase/server'
 import type { Community } from './types'
 
 export const communityTag = (community: Pick<Community, 'site' | 'slug'>) => `community:${community.site}:${community.slug}`
@@ -20,7 +22,7 @@ export async function getSiteCommunity(site: string, slug: string): Promise<Comm
 
   const { data, error } = await createPublicClient()
     .from('communities')
-    .select('id, site, slug, name, headline, about, hero_path, about_path, application_text, require_app_image, require_app_text, require_app_names, require_identity, require_age_18, keep_application_images, direct_join, privacy_version, domain, state_label_1, state_label_2, state_label_3')
+    .select('id, site, slug, name, start_title, headline, listed, about, hero_path, about_path, application_text, require_app_image, require_app_text, require_app_names, require_identity, require_age_18, keep_application_images, direct_join, privacy_version, domain, state_label_1, state_label_2, state_label_3')
     .eq('site', site)
     .eq('slug', slug)
     .maybeSingle()
@@ -32,10 +34,14 @@ export async function getSiteCommunity(site: string, slug: string): Promise<Comm
     site: data.site,
     slug: data.slug,
     name: data.name,
+    title: data.start_title ?? data.name,
+    startTitle: data.start_title ?? '',
     headline: data.headline,
     about: data.about,
-    heroSrc: data.hero_path ?? '/community/hero.png',
-    aboutSrc: data.about_path ?? '/community/ride.png',
+    heroSrc: imageSrc(data.hero_path, '/community/hero.png'),
+    heroUploaded: isUploaded(data.hero_path),
+    listed: data.listed,
+    aboutSrc: imageSrc(data.about_path, '/community/ride.png'),
     applicationText: data.application_text ?? '',
     requires: { image: data.require_app_image, text: data.require_app_text, names: data.require_app_names, identity: data.require_identity },
     directJoin: data.direct_join,
@@ -46,3 +52,23 @@ export async function getSiteCommunity(site: string, slug: string): Promise<Comm
     stateLabels: [data.state_label_1 ?? '', data.state_label_2 ?? '', data.state_label_3 ?? ''],
   }
 }
+
+// /communities on the main domain: the logged-in login's communities on this site, then the visible
+// ones it can join (site_communities). Per person, so never cached; one query.
+export type SiteCommunity = { slug: string; name: string; headline: string; state: 'approved' | 'pending' | null }
+
+export async function getSiteCommunities(site: string): Promise<SiteCommunity[]> {
+  const { data, error } = await (await createClient()).rpc('site_communities', { p_site: site })
+  if (error) throw error
+  return data.map((row) => ({
+    slug: row.slug,
+    name: row.name,
+    headline: row.headline,
+    state: row.state === 'approved' ? 'approved' : row.state ? 'pending' : null,
+  }))
+}
+
+// A built-in picture starts with '/'; anything else is a file the admin uploaded to the public
+// `profile` bucket ({community}/start/{uuid}.webp, save_community_start).
+const isUploaded = (path: string | null): path is string => !!path && !path.startsWith('/')
+const imageSrc = (path: string | null, fallback: string) => (isUploaded(path) ? profilePhotoUrl(path) : (path ?? fallback))

@@ -40,3 +40,10 @@ export function deleteAccountFiles(data: unknown) {
     await removeFiles('profile', profileFiles)
   })
 }
+
+// The start page image save_community_start has just replaced, from the public `profile` bucket. Same
+// rules: only a path the database function returned (it checks the path is in the start folder).
+export function deleteStartImage(path: unknown) {
+  if (typeof path !== 'string' || path === '') return
+  after(() => removeFiles('profile', [path]))
+}

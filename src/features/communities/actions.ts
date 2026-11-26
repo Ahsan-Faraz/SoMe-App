@@ -3,6 +3,8 @@
 import { updateTag } from 'next/cache'
 import { isBool, isRecord } from '@/lib/guards'
 import { t } from '@/lib/i18n'
+import { START_ABOUT_MAX, START_PARAGRAPHS_MAX, START_SUBTITLE_MAX, START_TITLE_MAX } from '@/lib/limits'
+import { deleteStartImage } from '@/lib/supabase/private-files'
 import { createClient } from '@/lib/supabase/server'
 import { communityTag, getCommunity } from './queries'
 
@@ -59,3 +61,43 @@ export async function saveCommunitySettingsAction(slug: string, settings: Commun
   if (error) return { error: error.code === '42501' ? t.settings.notAllowed : t.common.error }
   updateTag(communityTag(community))
 }
+
+// The start page (client guide 261123): headline (empty = the community's name), subheadline,
+// info text (paragraphs split on empty lines) and image. image: left out keeps the current one, null
+// goes back to the built-in picture, a path is a file the admin has just uploaded (uploadStartImage).
+// listed: shown on the main domain's community list (/communities) to logins that aren't members.
+export type CommunityStartPage = { title: string; headline: string; about: string; listed: boolean; image?: string | null }
+
+export async function saveCommunityStartAction(slug: string, start: CommunityStartPage): Promise<SettingsResult> {
+  if (!isRecord(start) || typeof start.title !== 'string' || typeof start.headline !== 'string' || typeof start.about !== 'string' || !isBool(start.listed)) {
+    return { error: t.settings.invalid }
+  }
+  const about = splitParagraphs(start.about)
+  const image = start.image
+  if (
+    start.title.trim().length > START_TITLE_MAX ||
+    start.headline.trim().length > START_SUBTITLE_MAX ||
+    about.length > START_PARAGRAPHS_MAX ||
+    about.join('').length > START_ABOUT_MAX ||
+    (image !== undefined && image !== null && typeof image !== 'string')
+  ) {
+    return { error: t.settings.startTooLong }
+  }
+  const community = await getCommunity(slug)
+  if (!community) return { error: t.common.error }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('save_community_start', {
+    p_community: community.id,
+    p_start: { title: start.title, headline: start.headline, about, listed: start.listed, ...(image === undefined ? {} : { image }) },
+  })
+  if (error) return { error: error.code === '42501' ? t.settings.notAllowed : error.code === '22001' ? t.settings.startTooLong : t.common.error }
+  deleteStartImage(data)
+  updateTag(communityTag(community))
+}
+
+const splitParagraphs = (text: string) =>
+  text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)

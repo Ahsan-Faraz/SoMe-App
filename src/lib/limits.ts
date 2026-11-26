@@ -17,6 +17,12 @@ export const LONG_TEXT_MAX = 4000 // application text and message, admin notes, 
 export const FIELD_TEXT_MAX = 32000 // profile answers, info post bodies, private notes
 export const SHORT_TEXT_MAX = 200 // a short text answer when its field sets no limit (save_profile)
 
+// The community start page (save_community_start)
+export const START_TITLE_MAX = 120
+export const START_SUBTITLE_MAX = 200 // communities.headline
+export const START_PARAGRAPHS_MAX = 10 // communities.about
+export const START_ABOUT_MAX = 4000 // all paragraphs together
+
 // Profile builder
 export const LIST_LABEL_MAX = 40 // a Status or District name
 export const FIELD_LABEL_MAX = 80 // a profile field's name and its choices

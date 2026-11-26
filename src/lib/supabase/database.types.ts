@@ -546,6 +546,7 @@ export type Database = {
           hero_path: string | null
           id: string
           keep_application_images: boolean
+          listed: boolean
           name: string
           privacy_version: string
           require_age_18: boolean
@@ -564,6 +565,7 @@ export type Database = {
           show_visibility: boolean
           site: string
           slug: string
+          start_title: string | null
           state_label_1: string | null
           state_label_2: string | null
           state_label_3: string | null
@@ -580,6 +582,7 @@ export type Database = {
           hero_path?: string | null
           id?: string
           keep_application_images?: boolean
+          listed?: boolean
           name: string
           privacy_version?: string
           require_age_18?: boolean
@@ -598,6 +601,7 @@ export type Database = {
           show_visibility?: boolean
           site?: string
           slug: string
+          start_title?: string | null
           state_label_1?: string | null
           state_label_2?: string | null
           state_label_3?: string | null
@@ -614,6 +618,7 @@ export type Database = {
           hero_path?: string | null
           id?: string
           keep_application_images?: boolean
+          listed?: boolean
           name?: string
           privacy_version?: string
           require_age_18?: boolean
@@ -632,6 +637,7 @@ export type Database = {
           show_visibility?: boolean
           site?: string
           slug?: string
+          start_title?: string | null
           state_label_1?: string | null
           state_label_2?: string | null
           state_label_3?: string | null
@@ -2026,6 +2032,10 @@ export type Database = {
         Args: { p_community: string; p_settings: Json }
         Returns: undefined
       }
+      save_community_start: {
+        Args: { p_community: string; p_start: Json }
+        Returns: string
+      }
       save_event: {
         Args: {
           p_chat: string
@@ -2196,6 +2206,22 @@ export type Database = {
         Args: { p_email: string; p_holder_hash: string; p_site: string }
         Returns: {
           code: string
+          user_id: string
+        }[]
+      }
+      site_communities: {
+        Args: { p_site: string }
+        Returns: {
+          headline: string
+          name: string
+          slug: string
+          state: string
+        }[]
+      }
+      site_join_prepare: {
+        Args: { p_email: string; p_site: string }
+        Returns: {
+          auth_email: string
           user_id: string
         }[]
       }

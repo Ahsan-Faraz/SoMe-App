@@ -11,9 +11,12 @@ import type { createClient } from '@/lib/supabase/server'
 
 export type Login = { userId: string; authEmail: string; email: string; confirmed: boolean }
 
+// No community (the main domain's log in): a username, which is per community, then finds nothing.
+export const NO_COMMUNITY = '00000000-0000-0000-0000-000000000000'
+
 // The login behind an email on this site, or behind a username in this community. One indexed query.
-export async function findLogin(site: string, communityId: string, login: string): Promise<Login | null> {
-  const { data, error } = await createAdminClient().rpc('login_lookup', { p_site: site, p_community: communityId, p_login: login }).maybeSingle()
+export async function findLogin(site: string, communityId: string | null, login: string): Promise<Login | null> {
+  const { data, error } = await createAdminClient().rpc('login_lookup', { p_site: site, p_community: communityId ?? NO_COMMUNITY, p_login: login }).maybeSingle()
   if (error) throw error
   return data ? { userId: data.user_id, authEmail: data.auth_email, email: data.email, confirmed: data.confirmed } : null
 }

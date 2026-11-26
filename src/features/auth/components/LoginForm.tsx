@@ -10,6 +10,7 @@ import { forgotPasswordAction, resetPasswordAction, signInAction } from '../acti
 import { submitWith, useFormError } from './submit'
 import { CodeField, VerifyEmail } from './VerifyEmail'
 
+// community '' = the main domain's log in (/login): email only, as usernames are per community.
 export function LoginForm({ community }: { community: string }) {
   const [state, signIn, pending] = useActionState(signInAction, undefined)
   const [forgotOpen, setForgotOpen] = useState(false)
@@ -23,7 +24,11 @@ export function LoginForm({ community }: { community: string }) {
     <div className="grid gap-4">
       <form action={signIn} onSubmit={submitWith(signIn)} onChange={clear} noValidate className="grid gap-4">
         <input type="hidden" name="community" value={community} />
-        <TextField id="login" name="login" label={t.login.username} autoComplete="username" autoCapitalize="none" />
+        {community ? (
+          <TextField id="login" name="login" label={t.login.username} autoComplete="username" autoCapitalize="none" />
+        ) : (
+          <TextField id="login" name="login" type="email" label={t.join.email} autoComplete="email" inputMode="email" autoCapitalize="none" />
+        )}
         <PasswordField id="password" name="password" label={t.login.password} autoComplete="current-password" />
 
 {error ? (
@@ -81,8 +86,8 @@ function ForgotPassword({ community, onCancel }: { community: string; onCancel: 
   return (
     <form action={send} onSubmit={submitWith(send)} onChange={sendError.clear} noValidate className="grid gap-4">
       <input type="hidden" name="community" value={community} />
-      <p className="text-ink-soft">{t.login.forgotBody}</p>
-      <TextField id="forgot-login" name="login" label={t.login.username} autoComplete="username" autoCapitalize="none" />
+      <p className="text-ink-soft">{community ? t.login.forgotBody : t.login.forgotBodyEmail}</p>
+      <TextField id="forgot-login" name="login" label={community ? t.login.username : t.join.email} autoComplete="username" autoCapitalize="none" />
       {sendError.error ? (
         <p role="alert" className="text-sm text-danger">
           {sendError.error}
