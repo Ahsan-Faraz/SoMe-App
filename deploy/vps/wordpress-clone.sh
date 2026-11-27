@@ -47,6 +47,10 @@ wt search-replace "$from" "$to" --all-tables-with-prefix --skip-columns=guid --q
 rm -rf -- "${troot:?}/public/wp-content"
 cp -a "$froot/public/wp-content" "$troot/public/wp-content"
 chown -R "wp-$tslug:www-data" "$troot/public/wp-content"
+# The locally stored fonts (wordpress-tune.sh) are CSS files with the source's full address in them,
+# which the database's search-replace doesn't reach: the target fetches its own on its first visit.
+rm -rf -- "${troot:?}/public/wp-content/fonts"
+wt option delete downloaded_font_files --quiet >/dev/null 2>&1 || true
 
 # --- Its own name, logo and a clean start ------------------------------------------------------------------
 wt option update blogname "$to" --quiet
