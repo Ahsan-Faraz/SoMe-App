@@ -5,13 +5,19 @@ import type { SiteCommunity } from '../queries'
 
 // /communities (client guide 261123): your communities on this domain, then the visible ones you can
 // join. Joining opens that community's Join page, which (logged in) asks only for a username there
-// and the consents, then goes on to the usual application.
-export function CommunityChooser({ communities }: { communities: SiteCommunity[] }) {
+// and the consents, then goes on to the usual application. The platform admin also gets a way to the
+// platform screen here, so it never depends on being in a community.
+export function CommunityChooser({ communities, platformAdmin }: { communities: SiteCommunity[]; platformAdmin: boolean }) {
   const mine = communities.filter((community) => community.state)
   const others = communities.filter((community) => !community.state)
 
   return (
     <div className="grid gap-10">
+      {platformAdmin ? (
+        <Link href={`/platform?back=${encodeURIComponent('/communities')}`} className={buttonClass('secondary')}>
+          {t.admin.platform}
+        </Link>
+      ) : null}
       <section>
         <h3 className="mb-3 text-[13px] font-bold tracking-wide text-muted uppercase">{t.site.mine}</h3>
         {mine.length ? (

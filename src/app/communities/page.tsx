@@ -4,6 +4,7 @@ import { LogoutButton } from '@/features/auth/components/LogoutButton'
 import { SiteShell } from '@/features/auth/components/SiteShell'
 import { CommunityChooser } from '@/features/communities/components/CommunityChooser'
 import { getSiteCommunities } from '@/features/communities/queries'
+import { isPlatformAdmin } from '@/features/platform/queries'
 import { getUserId } from '@/lib/auth/dal'
 import { t } from '@/lib/i18n'
 import { requestSite, requestSiteName } from '@/lib/sites'
@@ -23,7 +24,8 @@ async function CommunitiesContent() {
   // The session check reads the cookie (no database); logged out, there is nothing to list.
   if (!(await getUserId())) redirect('/login')
   const site = await requestSite()
-  const [siteName, communities] = await Promise.all([requestSiteName(), getSiteCommunities(site)])
+  // The platform admin reaches /platform from here too, without being in any community.
+  const [siteName, communities, platformAdmin] = await Promise.all([requestSiteName(), getSiteCommunities(site), isPlatformAdmin()])
 
   return (
     <SiteShell
@@ -37,7 +39,7 @@ async function CommunitiesContent() {
         />
       }
     >
-      <CommunityChooser communities={communities} />
+      <CommunityChooser communities={communities} platformAdmin={platformAdmin} />
     </SiteShell>
   )
 }
