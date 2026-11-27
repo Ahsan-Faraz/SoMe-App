@@ -16,3 +16,6 @@ Thumbs.db
 # WordPress site exports (All-in-One WP Migration): a full site backup with user data, never committed
 /Wordpress/
 *.wpress
+
+# Office lock files (made while a document is open in Word or Excel)
+~$*

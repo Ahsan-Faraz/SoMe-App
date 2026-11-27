@@ -22,7 +22,7 @@ before you run a command, and in the folder names replace the dots with dashes (
 - The new domain, and access to its DNS settings.
 - The client's Brevo account.
 - SSH to the VPS as `peter` (`ssh -i ~/.ssh/id_ed25519 peter@187.124.131.7`), with your sudo password.
-- The app release of 26 November 2026 or later deployed on the VPS (it brings the scripts used below).
+- The app release of 27 November 2026 or later deployed on the VPS (it brings the scripts used below).
 
 ## 1. DNS for the new name
 
@@ -34,6 +34,9 @@ At the new domain's DNS provider, add:
 | A | `www` | `187.124.131.7` |
 | AAAA | `newname.se` (`@`) | `2a02:4780:c:ef62::1` |
 | AAAA | `www` | `2a02:4780:c:ef62::1` |
+
+Remove any other A or AAAA records for these two names (for example a parking page from the domain
+seller). Leave MX records (email) as they are.
 
 **Check** from your PC: `nslookup newname.se` and `nslookup www.newname.se` both show `187.124.131.7`.
 Wait for this before step 4.
@@ -63,17 +66,32 @@ sudo chown peter: ~/move/*
 
 ## 4. The certificate
 
-One certificate covers every name on the server. Add the new names and keep all the old ones (the
-old name still needs it to forward):
+One certificate covers every name on the server. To get it, Let's Encrypt checks the new name over
+plain http, so nginx must answer for the new name on http first. Make a copy of the nginx config, so
+you can go back:
 
 ```
-sudo certbot certonly --nginx --cert-name theirl.net \
-  -d theirl.net -d www.theirl.net -d aiproduktion.se -d www.aiproduktion.se \
-  -d newname.se -d www.newname.se
+sudo cp -a /etc/nginx/sites-available/some ~/move/nginx-some.before-move
+sudo nano /etc/nginx/sites-available/some
 ```
 
-**Check:** it ends with "Successfully received certificate". If it says the domain could not be
-reached, the DNS from step 1 is not through yet: wait and run it again.
+In the last server block (the one with `listen 80;`), add the new names to `server_name`, so the line
+reads:
+
+```
+    server_name theirl.net www.theirl.net aiproduktion.se www.aiproduktion.se newname.se www.newname.se;
+```
+
+Save (Ctrl+O, Enter, Ctrl+X), then test, reload and get the certificate with the new names added (all
+the old names stay in it; the old name still needs it to forward):
+
+```
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot certonly --nginx --expand --cert-name theirl.net -d theirl.net -d www.theirl.net -d aiproduktion.se -d www.aiproduktion.se -d newname.se -d www.newname.se
+```
+
+**Check:** certbot ends with "Successfully received certificate". If it says the domain could not be
+reached, the DNS from step 1 is not through yet: wait and run the certbot command again.
 
 ## 5. The app's settings
 
@@ -108,6 +126,8 @@ sudo sed -e 's#/srv/wp/aiproduktion.se/#/srv/wp/newname.se/#' -e 's#aiproduktion
 ```
 
 Leave out `--icon-only` if the new name should show the icon and the name as its logo.
+`wordpress-setup.sh` restarts the WordPress database for a few seconds; visitors still get the pages
+from the page cache meanwhile, and the app is not affected.
 
 **Check:** the last lines of `wordpress-clone.sh` show `https://newname.se` and the five pages, and
 `wordpress-plugins.sh` says `newname.se: mail on, from noreply@newname.se`. The nightly backups pick
@@ -115,14 +135,11 @@ up the new site by themselves.
 
 ## 7. nginx: the new name serves, the old name forwards
 
-Make a copy of the current config first, so you can go back:
-
 ```
-sudo cp -a /etc/nginx/sites-available/some ~/move/nginx-some.before-move
 sudo nano /etc/nginx/sites-available/some
 ```
 
-Three changes:
+Two changes:
 
 **a.** In the server block that starts with `# aiproduktion.se:`, change the two lines
 
@@ -159,12 +176,6 @@ server {
 }
 ```
 
-**c.** In the last server block (the one with `listen 80;`), add the new names to `server_name`:
-
-```
-    server_name theirl.net www.theirl.net aiproduktion.se www.aiproduktion.se newname.se www.newname.se;
-```
-
 Save, then test and reload:
 
 ```
@@ -179,8 +190,8 @@ has changed yet: fix the line it names, or go back with
 
 In a browser (a private window, so no old login is used):
 
-1. `https://newname.se/` opens (the WordPress page, or the app's start page if WordPress does not
-   have `/` yet), with the right logo.
+1. `https://newname.se/` opens the WordPress home page with the right logo, and Get started opens the
+   app's sign-up.
 2. `https://newname.se/<a community>` opens the community; log in with an existing login.
 3. Sign up with a new test address: the code arrives from `noreply@newname.se`.
 4. `https://aiproduktion.se/<a community>` lands on the same page on `newname.se`.
@@ -196,23 +207,35 @@ sudo bash ~/move/wordpress-check.sh
 
 ## If something goes wrong
 
-- **The site does not open after step 7:** put the old nginx config back and reload:
+- **The site does not open after step 4 or 7:** put the old nginx config back and reload:
   `sudo cp -a ~/move/nginx-some.before-move /etc/nginx/sites-available/some && sudo nginx -t && sudo systemctl reload nginx`.
 - **Logins or emails fail after step 5:** undo the two changes in `.env.production` and restart the
   app (`sudo systemctl restart some.service`).
 - Nothing in these steps changes the database of the app, so no data needs restoring.
+
+## Good to know after the move
+
+- The repo's nginx config (`deploy/vps/nginx-some.conf`) still has the old name. Don't run
+  `wordpress-finish.sh` or `wordpress-switch.sh` from it any more: they install that config and would
+  undo step 7. Update the repo's nginx files to match the server first.
+- `wordpress-check.sh` and the nightly backups find every site by themselves, the new one included.
+- To renew the mail key for the new site later: `sudo bash ~/move/wordpress-plugins.sh newname.se`.
 
 ## 9. Later: switching the old name off
 
 After a few months, when links and installed apps have moved on:
 
 1. Remove the `aiproduktion.se` entries from `SITE_HOSTS` and restart the app.
-2. Remove the forwarding block (7b) and the old names from the port 80 block, then test and reload nginx.
+2. Remove the forwarding block (7b) and the old names from the port 80 block (step 4), then test and
+   reload nginx.
 3. Remove the old WordPress: `sudo systemctl disable --now wp-cron-aiproduktion-se.timer`, delete
+   `/etc/systemd/system/wp-cron-aiproduktion-se.*`,
    `/srv/wp/aiproduktion.se`, `/etc/php/8.5/fpm/pool.d/aiproduktion-se.conf` (then
    `sudo systemctl reload php8.5-fpm`), `/etc/nginx/snippets/wp-aiproduktion-se.conf`, and the database
    (`sudo mariadb -e "DROP DATABASE wp_aiproduktion_se; DROP USER 'wp_aiproduktion_se'@'localhost';"`).
-4. Renew the certificate without the old names (step 4 without `-d aiproduktion.se -d www.aiproduktion.se`).
+4. Renew the certificate without the old names: the certbot command from step 4 without
+   `--expand` and without `-d aiproduktion.se -d www.aiproduktion.se` (certbot asks you to confirm).
+5. The old site's backups in `/srv/wp-backups/aiproduktion.se` can be kept or deleted.
 
 Installed phone apps belong to the old name: members open the new address once and add it to the
 home screen again.
